@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>
+Student Dashboard
+</title>
+
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='css/style.css') }}">
+
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+
+</head>
+
+
+<body>
+
+
+<div class="dashboard-page">
+
+
+
+<!-- NAVBAR -->
+
+<nav class="top-navbar">
+
+
+<h2>
+🧠 AI Quiz System
+</h2>
+
+
+<div>
+
+<a href="/my_results">
+📊 Results
+</a>
+
+<a href="/leaderboard">
+🏆 Leaderboard
+</a>
+
+<button id="darkModeBtn">
+🌙
+</button>
+
+<a href="/logout">
+🚪 Logout
+</a>
+
+
+
+</div>
+
+
+</nav>
+
+
+
+
+
+<div class="dashboard-container">
+
+
+
+<div class="welcome-box">
+
+
+<h1>
+Welcome {{name}} 👋
+</h1>
+
+
+<p>
+Ready to test your knowledge today?
+</p>
+
+
+</div>
+
+
+
+
+
+<!-- STAT CARDS -->
+
+
+<div class="stats">
+
+
+
+<div class="stat-card">
+
+<h2>
+📚
+</h2>
+
+<h3>
+Available Quiz
+</h3>
+
+<p>
+Explore new quizzes
+</p>
+
+
+</div>
+
+
+
+
+<div class="stat-card">
+
+
+<h2>
+📈
+</h2>
+
+
+<h3>
+Performance
+</h3>
+
+
+<p>
+Track your progress
+</p>
+
+
+</div>
+
+
+
+
+
+<div class="stat-card">
+
+
+<h2>
+🏆
+</h2>
+
+
+<h3>
+Achievements
+</h3>
+
+
+<p>
+Improve your score
+</p>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+<!-- ACTION CARDS -->
+
+
+<h2 class="section-title">
+
+Quick Actions
+
+</h2>
+
+
+
+
+<div class="action-grid">
+
+<a href="/available_quizzes" class="action-card">
+
+<div>
+📚
+</div>
+
+<h3>
+Available Quizzes
+</h3>
+
+<p>
+Attempt new tests
+</p>
+
+</a>
+
+
+<a href="/my_results" class="action-card">
+
+<div>
+📊
+</div>
+
+<h3>
+My Results
+</h3>
+
+<p>
+View performance
+</p>
+
+</a>
+
+
+<a href="/student_profile" class="action-card">
+
+<div>
+👤
+</div>
+
+<h3>
+My Profile
+</h3>
+
+<p>
+View your details
+</p>
+
+</a>
+
+</div>
+
+
+
+
+</div>
+
+
+
+</div>
+
+
+{% include 'footer.html' %}
+
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+</body>
+
+
+</html>

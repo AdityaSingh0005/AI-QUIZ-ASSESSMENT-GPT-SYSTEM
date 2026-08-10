@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+
+<title>Leaderboard</title>
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='css/style.css') }}">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="dashboard-page">
+
+<nav class="top-navbar">
+
+<h2>🧠 AI Quiz System</h2>
+
+<div>
+
+<a href="/student_dashboard">🏠 Dashboard</a>
+
+<a href="/student_profile">👤 Profile</a>
+
+<a href="/logout">🚪 Logout</a>
+
+</div>
+
+</nav>
+
+<div class="dashboard-container">
+
+<div class="welcome-box">
+
+<h1>🏆 Student Leaderboard</h1>
+
+<p>Top performers based on average quiz percentage.</p>
+
+</div>
+
+<div class="leaderboard-card">
+
+<table>
+
+<tr>
+
+<th>Rank</th>
+<th>Student Name</th>
+<th>Roll Number</th>
+<th>Average %</th>
+<th>Total Attempts</th>
+
+</tr>
+
+{% for student in leaderboard %}
+
+<tr>
+
+<td>
+
+{% if loop.index == 1 %}
+🥇
+{% elif loop.index == 2 %}
+🥈
+{% elif loop.index == 3 %}
+🥉
+{% else %}
+{{ loop.index }}
+{% endif %}
+
+</td>
+
+<td>{{ student.full_name }}</td>
+
+<td>{{ student.roll_number }}</td>
+
+<td>
+
+<span class="badge excellent-badge">
+
+{{ student.average_percentage }}%
+
+</span>
+
+</td>
+
+<td>{{ student.total_attempts }}</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+</body>
+
+</html>

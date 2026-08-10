@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>
+Quiz Result
+</title>
+
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='css/style.css') }}">
+
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+
+</head>
+
+
+
+<body>
+
+
+
+<div class="dashboard-page">
+
+
+
+<nav class="top-navbar">
+
+
+<h2>
+🧠 AI Quiz System
+</h2>
+
+
+<div>
+
+<a href="/student_dashboard">
+🏠 Dashboard
+</a>
+
+
+<a href="/logout">
+🚪 Logout
+</a>
+
+
+</div>
+
+
+</nav>
+
+
+
+
+
+
+
+<div class="result-container">
+
+
+
+
+
+<div class="result-card">
+
+
+
+<div class="success-icon">
+
+🎉
+
+</div>
+
+
+
+
+<h1>
+
+Quiz Completed!
+
+</h1>
+
+
+<p>
+
+Great job! Here is your performance report.
+
+</p>
+
+
+
+
+
+<div class="score-box">
+
+
+<h2>
+Your Score
+</h2>
+
+
+<h1>
+
+{{score}} / {{total}}
+
+</h1>
+
+
+
+</div>
+
+
+
+
+
+
+<div class="percentage-box">
+
+
+<h2>
+
+{{percentage}}%
+
+</h2>
+
+
+<p>
+Accuracy Score
+</p>
+
+
+</div>
+
+
+
+
+
+
+
+{% if percentage >= 80 %}
+
+
+<h2 class="excellent">
+
+🌟 Excellent Performance!
+
+</h2>
+
+
+{% elif percentage >= 50 %}
+
+
+<h2 class="good">
+
+👍 Good Performance!
+
+</h2>
+
+
+{% else %}
+
+
+<h2 class="need-improve">
+
+📚 Need More Practice
+
+</h2>
+
+
+{% endif %}
+
+
+
+
+
+<a href="/student_dashboard">
+
+
+<button>
+
+Back To Dashboard
+
+</button>
+
+
+</a>
+
+
+
+
+
+</div>
+
+
+
+
+
+
+</div>
+
+
+
+</div>
+
+{% include 'footer.html' %}
+
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+</body>
+
+
+</html>

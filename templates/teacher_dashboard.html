@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Teacher Dashboard</title>
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='css/style.css') }}">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="dashboard-page">
+
+<nav class="top-navbar">
+
+<h2>
+🧠 AI Quiz System
+</h2>
+
+<div class="navbar-actions">
+
+<a href="/logout">
+🚪 Logout
+</a>
+
+</div>
+
+</nav>
+
+
+
+<div class="dashboard-container">
+
+<div class="welcome-box">
+
+<h1>
+Welcome {{name}} 👨‍🏫
+</h1>
+
+<p>
+
+Manage quizzes, monitor student performance and generate AI powered assessments.
+
+</p>
+
+</div>
+
+
+
+
+
+<div class="stats">
+
+<div class="stat-card">
+
+<h2>📚</h2>
+
+<h3>Quiz Manager</h3>
+
+<p>Create and manage quizzes</p>
+
+</div>
+
+<div class="stat-card">
+
+<h2>📱</h2>
+
+<h3>QR System</h3>
+
+<p>Generate secure QR Codes</p>
+
+</div>
+
+<div class="stat-card">
+
+<h2>📊</h2>
+
+<h3>Analytics</h3>
+
+<p>View student performance</p>
+
+</div>
+
+</div>
+
+
+
+
+
+<h2 class="section-title">
+
+Quick Actions
+
+</h2>
+
+
+
+<div class="action-grid">
+
+<a href="/create_quiz" class="action-card">
+
+<div>🤖</div>
+
+<h3>Create Quiz</h3>
+
+<p>Create new assessment</p>
+
+</a>
+
+<a href="/manage_quizzes" class="action-card">
+
+<div>
+📚
+</div>
+
+<h3>
+Manage Quizzes
+</h3>
+
+<p>
+View and delete quizzes
+</p>
+
+</a>
+
+<a href="/generate_qr_page" class="action-card">
+
+<div>📱</div>
+
+<h3>Generate QR</h3>
+
+<p>Share quiz instantly</p>
+
+</a>
+
+
+
+<a href="/view_results" class="action-card">
+
+<div>📊</div>
+
+<h3>View Results</h3>
+
+<p>Student analytics</p>
+
+</a>
+
+
+
+<a href="#" class="action-card">
+
+<div>⚙</div>
+
+<h3>AI Status</h3>
+
+<p>Coming Soon</p>
+
+</a>
+
+</div>
+
+
+
+
+
+<div class="info-box">
+
+<h2>
+
+🤖 AI Integration
+
+</h2>
+
+<p>
+
+Current Status :
+<span style="color:orange;font-weight:bold;">
+
+Preparing Ollama Model...
+
+</span>
+
+</p>
+
+<p>
+
+After integration, quizzes will be generated automatically using a Local Large Language Model.
+
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+{% include 'footer.html' %}
+
+</body>
+
+</html>

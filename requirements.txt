@@ -1,0 +1,6 @@
+Flask
+mysql-connector-python
+ollama
+qrcode
+Pillow
+gunicorn

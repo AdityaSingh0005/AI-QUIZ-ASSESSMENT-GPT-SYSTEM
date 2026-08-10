@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>
+Manage Quizzes
+</title>
+
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='css/style.css') }}">
+
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+</head>
+
+
+<body>
+
+
+<div class="dashboard-page">
+
+
+<nav class="top-navbar">
+
+<h2>
+🧠 AI Quiz System
+</h2>
+
+
+<div>
+
+<a href="/teacher_dashboard">
+🏠 Dashboard
+</a>
+
+
+<a href="/logout">
+🚪 Logout
+</a>
+
+</div>
+
+</nav>
+
+
+
+
+<div class="dashboard-container">
+
+
+<h1>
+📚 My Created Quizzes
+</h1>
+
+
+
+<div class="quiz-list">
+
+
+{% for quiz in quizzes %}
+
+
+<div class="stat-card">
+
+
+<h2>
+{{quiz.title}}
+</h2>
+
+
+<p>
+Questions: {{quiz.total_questions}}
+</p>
+
+
+<p>
+Created: {{quiz.created_at}}
+</p>
+
+
+<br>
+
+
+<a href="/show_qr/{{quiz.quiz_id}}"
+class="action-card">
+
+📱 View QR
+
+</a>
+
+
+<br><br>
+
+
+<a href="/delete_quiz/{{quiz.quiz_id}}"
+class="delete-btn">
+
+🗑 Delete
+
+</a>
+
+
+</div>
+
+
+{% endfor %}
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+</body>
+
+</html>

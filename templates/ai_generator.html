@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>
+AI Quiz Generator
+</title>
+
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='css/style.css') }}">
+
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+
+</head>
+
+
+
+<body>
+
+
+
+<div class="dashboard-page">
+
+
+
+<nav class="top-navbar">
+
+
+<h2>
+🧠 AI Quiz System
+</h2>
+
+
+<div>
+
+
+<a href="/teacher_dashboard">
+
+🏠 Dashboard
+
+</a>
+
+
+<a href="/logout">
+
+🚪 Logout
+
+</a>
+
+
+</div>
+
+
+</nav>
+
+
+
+
+
+
+
+
+<div class="ai-container">
+
+
+
+
+
+<div class="ai-header">
+
+
+<div class="ai-icon">
+
+🤖
+
+</div>
+
+
+
+<h1>
+
+AI Quiz Generator
+
+</h1>
+
+
+<p>
+
+Generate smart assessment questions using Artificial Intelligence
+
+</p>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<div class="ai-card">
+
+
+
+
+
+
+<form method="POST"
+action="/ai_generator">
+
+
+
+
+
+
+<label>
+
+Quiz Topic
+
+</label>
+
+
+<input
+
+type="text"
+
+name="subject"
+
+placeholder="Example: Database Management System"
+
+required>
+
+
+
+<label>
+
+Difficulty Level
+
+</label>
+
+
+
+<select name="difficulty">
+
+
+<option>
+
+Easy
+
+</option>
+
+
+<option>
+
+Medium
+
+</option>
+
+
+<option>
+
+Hard
+
+</option>
+
+
+</select>
+
+
+
+
+
+
+
+<label>
+
+Number of Questions
+
+</label>
+
+
+
+<input
+
+type="number"
+
+name="questions"
+
+placeholder="10"
+
+required>
+
+
+
+
+
+
+
+
+<button>
+
+✨ Generate Quiz
+
+</button>
+
+
+
+
+</form>
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+</div>
+
+{% include 'footer.html' %}
+
+    <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+
+</body>
+
+
+</html>

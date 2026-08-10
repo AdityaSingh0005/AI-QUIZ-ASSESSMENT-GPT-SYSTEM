@@ -1,0 +1,321 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Create AI Quiz</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
+
+</head>
+
+
+<body>
+
+<div class="dashboard-page">
+
+
+    <!-- NAVBAR -->
+
+    <nav class="top-navbar">
+
+        <h2>
+            🧠 AI Quiz System
+        </h2>
+
+        <div>
+
+            <a href="/teacher_dashboard">
+                🏠 Dashboard
+            </a>
+
+            <a href="/logout">
+                🚪 Logout
+            </a>
+
+        </div>
+
+    </nav>
+
+
+    <!-- MAIN -->
+
+    <div class="ai-create-container">
+
+
+        <!-- LEFT CARD -->
+
+        <div class="ai-info-card">
+
+            <div class="robot">
+                🤖
+            </div>
+
+            <h2>
+                AI Quiz Generator
+            </h2>
+
+            <p>
+                Create smart quizzes using Ollama AI
+            </p>
+
+            <div class="feature">
+                ✨ Automatic Question Generation
+            </div>
+
+            <div class="feature">
+                🎯 Difficulty Based Questions
+            </div>
+
+            <div class="feature">
+                📊 Instant Assessment
+            </div>
+
+        </div>
+
+
+        <!-- RIGHT CARD -->
+
+        <div class="quiz-form-card">
+
+            <h1>
+                Create New Quiz 🚀
+            </h1>
+
+
+            <form action="/create_quiz"
+                  method="POST"
+                  id="quizForm">
+
+
+                <!-- TITLE -->
+
+                <label>
+                    Quiz Title
+                </label>
+
+                <input
+                    type="text"
+                    name="title"
+                    placeholder="Example: DSA Quiz"
+                    required>
+
+
+                <!-- TOPIC -->
+
+                <label>
+                    Topic / Prompt
+                </label>
+
+                <textarea
+                    name="prompt"
+                    placeholder="Example: Data Structures and Algorithms"
+                    required></textarea>
+
+
+                <!-- DIFFICULTY -->
+
+                <h3>
+                    Select Question Distribution
+                </h3>
+
+                <p>
+                    Choose how many Easy, Medium and Hard questions
+                    AI should generate.
+                </p>
+
+
+                <div class="row">
+
+
+                    <!-- EASY -->
+
+                    <div>
+
+                        <label>
+                            🟢 Easy
+                        </label>
+
+                        <input
+                            type="number"
+                            name="easy"
+                            id="easy"
+                            value="0"
+                            min="0"
+                            max="50">
+
+                    </div>
+
+
+                    <!-- MEDIUM -->
+
+                    <div>
+
+                        <label>
+                            🟡 Medium
+                        </label>
+
+                        <input
+                            type="number"
+                            name="medium"
+                            id="medium"
+                            value="0"
+                            min="0"
+                            max="50">
+
+                    </div>
+
+
+                    <!-- HARD -->
+
+                    <div>
+
+                        <label>
+                            🔴 Hard
+                        </label>
+
+                        <input
+                            type="number"
+                            name="hard"
+                            id="hard"
+                            value="0"
+                            min="0"
+                            max="50">
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- TOTAL -->
+
+                <div class="total-box">
+
+                    Total Questions:
+
+                    <strong id="totalQuestions">
+                        0
+                    </strong>
+
+                </div>
+
+
+                <!-- BUTTON -->
+
+                <button type="submit">
+
+                    🤖 Generate Quiz
+
+                </button>
+
+
+            </form>
+
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- JAVASCRIPT -->
+
+<script>
+
+const easyInput =
+    document.getElementById("easy");
+
+const mediumInput =
+    document.getElementById("medium");
+
+const hardInput =
+    document.getElementById("hard");
+
+const totalDisplay =
+    document.getElementById("totalQuestions");
+
+
+function updateTotal() {
+
+    const easy =
+        parseInt(easyInput.value) || 0;
+
+    const medium =
+        parseInt(mediumInput.value) || 0;
+
+    const hard =
+        parseInt(hardInput.value) || 0;
+
+
+    const total =
+        easy + medium + hard;
+
+
+    totalDisplay.textContent =
+        total;
+}
+
+
+easyInput.addEventListener(
+    "input",
+    updateTotal
+);
+
+mediumInput.addEventListener(
+    "input",
+    updateTotal
+);
+
+hardInput.addEventListener(
+    "input",
+    updateTotal
+);
+
+
+document.getElementById("quizForm")
+    .addEventListener("submit", function(event) {
+
+        const easy =
+            parseInt(easyInput.value) || 0;
+
+        const medium =
+            parseInt(mediumInput.value) || 0;
+
+        const hard =
+            parseInt(hardInput.value) || 0;
+
+
+        const total =
+            easy + medium + hard;
+
+
+        if (total <= 0) {
+
+            event.preventDefault();
+
+            alert(
+                "Please select at least one question."
+            );
+
+            return;
+        }
+
+    });
+
+
+updateTotal();
+
+</script>
+
+
+</body>
+
+</html>
+

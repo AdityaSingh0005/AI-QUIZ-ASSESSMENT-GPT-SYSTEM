@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>
+Quiz QR Codes
+</title>
+
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='css/style.css') }}">
+
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+
+</head>
+
+
+<body>
+
+
+
+<div class="dashboard-page">
+
+
+
+<nav class="top-navbar">
+
+
+<h2>
+🧠 AI Quiz System
+</h2>
+
+
+
+<div>
+
+<a href="/teacher_dashboard">
+
+🏠 Dashboard
+
+</a>
+
+
+<a href="/logout">
+
+🚪 Logout
+
+</a>
+
+
+</div>
+
+
+</nav>
+
+
+
+
+
+
+
+<div class="dashboard-container">
+
+
+
+<div class="welcome-box">
+
+
+<h1>
+📱 Quiz QR Codes
+</h1>
+
+
+<p>
+Share quizzes instantly with students using QR Code
+</p>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="quiz-grid">
+
+
+
+{% for quiz in quizzes %}
+
+
+
+<div class="quiz-card">
+
+
+
+<div class="quiz-icon">
+
+📱
+
+</div>
+
+
+
+<h2>
+
+{{quiz.title}}
+
+</h2>
+
+
+
+<p>
+
+Ready to share
+
+</p>
+
+
+
+
+<a href="/show_qr/{{quiz.quiz_id}}">
+
+
+<button>
+
+View QR Code
+
+</button>
+
+
+</a>
+
+
+
+</div>
+
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+
+
+
+
+
+</div>
+
+
+</div>
+
+
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+</body>
+
+
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Add Question</title>
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='css/style.css') }}">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+</head>
+
+
+<body>
+
+
+<div class="dashboard-page">
+
+
+<nav class="top-navbar">
+
+<h2>
+🧠 AI Quiz System
+</h2>
+
+
+<div>
+
+<a href="/teacher_dashboard">
+🏠 Dashboard
+</a>
+
+
+<a href="/logout">
+🚪 Logout
+</a>
+
+</div>
+
+</nav>
+
+
+
+<div class="question-container">
+
+
+
+<div class="question-card">
+
+
+
+<div class="question-icon">
+📝
+</div>
+
+
+
+<h1>
+Add Question
+</h1>
+
+
+<p>
+Quiz ID : {{ quiz_id }}
+</p>
+
+
+
+
+<form method="POST">
+
+
+
+<label>
+Question
+</label>
+
+
+<textarea
+
+name="question"
+
+placeholder="Enter your question here..."
+
+required>
+
+</textarea>
+
+
+
+
+
+<div class="option-grid">
+
+
+<div>
+
+<label>
+Option A
+</label>
+
+<input
+
+type="text"
+
+name="option_a"
+
+placeholder="Option A"
+
+required>
+
+</div>
+
+
+
+<div>
+
+<label>
+Option B
+</label>
+
+<input
+
+type="text"
+
+name="option_b"
+
+placeholder="Option B"
+
+required>
+
+</div>
+
+
+
+<div>
+
+<label>
+Option C
+</label>
+
+<input
+
+type="text"
+
+name="option_c"
+
+placeholder="Option C"
+
+required>
+
+</div>
+
+
+
+<div>
+
+<label>
+Option D
+</label>
+
+<input
+
+type="text"
+
+name="option_d"
+
+placeholder="Option D"
+
+required>
+
+</div>
+
+
+</div>
+
+
+
+
+
+<label>
+Correct Answer
+</label>
+
+
+<select name="correct_option">
+
+
+<option value="A">
+Option A
+</option>
+
+
+<option value="B">
+Option B
+</option>
+
+
+<option value="C">
+Option C
+</option>
+
+
+<option value="D">
+Option D
+</option>
+
+
+</select>
+
+
+
+
+
+<button type="submit">
+
+💾 Save Question
+
+</button>
+
+
+
+</form>
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+</body>
+
+</html>

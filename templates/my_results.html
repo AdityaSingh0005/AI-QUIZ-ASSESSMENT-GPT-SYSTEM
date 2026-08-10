@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+
+<title>
+My Performance
+</title>
+
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='css/style.css') }}">
+
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+
+</head>
+
+
+
+<body>
+
+
+
+<div class="dashboard-page">
+
+
+
+<nav class="top-navbar">
+
+
+<h2>
+🧠 AI Quiz System
+</h2>
+
+
+
+<div>
+
+<a href="/student_dashboard">
+🏠 Dashboard
+</a>
+
+
+<a href="/logout">
+🚪 Logout
+</a>
+
+
+</div>
+
+
+</nav>
+
+
+
+
+
+
+
+<div class="dashboard-container">
+
+
+
+
+
+<div class="welcome-box">
+
+
+<h1>
+
+📊 My Performance
+
+</h1>
+
+
+<p>
+
+Track your quiz progress and improve your skills.
+
+</p>
+
+
+</div>
+
+
+
+
+
+
+
+
+<div class="result-history-card">
+
+
+
+
+
+<h2>
+
+Quiz History
+
+</h2>
+
+
+
+
+
+<table>
+
+
+<tr>
+
+
+<th>
+Quiz Name
+</th>
+
+
+<th>
+Score
+</th>
+
+
+<th>
+Percentage
+</th>
+
+
+<th>
+Date
+</th>
+
+
+</tr>
+
+
+
+
+
+
+{% for r in results %}
+
+
+
+<tr>
+
+
+<td>
+
+{{r.title}}
+
+</td>
+
+
+
+
+<td>
+
+{{r.score}}
+
+</td>
+
+
+
+
+
+<td>
+
+
+{% if r.percentage >= 80 %}
+
+<span class="badge excellent-badge">
+
+{{r.percentage}}%
+
+</span>
+
+
+
+{% elif r.percentage >= 50 %}
+
+
+<span class="badge good-badge">
+
+{{r.percentage}}%
+
+</span>
+
+
+
+
+{% else %}
+
+
+<span class="badge poor-badge">
+
+{{r.percentage}}%
+
+</span>
+
+
+
+{% endif %}
+
+
+
+</td>
+
+
+
+
+<td>
+
+{{r.submitted_at}}
+
+</td>
+
+
+
+
+</tr>
+
+
+
+
+
+{% endfor %}
+
+
+
+
+
+</table>
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+{% include 'footer.html' %}
+
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+</body>
+
+
+</html>

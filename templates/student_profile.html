@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Student Profile</title>
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='css/style.css') }}">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="dashboard-page">
+
+<nav class="top-navbar">
+
+<h2>🧠 AI Quiz System</h2>
+
+<div>
+
+<a href="/student_dashboard">🏠 Dashboard</a>
+
+<a href="/logout">🚪 Logout</a>
+
+</div>
+
+</nav>
+
+<div class="profile-container">
+
+<div class="profile-card">
+
+<div class="avatar">
+{{ student.full_name[0] }}
+</div>
+
+<h1>{{ student.full_name }}</h1>
+
+<p>{{ student.roll_number }}</p>
+
+</div>
+
+<div class="profile-info">
+
+<div class="info-box">
+
+<h3>Department</h3>
+
+<p>{{ student.department }}</p>
+
+</div>
+
+<div class="info-box">
+
+<h3>Semester</h3>
+
+<p>{{ student.semester }}</p>
+
+</div>
+
+<div class="info-box">
+
+<h3>Section</h3>
+
+<p>{{ student.section }}</p>
+
+</div>
+
+<div class="info-box">
+
+<h3>Joined</h3>
+
+<p>{{ student.created_at }}</p>
+
+</div>
+
+</div>
+
+<h2 class="section-title">
+
+Performance
+
+</h2>
+
+<div class="stats">
+
+<div class="stat-card">
+
+<h2>📝</h2>
+
+<h3>{{ stats.total_quizzes or 0 }}</h3>
+
+<p>Total Quiz</p>
+
+</div>
+
+<div class="stat-card">
+
+<h2>🏆</h2>
+
+<h3>{{ stats.best_score or 0 }}</h3>
+
+<p>Best Score</p>
+
+</div>
+
+<div class="stat-card">
+
+<h2>📈</h2>
+
+<h3>{{ stats.average_percentage or 0 }}%</h3>
+
+<p>Average</p>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+
+</body>
+
+</html>

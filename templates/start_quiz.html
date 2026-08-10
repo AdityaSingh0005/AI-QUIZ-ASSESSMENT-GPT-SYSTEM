@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Start Quiz</title>
+</head>
+
+<body>
+
+<h1>Quiz Questions</h1>
+
+
+{% for q in questions %}
+
+<hr>
+
+<h3>
+{{ loop.index }}. {{ q.question }}
+</h3>
+
+
+<input type="radio">
+{{ q.option_a }}
+
+<br>
+
+<input type="radio">
+{{ q.option_b }}
+
+<br>
+
+<input type="radio">
+{{ q.option_c }}
+
+<br>
+
+<input type="radio">
+{{ q.option_d }}
+
+<br>
+
+
+{% endfor %}
+
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+</body>
+
+</html>

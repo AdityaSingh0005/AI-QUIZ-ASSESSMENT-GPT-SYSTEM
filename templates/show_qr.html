@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>
+QR Code
+</title>
+
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='css/style.css') }}">
+
+
+</head>
+
+
+<body>
+
+
+
+<div class="dashboard-page">
+
+
+
+<nav class="top-navbar">
+
+
+<h2>
+
+🧠 AI Quiz System
+
+</h2>
+
+
+<a href="/teacher_dashboard">
+
+🏠 Dashboard
+
+</a>
+
+
+</nav>
+
+
+
+
+
+
+
+<div class="qr-container">
+
+
+
+
+
+<div class="qr-card">
+
+
+
+<div class="qr-icon">
+
+📱
+
+</div>
+
+
+
+<h1>
+
+{{quiz.title}}
+
+</h1>
+
+
+<p>
+
+Scan this QR Code to start quiz
+
+</p>
+
+
+
+
+
+
+<img src="/{{quiz.qr_code_path}}"
+class="qr-image">
+
+
+
+
+
+
+<br><br>
+
+
+
+<a href="/{{quiz.qr_code_path}}" download>
+
+
+<button>
+
+⬇ Download QR
+
+</button>
+
+
+</a>
+
+
+
+
+</div>
+
+
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+
+</body>
+
+
+</html>
