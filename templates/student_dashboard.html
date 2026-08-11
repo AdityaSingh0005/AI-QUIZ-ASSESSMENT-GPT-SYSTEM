@@ -1,251 +1,481 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
-<title>
-Student Dashboard
-</title>
+```
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>Student Dashboard | AI Quiz Assessment System</title>
 
 <link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+      href="{{ url_for('static', filename='css/style.css') }}">
 
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
+```
 
 </head>
 
-
 <body>
 
+<div class="dashboard-page student-dashboard-page">
 
-<div class="dashboard-page">
-
-
-
-<!-- NAVBAR -->
+```
+<!-- =====================================================
+     NAVBAR
+====================================================== -->
 
 <nav class="top-navbar">
 
+    <div class="student-navbar-brand">
 
-<h2>
-🧠 AI Quiz System
-</h2>
+        <span class="student-brand-icon">
+            🧠
+        </span>
 
+        <div>
+            <strong>AI Quiz</strong>
+            <small>Assessment System</small>
+        </div>
 
-<div>
-
-<a href="/my_results">
-📊 Results
-</a>
-
-<a href="/leaderboard">
-🏆 Leaderboard
-</a>
-
-<button id="darkModeBtn">
-🌙
-</button>
-
-<a href="/logout">
-🚪 Logout
-</a>
+    </div>
 
 
+    <div class="navbar-actions">
 
-</div>
+        <a href="/my_results"
+           class="student-nav-link">
 
+            <span>▣</span>
+            Results
+
+        </a>
+
+
+        <a href="/leaderboard"
+           class="student-nav-link">
+
+            <span>♛</span>
+            Leaderboard
+
+        </a>
+
+
+        <button
+            id="darkModeBtn"
+            class="student-theme-button"
+            type="button"
+            aria-label="Toggle dark mode">
+
+            ☾
+
+        </button>
+
+
+        <a href="/logout"
+           class="student-logout-link">
+
+            <span>↪</span>
+            Logout
+
+        </a>
+
+    </div>
 
 </nav>
 
 
 
+<!-- =====================================================
+     MAIN
+====================================================== -->
+
+<main class="student-dashboard-container">
 
 
-<div class="dashboard-container">
+    <!-- =================================================
+         WELCOME HERO
+    ================================================== -->
+
+    <section class="student-hero">
+
+
+        <div class="student-hero-content">
+
+            <div class="student-hero-badge">
+
+                <span>✦</span>
+                STUDENT DASHBOARD
+
+            </div>
+
+
+            <h1>
+                Welcome back,
+                <span>{{ name }}</span> 👋
+            </h1>
+
+
+            <p>
+                Ready to challenge yourself?
+                Take a quiz, track your progress and keep improving.
+            </p>
+
+
+            <div class="student-hero-actions">
+
+                <a href="/available_quizzes"
+                   class="hero-primary-button">
+
+                    <span>✦</span>
+                    Explore Quizzes
+                    <strong>→</strong>
+
+                </a>
+
+
+                <a href="/my_results"
+                   class="hero-secondary-button">
+
+                    View Results
+
+                </a>
+
+            </div>
+
+        </div>
 
 
 
-<div class="welcome-box">
+        <!-- DECORATIVE ELEMENT -->
+
+        <div class="student-hero-visual">
+
+            <div class="hero-orbit orbit-one"></div>
+
+            <div class="hero-orbit orbit-two"></div>
+
+            <div class="hero-brain">
+                🧠
+            </div>
+
+            <div class="floating-score">
+                <span>✦</span>
+                Keep Learning
+            </div>
+
+        </div>
+
+    </section>
 
 
-<h1>
-Welcome {{name}} 👋
-</h1>
+
+    <!-- =================================================
+         OVERVIEW
+    ================================================== -->
+
+    <div class="student-section-heading">
+
+        <div>
+
+            <span>
+                YOUR LEARNING SPACE
+            </span>
+
+            <h2>
+                Dashboard overview
+            </h2>
+
+        </div>
+
+    </div>
 
 
-<p>
-Ready to test your knowledge today?
-</p>
 
+    <!-- =================================================
+         STAT CARDS
+    ================================================== -->
+
+    <section class="student-stats">
+
+
+        <div class="student-stat-card">
+
+            <div class="student-stat-icon purple">
+                📚
+            </div>
+
+            <div>
+
+                <span>
+                    AVAILABLE QUIZZES
+                </span>
+
+                <h3>
+                    Explore
+                </h3>
+
+                <p>
+                    Discover new assessments
+                </p>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="student-stat-card">
+
+            <div class="student-stat-icon blue">
+                📈
+            </div>
+
+            <div>
+
+                <span>
+                    PERFORMANCE
+                </span>
+
+                <h3>
+                    Track
+                </h3>
+
+                <p>
+                    Monitor your progress
+                </p>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="student-stat-card">
+
+            <div class="student-stat-icon gold">
+                🏆
+            </div>
+
+            <div>
+
+                <span>
+                    ACHIEVEMENTS
+                </span>
+
+                <h3>
+                    Improve
+                </h3>
+
+                <p>
+                    Build your learning streak
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =================================================
+         QUICK ACTIONS
+    ================================================== -->
+
+    <section class="student-actions-section">
+
+
+        <div class="student-section-heading">
+
+            <div>
+
+                <span>
+                    GET STARTED
+                </span>
+
+                <h2>
+                    Quick actions
+                </h2>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="student-action-grid">
+
+
+            <!-- AVAILABLE QUIZZES -->
+
+            <a href="/available_quizzes"
+               class="student-action-card quiz-action">
+
+                <div class="student-action-top">
+
+                    <div class="student-action-icon">
+                        📚
+                    </div>
+
+                    <span class="action-arrow">
+                        →
+                    </span>
+
+                </div>
+
+
+                <div>
+
+                    <span class="student-action-label">
+                        ASSESSMENTS
+                    </span>
+
+                    <h3>
+                        Available Quizzes
+                    </h3>
+
+                    <p>
+                        Find quizzes and test your knowledge.
+                    </p>
+
+                </div>
+
+            </a>
+
+
+
+            <!-- RESULTS -->
+
+            <a href="/my_results"
+               class="student-action-card result-action">
+
+                <div class="student-action-top">
+
+                    <div class="student-action-icon">
+                        📊
+                    </div>
+
+                    <span class="action-arrow">
+                        →
+                    </span>
+
+                </div>
+
+
+                <div>
+
+                    <span class="student-action-label">
+                        PERFORMANCE
+                    </span>
+
+                    <h3>
+                        My Results
+                    </h3>
+
+                    <p>
+                        Review your scores and assessment history.
+                    </p>
+
+                </div>
+
+            </a>
+
+
+
+            <!-- PROFILE -->
+
+            <a href="/student_profile"
+               class="student-action-card profile-action">
+
+                <div class="student-action-top">
+
+                    <div class="student-action-icon">
+                        👤
+                    </div>
+
+                    <span class="action-arrow">
+                        →
+                    </span>
+
+                </div>
+
+
+                <div>
+
+                    <span class="student-action-label">
+                        ACCOUNT
+                    </span>
+
+                    <h3>
+                        My Profile
+                    </h3>
+
+                    <p>
+                        View and manage your student details.
+                    </p>
+
+                </div>
+
+            </a>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =================================================
+         MOTIVATION CARD
+    ================================================== -->
+
+    <section class="student-learning-card">
+
+        <div class="learning-card-icon">
+            ✦
+        </div>
+
+
+        <div>
+
+            <span>
+                KEEP GOING
+            </span>
+
+            <h2>
+                Every quiz is a step forward.
+            </h2>
+
+            <p>
+                Challenge yourself, learn from your results
+                and keep improving your knowledge.
+            </p>
+
+        </div>
+
+
+        <a href="/available_quizzes">
+
+            Start a Quiz
+            <strong>→</strong>
+
+        </a>
+
+    </section>
+
+
+</main>
+```
 
 </div>
-
-
-
-
-
-<!-- STAT CARDS -->
-
-
-<div class="stats">
-
-
-
-<div class="stat-card">
-
-<h2>
-📚
-</h2>
-
-<h3>
-Available Quiz
-</h3>
-
-<p>
-Explore new quizzes
-</p>
-
-
-</div>
-
-
-
-
-<div class="stat-card">
-
-
-<h2>
-📈
-</h2>
-
-
-<h3>
-Performance
-</h3>
-
-
-<p>
-Track your progress
-</p>
-
-
-</div>
-
-
-
-
-
-<div class="stat-card">
-
-
-<h2>
-🏆
-</h2>
-
-
-<h3>
-Achievements
-</h3>
-
-
-<p>
-Improve your score
-</p>
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-<!-- ACTION CARDS -->
-
-
-<h2 class="section-title">
-
-Quick Actions
-
-</h2>
-
-
-
-
-<div class="action-grid">
-
-<a href="/available_quizzes" class="action-card">
-
-<div>
-📚
-</div>
-
-<h3>
-Available Quizzes
-</h3>
-
-<p>
-Attempt new tests
-</p>
-
-</a>
-
-
-<a href="/my_results" class="action-card">
-
-<div>
-📊
-</div>
-
-<h3>
-My Results
-</h3>
-
-<p>
-View performance
-</p>
-
-</a>
-
-
-<a href="/student_profile" class="action-card">
-
-<div>
-👤
-</div>
-
-<h3>
-My Profile
-</h3>
-
-<p>
-View your details
-</p>
-
-</a>
-
-</div>
-
-
-
-
-</div>
-
-
-
-</div>
-
 
 {% include 'footer.html' %}
 
 <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
-</body>
 
+</body>
 
 </html>
