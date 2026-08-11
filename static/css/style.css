@@ -11923,3 +11923,748 @@ SMALL MOBILE
     font-size: 20px;
   }
 }
+
+/* =========================================================
+PREMIUM FOOTER
+========================================================= */
+.premium-footer {
+  width: 100%;
+  margin-top: 50px;
+  padding: 28px 5% 18px;
+  background: #ffffff;
+  border-top: 1px solid #e9ebf2;
+  box-shadow: 0 -8px 30px rgba(31,41,55,.035);
+}
+
+.footer-content {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+}
+
+/* BRAND */
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.footer-logo {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #eef2ff, #f3e8ff);
+  font-size: 20px;
+}
+
+.footer-brand h3 {
+  margin: 0;
+  color: #252d40;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.footer-brand p {
+  margin: 4px 0 0;
+  color: #9298a8;
+  font-size: 9px;
+}
+
+/* STATUS */
+.footer-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #edf0f5;
+  color: #7b8293;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16,185,129,.10);
+}
+
+/* BOTTOM */
+.footer-bottom {
+  max-width: 1180px;
+  margin: 20px auto 0;
+  padding-top: 15px;
+  border-top: 1px solid #f0f1f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  color: #a1a6b4;
+  font-size: 8px;
+}
+
+/* =========================================================
+MOBILE
+========================================================= */
+@media (max-width: 650px) {
+  .premium-footer {
+    padding: 25px 5% 16px;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .footer-status {
+    font-size: 8px;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+
+/* =========================================================
+GLOBAL MOBILE RESPONSIVE
+AI QUIZ ASSESSMENT SYSTEM
+========================================================= */
+
+/* ---------- TABLET ---------- */
+@media (max-width: 1000px) {
+  .dashboard-container {
+    width: 92%;
+    margin: 0 auto;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+  }
+
+  .action-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+  }
+
+  .quiz-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+  }
+
+  .premium-qr-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .top-navbar {
+    padding: 14px 4%;
+  }
+}
+
+/* =========================================================
+MOBILE
+========================================================= */
+@media (max-width: 760px) {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    font-size: 14px;
+  }
+
+  /* ---------- NAVBAR ---------- */
+  .top-navbar {
+    width: 100%;
+    min-height: auto;
+    padding: 13px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .top-navbar h2 {
+    margin: 0;
+    font-size: 17px;
+  }
+
+  .top-navbar > div {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .top-navbar a {
+    font-size: 11px;
+    padding: 7px 9px;
+    white-space: nowrap;
+  }
+
+  .top-navbar button {
+    padding: 6px 9px;
+    font-size: 13px;
+  }
+
+  /* ---------- MAIN CONTAINER ---------- */
+  .dashboard-container {
+    width: 92%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 22px 0 40px;
+  }
+
+  /* ---------- WELCOME BOX ---------- */
+  .welcome-box {
+    width: 100%;
+    padding: 22px 18px;
+    border-radius: 17px;
+    text-align: left;
+  }
+
+  .welcome-box h1 {
+    font-size: 22px;
+    line-height: 1.3;
+  }
+
+  .welcome-box p {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  /* ---------- STATS ---------- */
+  .stats {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .stat-card {
+    width: 100%;
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .stat-card h2 {
+    font-size: 24px;
+  }
+
+  .stat-card h3 {
+    font-size: 14px;
+  }
+
+  .stat-card p {
+    font-size: 10px;
+  }
+
+  /* ---------- SECTION TITLE ---------- */
+  .section-title {
+    margin-top: 25px;
+    margin-bottom: 13px;
+    font-size: 18px;
+  }
+
+  /* ---------- ACTION CARDS ---------- */
+  .action-grid {
+    width: 100%;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .action-card {
+    width: 100%;
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .action-card h3 {
+    font-size: 14px;
+  }
+
+  .action-card p {
+    font-size: 10px;
+  }
+
+  /* ---------- QUIZ GRID ---------- */
+  .quiz-grid {
+    width: 100%;
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+
+  .quiz-card {
+    width: 100%;
+    padding: 20px;
+    border-radius: 17px;
+  }
+
+  .quiz-card h2 {
+    font-size: 17px;
+  }
+
+  .quiz-card p {
+    font-size: 11px;
+  }
+
+  .quiz-card button {
+    width: 100%;
+    min-height: 44px;
+    font-size: 12px;
+  }
+
+  /* =====================================================
+     FORMS
+     ===================================================== */
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  select,
+  textarea {
+    width: 100%;
+    font-size: 13px;
+  }
+
+  textarea {
+    min-height: 110px;
+    resize: vertical;
+  }
+
+  /* ---------- AI GENERATOR ---------- */
+  .ai-generator-container,
+  .ai-container {
+    width: 92%;
+    margin: 0 auto;
+    padding: 25px 0 50px;
+  }
+
+  .ai-generator-layout {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .ai-generator-hero {
+    padding: 23px 19px;
+    border-radius: 18px;
+  }
+
+  .ai-hero-content {
+    gap: 13px;
+  }
+
+  .ai-generator-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 17px;
+    font-size: 25px;
+  }
+
+  .ai-generator-hero h1 {
+    font-size: 22px;
+  }
+
+  .ai-generator-hero p {
+    font-size: 10px;
+  }
+
+  .ai-info-panel,
+  .ai-form-card {
+    width: 100%;
+    padding: 20px;
+    border-radius: 17px;
+  }
+
+  /* =====================================================
+     CREATE QUIZ
+     ===================================================== */
+  .ai-create-container {
+    width: 92%;
+    margin: 0 auto;
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .ai-info-card,
+  .quiz-form-card {
+    width: 100%;
+    padding: 20px;
+    border-radius: 17px;
+  }
+
+  .ai-create-container .row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .quiz-form-card h1 {
+    font-size: 22px;
+  }
+
+  /* =====================================================
+     QUESTION PAGE
+     ===================================================== */
+  .question-container {
+    width: 92%;
+    margin: 25px auto;
+  }
+
+  .question-card {
+    width: 100%;
+    padding: 20px;
+    border-radius: 17px;
+  }
+
+  .question-card h1 {
+    font-size: 22px;
+  }
+
+  .option-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .question-card button {
+    width: 100%;
+    min-height: 45px;
+  }
+
+  /* =====================================================
+     ATTEMPT QUIZ
+     ===================================================== */
+  .quiz-container {
+    width: 92%;
+    margin: 25px auto;
+  }
+
+  .quiz-container .quiz-card {
+    width: 100%;
+    padding: 20px;
+    border-radius: 18px;
+  }
+
+  .quiz-header h2 {
+    font-size: 14px;
+  }
+
+  .question-text {
+    font-size: 20px;
+    line-height: 1.45;
+    word-break: break-word;
+  }
+
+  .option {
+    width: 100%;
+    padding: 13px;
+    margin-bottom: 9px;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .quiz-container button {
+    width: 100%;
+    min-height: 46px;
+    margin-top: 12px;
+  }
+
+  /* =====================================================
+     RESULT PAGE
+     ===================================================== */
+  .result-container {
+    width: 92%;
+    margin: 25px auto;
+  }
+
+  .result-card {
+    width: 100%;
+    padding: 25px 18px;
+    border-radius: 18px;
+    text-align: center;
+  }
+
+  .result-card h1 {
+    font-size: 25px;
+  }
+
+  .score-box,
+  .percentage-box {
+    width: 100%;
+    margin-top: 15px;
+    padding: 17px;
+  }
+
+  .score-box h1 {
+    font-size: 30px;
+  }
+
+  .percentage-box h2 {
+    font-size: 28px;
+  }
+
+  .result-card button {
+    width: 100%;
+    min-height: 45px;
+  }
+
+  /* =====================================================
+     QR PAGE
+     ===================================================== */
+  .qr-container {
+    width: 92%;
+    margin: 25px auto;
+  }
+
+  .qr-card {
+    width: 100%;
+    padding: 22px 18px;
+    border-radius: 18px;
+    text-align: center;
+  }
+
+  .qr-card h1 {
+    font-size: 21px;
+    word-break: break-word;
+  }
+
+  .qr-card p {
+    font-size: 11px;
+  }
+
+  .qr-image {
+    width: min(260px, 75vw);
+    height: auto;
+    max-width: 100%;
+  }
+
+  .qr-card button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  /* =====================================================
+     QR LIBRARY
+     ===================================================== */
+  .qr-library-hero {
+    min-height: auto;
+    padding: 23px 19px;
+    border-radius: 18px;
+  }
+
+  .premium-qr-grid {
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+
+  .premium-qr-card {
+    min-height: auto;
+    padding: 19px;
+    border-radius: 17px;
+  }
+
+  .qr-card-content h2 {
+    font-size: 16px;
+  }
+
+  .qr-card-footer {
+    flex-wrap: wrap;
+  }
+
+  .qr-view-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* =====================================================
+     TABLES — MOBILE SAFE
+     ===================================================== */
+  .result-history-card,
+  .leaderboard-card {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 17px;
+  }
+
+  .result-history-card table,
+  .leaderboard-card table {
+    width: 700px;
+    min-width: 700px;
+    border-collapse: collapse;
+  }
+
+  .result-history-card th,
+  .result-history-card td,
+  .leaderboard-card th,
+  .leaderboard-card td {
+    padding: 10px 9px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  /* =====================================================
+     PERFORMANCE / ANALYTICS
+     ===================================================== */
+  .percentage-ring {
+    width: 85px;
+    height: 85px;
+  }
+
+  .analytics-container {
+    width: 92%;
+    margin: 0 auto;
+  }
+
+  /* =====================================================
+     MANAGE QUIZZES
+     ===================================================== */
+  .quiz-list {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+
+  .quiz-list .stat-card {
+    width: 100%;
+  }
+
+  /* =====================================================
+     PROFILE
+     ===================================================== */
+  .profile-card,
+  .profile-container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* =====================================================
+     FOOTER
+     ===================================================== */
+  .footer {
+    width: 100%;
+    padding: 22px 15px;
+    text-align: center;
+  }
+
+  .footer p {
+    font-size: 10px;
+    line-height: 1.5;
+    margin: 4px 0;
+  }
+}
+
+/* =========================================================
+SMALL PHONES
+========================================================= */
+@media (max-width: 420px) {
+  .top-navbar h2 {
+    font-size: 15px;
+  }
+
+  .top-navbar a {
+    font-size: 10px;
+    padding: 6px 7px;
+  }
+
+  .dashboard-container {
+    width: 94%;
+  }
+
+  .welcome-box h1 {
+    font-size: 20px;
+  }
+
+  .welcome-box {
+    padding: 19px 15px;
+  }
+
+  .stat-card,
+  .action-card,
+  .quiz-card {
+    padding: 16px;
+  }
+
+  .ai-generator-hero h1 {
+    font-size: 20px;
+  }
+
+  .question-text {
+    font-size: 18px;
+  }
+
+  .result-card {
+    padding: 21px 15px;
+  }
+
+  .qr-image {
+    width: 220px;
+    max-width: 75vw;
+  }
+}
+
+/* =========================================================
+VERY SMALL PHONES
+========================================================= */
+@media (max-width: 360px) {
+  .top-navbar > div {
+    gap: 3px;
+  }
+
+  .top-navbar a {
+    font-size: 9px;
+    padding: 5px 6px;
+  }
+
+  .top-navbar h2 {
+    font-size: 14px;
+  }
+
+  .dashboard-container {
+    width: 95%;
+  }
+
+  .welcome-box h1 {
+    font-size: 18px;
+  }
+
+  .question-text {
+    font-size: 17px;
+  }
+
+  .qr-image {
+    width: 200px;
+  }
+}
