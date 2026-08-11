@@ -1,168 +1,359 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
+```
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>
-Available Quizzes
-</title>
-
+<title>Available Quizzes | AI Quiz Assessment System</title>
 
 <link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+      href="{{ url_for('static', filename='css/style.css') }}">
 
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
+```
 
 </head>
 
-
 <body>
 
+<div class="dashboard-page available-quizzes-page">
 
-
-<div class="dashboard-page">
-
-
+```
+<!-- =====================================================
+     NAVBAR
+====================================================== -->
 
 <nav class="top-navbar">
 
+    <div class="student-navbar-brand">
 
-<h2>
-🧠 AI Quiz System
-</h2>
+        <span class="student-brand-icon">
+            🧠
+        </span>
 
+        <div>
+            <strong>AI Quiz</strong>
+            <small>Assessment System</small>
+        </div>
 
-
-<div>
-
-<a href="/student_dashboard">
-🏠 Dashboard
-</a>
-
-
-<a href="/logout">
-🚪 Logout
-</a>
+    </div>
 
 
-</div>
+    <div class="navbar-actions">
 
+        <a href="/student_dashboard"
+           class="student-nav-link">
+
+            <span>⌂</span>
+            Dashboard
+
+        </a>
+
+
+        <a href="/logout"
+           class="student-logout-link">
+
+            <span>↪</span>
+            Logout
+
+        </a>
+
+    </div>
 
 </nav>
 
 
 
+<!-- =====================================================
+     MAIN
+====================================================== -->
 
+<main class="available-quizzes-container">
 
-<div class="dashboard-container">
 
+    <!-- =================================================
+         PAGE HEADER
+    ================================================== -->
 
+    <section class="available-quizzes-hero">
 
-<div class="welcome-box">
+        <div class="available-hero-content">
 
+            <div class="available-page-badge">
 
-<h1>
-📚 Available Quizzes
-</h1>
+                <span>✦</span>
+                ASSESSMENT LIBRARY
 
+            </div>
 
-<p>
-Choose a quiz and test your knowledge
-</p>
 
+            <h1>
+                Available Quizzes
+            </h1>
 
-</div>
 
+            <p>
+                Choose an assessment, challenge your knowledge
+                and discover how much you've learned.
+            </p>
 
+        </div>
 
 
+        <div class="available-hero-icon">
+            📚
+        </div>
 
+    </section>
 
-<div class="quiz-grid">
 
 
+    <!-- =================================================
+         SECTION HEADER
+    ================================================== -->
 
-{% for quiz in quizzes %}
+    <div class="quiz-library-heading">
 
+        <div>
 
+            <span>
+                READY WHEN YOU ARE
+            </span>
 
+            <h2>
+                Choose your assessment
+            </h2>
 
-<div class="quiz-card">
+        </div>
 
 
+        <div class="quiz-count-badge">
 
-<div class="quiz-icon">
+            <span>
+                {{ quizzes|length }}
+            </span>
 
-📝
+            <small>
+                Quiz{% if quizzes|length != 1 %}zes{% endif %}
+            </small>
 
-</div>
+        </div>
 
+    </div>
 
 
-<h2>
 
-{{quiz.title}}
+    <!-- =================================================
+         QUIZ GRID
+    ================================================== -->
 
-</h2>
+    <section class="premium-quiz-grid">
 
 
+        {% for quiz in quizzes %}
 
 
-<p>
+        <article class="premium-quiz-card">
 
-Total Questions:
-<strong>
-{{quiz.total_questions}}
-</strong>
 
-</p>
+            <!-- CARD TOP -->
 
+            <div class="premium-quiz-card-top">
 
+                <div class="premium-quiz-icon">
+                    📝
+                </div>
 
 
+                <span class="quiz-status">
 
-<a href="/start_quiz/{{ quiz.quiz_id }}">
+                    <i></i>
+                    Available
 
+                </span>
 
-<button>
+            </div>
 
-Start Quiz 🚀
 
-</button>
 
+            <!-- QUIZ CONTENT -->
 
-</a>
+            <div class="premium-quiz-content">
 
+                <span class="premium-quiz-label">
+                    ASSESSMENT
+                </span>
 
 
+                <h2>
+                    {{ quiz.title }}
+                </h2>
 
-</div>
 
+                <p>
+                    Test your understanding and
+                    challenge yourself with this assessment.
+                </p>
 
+            </div>
 
 
 
-{% endfor %}
+            <!-- QUIZ META -->
 
+            <div class="premium-quiz-meta">
 
+                <div>
 
-</div>
+                    <span class="meta-icon">
+                        ▦
+                    </span>
 
+                    <div>
 
+                        <small>
+                            QUESTIONS
+                        </small>
 
+                        <strong>
+                            {{ quiz.total_questions }}
+                        </strong>
 
+                    </div>
 
+                </div>
 
-</div>
 
+                <div>
+
+                    <span class="meta-icon">
+                        ◷
+                    </span>
+
+                    <div>
+
+                        <small>
+                            TYPE
+                        </small>
+
+                        <strong>
+                            MCQ
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- START BUTTON -->
+
+            <a href="/start_quiz/{{ quiz.quiz_id }}"
+               class="start-quiz-button">
+
+                <span>
+                    Start Quiz
+                </span>
+
+                <strong>
+                    →
+                </strong>
+
+            </a>
+
+
+        </article>
+
+
+        {% else %}
+
+
+        <!-- =================================================
+             EMPTY STATE
+        ================================================== -->
+
+        <div class="quiz-empty-state">
+
+            <div class="empty-state-icon">
+                📭
+            </div>
+
+
+            <span>
+                NO ASSESSMENTS AVAILABLE
+            </span>
+
+
+            <h2>
+                No quizzes available right now
+            </h2>
+
+
+            <p>
+                New assessments will appear here when
+                they are published by your teacher.
+            </p>
+
+
+            <a href="/student_dashboard">
+                ← Back to Dashboard
+            </a>
+
+        </div>
+
+
+        {% endfor %}
+
+
+    </section>
+
+
+
+    <!-- =================================================
+         BOTTOM TIP
+    ================================================== -->
+
+    <section class="quiz-library-tip">
+
+        <div class="tip-icon">
+            ✦
+        </div>
+
+
+        <div>
+
+            <span>
+                QUICK TIP
+            </span>
+
+            <h3>
+                Take your time and read every question carefully.
+            </h3>
+
+            <p>
+                Your goal isn't just to finish the quiz —
+                it's to learn something from every attempt.
+            </p>
+
+        </div>
+
+    </section>
+
+
+</main>
+```
 
 </div>
 
 <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
-</body>
 
+</body>
 
 </html>
