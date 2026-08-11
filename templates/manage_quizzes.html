@@ -1,121 +1,305 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
-<title>
-Manage Quizzes
-</title>
 
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Manage Quizzes | AI Quiz System</title>
 
 <link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+      href="{{ url_for('static', filename='css/style.css') }}">
 
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
 
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 </head>
 
-
-<body>
-
-
-<div class="dashboard-page">
+<body class="dashboard-page">
 
 
-<nav class="top-navbar">
+<!-- ================= NAVBAR ================= -->
 
-<h2>
-🧠 AI Quiz System
-</h2>
+<nav class="premium-navbar">
+
+    <div class="navbar-brand">
+
+        <div class="navbar-logo">
+            🧠
+        </div>
+
+        <div class="navbar-brand-text">
+
+            <strong>
+                AI Quiz
+            </strong>
+
+            <span>
+                ASSESSMENT SYSTEM
+            </span>
+
+        </div>
+
+    </div>
 
 
-<div>
+    <div class="navbar-actions">
 
-<a href="/teacher_dashboard">
-🏠 Dashboard
-</a>
+        <a href="/teacher_dashboard"
+           class="navbar-link">
+
+            <span class="navbar-link-icon">
+                🏠
+            </span>
+
+            Dashboard
+
+        </a>
 
 
-<a href="/logout">
-🚪 Logout
-</a>
+        <a href="/logout"
+           class="navbar-link logout-link">
 
-</div>
+            <span class="navbar-link-icon">
+                🚪
+            </span>
+
+            Logout
+
+        </a>
+
+    </div>
 
 </nav>
 
 
 
+<!-- ================= MAIN ================= -->
 
-<div class="dashboard-container">
-
-
-<h1>
-📚 My Created Quizzes
-</h1>
+<main class="manage-page">
 
 
+    <!-- HEADER -->
 
-<div class="quiz-list">
+    <section class="manage-header">
 
+        <div>
 
-{% for quiz in quizzes %}
+            <div class="manage-eyebrow">
+                <span>✦</span>
+                QUIZ MANAGEMENT
+            </div>
 
+            <h1>
+                My Created Quizzes
+            </h1>
 
-<div class="stat-card">
+            <p>
+                Manage your assessments, share quiz access
+                and organize your created quizzes.
+            </p>
 
-
-<h2>
-{{quiz.title}}
-</h2>
-
-
-<p>
-Questions: {{quiz.total_questions}}
-</p>
-
-
-<p>
-Created: {{quiz.created_at}}
-</p>
+        </div>
 
 
-<br>
+        <a href="/create_quiz"
+           class="create-quiz-btn">
+
+            <span>＋</span>
+            Create Quiz
+
+        </a>
+
+    </section>
 
 
-<a href="/show_qr/{{quiz.quiz_id}}"
-class="action-card">
 
-📱 View QR
+    <!-- QUIZ COUNT -->
 
-</a>
+    <div class="quiz-management-summary">
 
+        <div class="summary-icon">
+            📚
+        </div>
 
-<br><br>
+        <div>
 
+            <strong>
+                {{ quizzes|length }}
+            </strong>
 
-<a href="/delete_quiz/{{quiz.quiz_id}}"
-class="delete-btn">
+            <span>
+                Total Quizzes
+            </span>
 
-🗑 Delete
+        </div>
 
-</a>
-
-
-</div>
-
-
-{% endfor %}
-
-
-</div>
+    </div>
 
 
-</div>
+
+    <!-- QUIZ GRID -->
+
+    {% if quizzes %}
+
+    <section class="manage-quiz-grid">
 
 
-</div>
+        {% for quiz in quizzes %}
+
+        <article class="manage-quiz-card">
+
+
+            <div class="manage-card-top">
+
+                <div class="manage-quiz-icon">
+                    📝
+                </div>
+
+                <span class="quiz-status">
+                    ● Active
+                </span>
+
+            </div>
+
+
+            <div class="manage-card-content">
+
+                <h2>
+                    {{ quiz.title }}
+                </h2>
+
+                <div class="quiz-meta">
+
+                    <div class="quiz-meta-item">
+
+                        <span class="meta-icon">
+                            📋
+                        </span>
+
+                        <div>
+
+                            <small>
+                                Questions
+                            </small>
+
+                            <strong>
+                                {{ quiz.total_questions }}
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="quiz-meta-item">
+
+                        <span class="meta-icon">
+                            📅
+                        </span>
+
+                        <div>
+
+                            <small>
+                                Created
+                            </small>
+
+                            <strong>
+                                {{ quiz.created_at }}
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="manage-card-actions">
+
+                <a href="/show_qr/{{ quiz.quiz_id }}"
+                   class="quiz-action primary-action">
+
+                    <span>
+                        📱
+                    </span>
+
+                    View QR
+
+                </a>
+
+
+                <a href="/delete_quiz/{{ quiz.quiz_id }}"
+                   class="quiz-action delete-action">
+
+                    <span>
+                        🗑
+                    </span>
+
+                    Delete
+
+                </a>
+
+            </div>
+
+
+        </article>
+
+        {% endfor %}
+
+
+    </section>
+
+
+    {% else %}
+
+
+    <!-- EMPTY STATE -->
+
+    <section class="manage-empty">
+
+        <div class="manage-empty-icon">
+            📚
+        </div>
+
+        <h2>
+            No quizzes created yet
+        </h2>
+
+        <p>
+            Create your first AI-powered quiz and start
+            assessing your students.
+        </p>
+
+        <a href="/create_quiz"
+           class="create-quiz-btn">
+
+            <span>＋</span>
+            Create Your First Quiz
+
+        </a>
+
+    </section>
+
+
+    {% endif %}
+
+
+</main>
+
+
+{% include 'footer.html' %}
+
+
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
 
 
 </body>

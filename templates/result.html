@@ -1,206 +1,346 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
-<title>
-Quiz Result
-</title>
 
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Quiz Result | AI Quiz Assessment System</title>
 
 <link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+      href="{{ url_for('static', filename='css/style.css') }}">
 
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
 
 
 </head>
 
-
-
 <body>
 
+<div class="dashboard-page result-page">
 
 
-<div class="dashboard-page">
-
-
+<!-- =====================================================
+     NAVBAR
+====================================================== -->
 
 <nav class="top-navbar">
 
+    <div class="student-navbar-brand">
 
-<h2>
-🧠 AI Quiz System
-</h2>
+        <span class="student-brand-icon">
+            🧠
+        </span>
 
+        <div>
+            <strong>AI Quiz</strong>
+            <small>Assessment System</small>
+        </div>
 
-<div>
-
-<a href="/student_dashboard">
-🏠 Dashboard
-</a>
-
-
-<a href="/logout">
-🚪 Logout
-</a>
+    </div>
 
 
-</div>
+    <div class="navbar-actions">
 
+        <a href="/student_dashboard"
+           class="student-nav-link">
+
+            <span>⌂</span>
+            Dashboard
+
+        </a>
+
+
+        <a href="/my_results"
+           class="student-nav-link">
+
+            <span>▣</span>
+            Results
+
+        </a>
+
+
+        <a href="/logout"
+           class="student-logout-link">
+
+            <span>↪</span>
+            Logout
+
+        </a>
+
+    </div>
 
 </nav>
 
 
 
+<!-- =====================================================
+     RESULT MAIN
+====================================================== -->
 
+<main class="result-page-container">
 
 
+    <!-- HEADER -->
 
-<div class="result-container">
+    <section class="result-header">
 
+        <div class="result-header-badge">
+            <span>✦</span>
+            ASSESSMENT COMPLETE
+        </div>
 
 
+        <h1>
+            Quiz Completed!
+        </h1>
 
 
-<div class="result-card">
+        <p>
+            Great job! Here's a summary of your performance.
+        </p>
 
+    </section>
 
 
-<div class="success-icon">
 
-🎉
+    <!-- RESULT CARD -->
 
-</div>
+    <section class="premium-result-card">
 
 
+        <!-- DECORATIVE GLOW -->
 
+        <div class="result-glow"></div>
 
-<h1>
 
-Quiz Completed!
 
-</h1>
+        <!-- SUCCESS ICON -->
 
+        <div class="premium-success-icon">
+            🎉
+        </div>
 
-<p>
 
-Great job! Here is your performance report.
+        <span class="result-complete-label">
+            YOUR PERFORMANCE
+        </span>
 
-</p>
 
 
+        <!-- SCORE -->
 
+        <div class="result-score-section">
 
+            <span>
+                FINAL SCORE
+            </span>
 
-<div class="score-box">
 
+            <div class="result-score">
 
-<h2>
-Your Score
-</h2>
+                <strong>
+                    {{ score }}
+                </strong>
 
+                <small>
+                    / {{ total }}
+                </small>
 
-<h1>
+            </div>
 
-{{score}} / {{total}}
+        </div>
 
-</h1>
 
 
+        <!-- PERCENTAGE -->
 
-</div>
+        <div class="result-percentage-card">
 
+            <div class="percentage-ring">
 
+                <div>
 
+                    <strong>
+                        {{ percentage }}%
+                    </strong>
 
+                    <span>
+                        Accuracy
+                    </span>
 
+                </div>
 
-<div class="percentage-box">
+            </div>
 
 
-<h2>
+            <div class="percentage-info">
 
-{{percentage}}%
+                <span>
+                    ACCURACY SCORE
+                </span>
 
-</h2>
+                <h2>
+                    {{ percentage }}%
+                </h2>
 
+                <p>
+                    Your overall accuracy in this assessment.
+                </p>
 
-<p>
-Accuracy Score
-</p>
+            </div>
 
+        </div>
 
-</div>
 
 
+        <!-- PERFORMANCE MESSAGE -->
 
+        <div class="performance-message">
 
+            {% if percentage >= 80 %}
 
+                <div class="performance-icon excellent-icon">
+                    🌟
+                </div>
 
+                <div>
 
-{% if percentage >= 80 %}
+                    <span>
+                        OUTSTANDING
+                    </span>
 
+                    <h2>
+                        Excellent Performance!
+                    </h2>
 
-<h2 class="excellent">
+                    <p>
+                        Excellent work! Your understanding
+                        of the topic is impressive.
+                    </p>
 
-🌟 Excellent Performance!
+                </div>
 
-</h2>
 
+            {% elif percentage >= 50 %}
 
-{% elif percentage >= 50 %}
+                <div class="performance-icon good-icon">
+                    👍
+                </div>
 
+                <div>
 
-<h2 class="good">
+                    <span>
+                        GOOD PROGRESS
+                    </span>
 
-👍 Good Performance!
+                    <h2>
+                        Good Performance!
+                    </h2>
 
-</h2>
+                    <p>
+                        Nice work! Keep practicing and
+                        push your score even higher.
+                    </p>
 
+                </div>
 
-{% else %}
 
+            {% else %}
 
-<h2 class="need-improve">
+                <div class="performance-icon improve-icon">
+                    📚
+                </div>
 
-📚 Need More Practice
+                <div>
 
-</h2>
+                    <span>
+                        KEEP LEARNING
+                    </span>
 
+                    <h2>
+                        Need More Practice
+                    </h2>
 
-{% endif %}
+                    <p>
+                        Don't worry. Review the concepts,
+                        practice again and keep improving.
+                    </p>
 
+                </div>
 
+            {% endif %}
 
+        </div>
 
 
-<a href="/student_dashboard">
 
+        <!-- ACTIONS -->
 
-<button>
+        <div class="result-actions">
 
-Back To Dashboard
+            <a href="/student_dashboard"
+               class="result-primary-button">
 
-</button>
+                <span>
+                    Back to Dashboard
+                </span>
 
+                <strong>
+                    →
+                </strong>
 
-</a>
+            </a>
 
 
+            <a href="/available_quizzes"
+               class="result-secondary-button">
 
+                Take Another Quiz
 
+            </a>
 
-</div>
+        </div>
 
 
+    </section>
 
 
 
+    <!-- MOTIVATION -->
 
-</div>
+    <section class="result-motivation">
 
+        <div class="motivation-icon">
+            ✦
+        </div>
+
+
+        <div>
+
+            <span>
+                KEEP MOVING FORWARD
+            </span>
+
+            <h3>
+                Every attempt makes you better.
+            </h3>
+
+            <p>
+                Learn from every question and continue
+                building your knowledge.
+            </p>
+
+        </div>
+
+    </section>
+
+
+</main>
 
 
 </div>
@@ -208,7 +348,7 @@ Back To Dashboard
 {% include 'footer.html' %}
 
 <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
-</body>
 
+</body>
 
 </html>

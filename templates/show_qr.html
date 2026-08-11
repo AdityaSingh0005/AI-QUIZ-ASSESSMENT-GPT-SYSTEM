@@ -1,134 +1,252 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
-<title>
-QR Code
-</title>
 
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Quiz QR Code | AI Quiz Assessment System</title>
 
 <link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+      href="{{ url_for('static', filename='css/style.css') }}">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
 
 
 </head>
 
-
 <body>
 
+<div class="dashboard-page qr-page">
 
 
-<div class="dashboard-page">
-
-
+<!-- =====================================================
+     NAVBAR
+====================================================== -->
 
 <nav class="top-navbar">
 
+    <div class="qr-navbar-brand">
 
-<h2>
+        <span class="qr-brand-icon">
+            🧠
+        </span>
 
-🧠 AI Quiz System
+        <div>
+            <strong>AI Quiz</strong>
+            <small>Assessment System</small>
+        </div>
 
-</h2>
+    </div>
 
 
-<a href="/teacher_dashboard">
+    <div class="navbar-actions">
 
-🏠 Dashboard
+        <a href="/teacher_dashboard"
+           class="qr-dashboard-link">
 
-</a>
+            <span>⌂</span>
+            Dashboard
 
+        </a>
+
+
+        <a href="/logout"
+           class="qr-logout-link">
+
+            <span>↪</span>
+            Logout
+
+        </a>
+
+    </div>
 
 </nav>
 
 
 
+<!-- =====================================================
+     MAIN QR AREA
+====================================================== -->
+
+<main class="qr-page-container">
+
+
+    <!-- HEADER -->
+
+    <section class="qr-page-header">
+
+        <div class="qr-status-badge">
+
+            <span class="qr-status-dot"></span>
+
+            QUIZ READY
+
+        </div>
+
+
+        <h1>
+            Share Your Quiz
+        </h1>
+
+
+        <p>
+            Students can scan the QR code below to instantly
+            access the assessment.
+        </p>
+
+    </section>
 
 
 
+    <!-- QR CARD -->
 
-<div class="qr-container">
-
-
-
+    <section class="premium-qr-card">
 
 
-<div class="qr-card">
+        <div class="qr-card-top">
+
+            <div class="premium-qr-icon">
+                📱
+            </div>
+
+
+            <div>
+
+                <span>
+                    QUIZ QR CODE
+                </span>
+
+                <h2>
+                    {{ quiz.title }}
+                </h2>
+
+            </div>
+
+        </div>
 
 
 
-<div class="qr-icon">
+        <!-- QR CODE -->
 
-📱
+        <div class="qr-display">
+
+            <div class="qr-image-frame">
+
+                <img src="/{{ quiz.qr_code_path }}"
+                     class="qr-image"
+                     alt="QR code for {{ quiz.title }}">
+
+            </div>
+
+        </div>
+
+
+
+        <!-- INSTRUCTION -->
+
+        <div class="qr-instruction">
+
+            <div class="instruction-number">
+                1
+            </div>
+
+            <div>
+
+                <strong>
+                    Open your phone camera
+                </strong>
+
+                <p>
+                    Point it towards the QR code above.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="qr-instruction">
+
+            <div class="instruction-number">
+                2
+            </div>
+
+            <div>
+
+                <strong>
+                    Tap the quiz link
+                </strong>
+
+                <p>
+                    The assessment will open automatically.
+                </p>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- DOWNLOAD -->
+
+        <a href="/{{ quiz.qr_code_path }}"
+           download
+           class="qr-download-button">
+
+            <span>
+                ↓
+            </span>
+
+            Download QR Code
+
+        </a>
+
+
+    </section>
+
+
+
+    <!-- SHARE TIP -->
+
+    <section class="qr-share-tip">
+
+        <div class="qr-tip-icon">
+            ✦
+        </div>
+
+
+        <div>
+
+            <span>
+                QUICK TIP
+            </span>
+
+            <h3>
+                Display this QR code on your screen
+            </h3>
+
+            <p>
+                Students can scan it directly from the classroom
+                projector, laptop or another phone.
+            </p>
+
+        </div>
+
+    </section>
+
+
+</main>
+
 
 </div>
-
-
-
-<h1>
-
-{{quiz.title}}
-
-</h1>
-
-
-<p>
-
-Scan this QR Code to start quiz
-
-</p>
-
-
-
-
-
-
-<img src="/{{quiz.qr_code_path}}"
-class="qr-image">
-
-
-
-
-
-
-<br><br>
-
-
-
-<a href="/{{quiz.qr_code_path}}" download>
-
-
-<button>
-
-⬇ Download QR
-
-</button>
-
-
-</a>
-
-
-
-
-</div>
-
-
-
-
-
-
-</div>
-
-
-
-
-</div>
-
 
 <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
 
 </body>
-
 
 </html>

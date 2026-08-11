@@ -1,409 +1,375 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
-<title>
-Student Analytics
-</title>
 
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Student Analytics | AI Quiz System</title>
 
 <link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+      href="{{ url_for('static', filename='css/style.css') }}">
 
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet">
 
 
 </head>
 
-
-
 <body>
-
-
 
 <div class="dashboard-page">
 
 
+<!-- ================= NAVBAR ================= -->
 
 <nav class="top-navbar">
 
+    <h2>
+        🧠 AI Quiz System
+    </h2>
 
-<h2>
+    <div>
 
-🧠 AI Quiz System
+        <a href="/teacher_dashboard">
+            🏠 Dashboard
+        </a>
 
-</h2>
+        <a href="/logout">
+            🚪 Logout
+        </a>
 
-
-
-<div>
-
-
-<a href="/teacher_dashboard">
-
-🏠 Dashboard
-
-</a>
-
-
-
-<a href="/logout">
-
-🚪 Logout
-
-</a>
-
-
-</div>
-
+    </div>
 
 </nav>
 
 
+<!-- ================= MAIN CONTENT ================= -->
+
+<main class="analytics-container">
+
+    <!-- HERO -->
+
+    <section class="analytics-hero">
+
+        <div class="analytics-hero-content">
+
+            <div class="analytics-hero-icon">
+                📊
+            </div>
+
+            <div>
+
+                <span class="analytics-badge">
+                    PERFORMANCE INSIGHTS
+                </span>
+
+                <h1>
+                    Student Analytics
+                </h1>
+
+                <p>
+                    Monitor student performance, quiz attempts
+                    and assessment results from one place.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
 
 
+    <!-- ================= STATISTICS ================= -->
+
+    <section class="analytics-stats">
+
+        <div class="analytics-stat-card">
+
+            <div class="analytics-stat-icon">
+                👨‍🎓
+            </div>
+
+            <div>
+
+                <span>
+                    STUDENTS
+                </span>
+
+                <h3>
+                    Performance
+                </h3>
+
+                <p>
+                    Track student progress
+                </p>
+
+            </div>
+
+        </div>
 
 
+        <div class="analytics-stat-card">
 
-<div class="dashboard-container">
+            <div class="analytics-stat-icon">
+                📝
+            </div>
+
+            <div>
+
+                <span>
+                    QUIZ ACTIVITY
+                </span>
+
+                <h3>
+                    Quiz Attempts
+                </h3>
+
+                <p>
+                    Monitor assessment records
+                </p>
+
+            </div>
+
+        </div>
 
 
+        <div class="analytics-stat-card">
+
+            <div class="analytics-stat-icon">
+                📈
+            </div>
+
+            <div>
+
+                <span>
+                    REPORTS
+                </span>
+
+                <h3>
+                    Detailed Analysis
+                </h3>
+
+                <p>
+                    Review overall performance
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
 
 
+    <!-- ================= PERFORMANCE HEADER ================= -->
+
+    <section class="analytics-section-heading">
+
+        <div>
+
+            <span>
+                ASSESSMENT OVERVIEW
+            </span>
+
+            <h2>
+                Student Performance Report
+            </h2>
+
+            <p>
+                Review quiz scores and performance of your students.
+            </p>
+
+        </div>
+
+        <div class="analytics-live-badge">
+            ● Live Data
+        </div>
+
+    </section>
 
 
-<div class="welcome-box">
+    <!-- ================= PERFORMANCE TABLE ================= -->
+
+    <section class="analytics-table-card">
+
+        <div class="analytics-table-wrapper">
+
+            <table class="analytics-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Student
+                        </th>
+
+                        <th>
+                            Roll Number
+                        </th>
+
+                        <th>
+                            Quiz
+                        </th>
+
+                        <th>
+                            Score
+                        </th>
+
+                        <th>
+                            Performance
+                        </th>
+
+                        <th>
+                            Submitted
+                        </th>
+
+                    </tr>
+
+                </thead>
 
 
-<h1>
+                <tbody>
 
-📊 Student Analytics
+                {% for r in results %}
 
-</h1>
+                    <tr>
+
+                        <td>
+
+                            <div class="student-cell">
+
+                                <div class="student-avatar">
+                                    {{ r.full_name[0] | upper }}
+                                </div>
+
+                                <div>
+
+                                    <strong>
+                                        {{ r.full_name }}
+                                    </strong>
+
+                                    <small>
+                                        Student
+                                    </small>
+
+                                </div>
+
+                            </div>
+
+                        </td>
 
 
-<p>
+                        <td>
 
-Monitor student performance and quiz results.
+                            <span class="roll-number">
+                                {{ r.roll_number }}
+                            </span>
 
-</p>
+                        </td>
+
+
+                        <td>
+
+                            <span class="quiz-name">
+                                {{ r.title }}
+                            </span>
+
+                        </td>
+
+
+                        <td>
+
+                            <strong class="score-value">
+                                {{ r.score }}
+                            </strong>
+
+                        </td>
+
+
+                        <td>
+
+                            {% if r.percentage >= 80 %}
+
+                                <span class="analytics-performance excellent">
+                                    <span>●</span>
+                                    {{ r.percentage }}%
+                                </span>
+
+                            {% elif r.percentage >= 50 %}
+
+                                <span class="analytics-performance good">
+                                    <span>●</span>
+                                    {{ r.percentage }}%
+                                </span>
+
+                            {% else %}
+
+                                <span class="analytics-performance poor">
+                                    <span>●</span>
+                                    {{ r.percentage }}%
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            <span class="submitted-date">
+                                {{ r.submitted_at }}
+                            </span>
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        {% if not results %}
+
+            <div class="analytics-empty">
+
+                <div class="analytics-empty-icon">
+                    📊
+                </div>
+
+                <h3>
+                    No Performance Data Yet
+                </h3>
+
+                <p>
+                    Student quiz attempts will appear here
+                    once they complete an assessment.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
+</main>
 
 
 </div>
-
-
-
-
-
-
-
-
-
-<div class="stats">
-
-
-
-<div class="stat-card">
-
-
-<h2>
-👨‍🎓
-</h2>
-
-
-<h3>
-
-Students
-
-</h3>
-
-
-<p>
-
-Performance Tracking
-
-</p>
-
-
-</div>
-
-
-
-
-
-
-<div class="stat-card">
-
-
-<h2>
-📝
-</h2>
-
-
-<h3>
-
-Quiz Attempts
-
-</h3>
-
-
-<p>
-
-Assessment Records
-
-</p>
-
-
-</div>
-
-
-
-
-
-
-
-<div class="stat-card">
-
-
-<h2>
-📈
-</h2>
-
-
-<h3>
-
-Reports
-
-</h3>
-
-
-<p>
-
-Detailed Analysis
-
-</p>
-
-
-</div>
-
-
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<div class="result-history-card">
-
-
-
-<h2>
-
-Student Performance Report
-
-</h2>
-
-
-
-
-
-
-<table>
-
-
-<tr>
-
-
-<th>
-Student Name
-</th>
-
-
-<th>
-Roll Number
-</th>
-
-
-<th>
-Quiz
-</th>
-
-
-<th>
-Score
-</th>
-
-
-<th>
-Percentage
-</th>
-
-
-<th>
-Date
-</th>
-
-
-</tr>
-
-
-
-
-
-
-
-{% for r in results %}
-
-
-
-
-<tr>
-
-
-<td>
-
-{{r.full_name}}
-
-</td>
-
-
-
-<td>
-
-{{r.roll_number}}
-
-</td>
-
-
-
-<td>
-
-{{r.title}}
-
-</td>
-
-
-
-
-<td>
-
-{{r.score}}
-
-</td>
-
-
-
-
-
-<td>
-
-
-
-{% if r.percentage >= 80 %}
-
-
-<span class="badge excellent-badge">
-
-{{r.percentage}}%
-
-</span>
-
-
-
-
-{% elif r.percentage >= 50 %}
-
-
-
-<span class="badge good-badge">
-
-{{r.percentage}}%
-
-</span>
-
-
-
-
-{% else %}
-
-
-
-<span class="badge poor-badge">
-
-{{r.percentage}}%
-
-</span>
-
-
-
-{% endif %}
-
-
-
-
-
-</td>
-
-
-
-
-
-<td>
-
-{{r.submitted_at}}
-
-</td>
-
-
-
-</tr>
-
-
-
-
-
-{% endfor %}
-
-
-
-
-
-</table>
-
-
-
-
-
-
-</div>
-
-
-
-
-
-
-</div>
-
-
-
-
-
-</div>
-
 
 {% include 'footer.html' %}
 
 <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
-</body>
 
+</body>
 
 </html>

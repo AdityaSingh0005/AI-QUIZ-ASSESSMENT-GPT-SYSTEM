@@ -1,15 +1,21 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
 
-<title>Leaderboard</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Leaderboard | AI Quiz System</title>
 
 <link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+      href="{{ url_for('static', filename='css/style.css') }}">
 
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
+
 
 </head>
 
@@ -17,93 +23,289 @@ href="{{ url_for('static', filename='css/style.css') }}">
 
 <div class="dashboard-page">
 
+
+<!-- ================= NAVBAR ================= -->
+
 <nav class="top-navbar">
 
-<h2>🧠 AI Quiz System</h2>
+    <h2>
+        🧠 AI Quiz System
+    </h2>
 
-<div>
+    <div class="navbar-actions">
 
-<a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/student_dashboard">
+            🏠 Dashboard
+        </a>
 
-<a href="/student_profile">👤 Profile</a>
+        <a href="/student_profile">
+            👤 Profile
+        </a>
 
-<a href="/logout">🚪 Logout</a>
+        <a href="/logout">
+            🚪 Logout
+        </a>
 
-</div>
+    </div>
 
 </nav>
 
-<div class="dashboard-container">
 
-<div class="welcome-box">
+<!-- ================= MAIN ================= -->
 
-<h1>🏆 Student Leaderboard</h1>
+<main class="dashboard-container">
 
-<p>Top performers based on average quiz percentage.</p>
 
-</div>
+    <!-- HERO -->
 
-<div class="leaderboard-card">
+    <section class="welcome-box leaderboard-hero">
 
-<table>
+        <div>
 
-<tr>
+            <div class="hero-badge">
+                🏆 Performance Ranking
+            </div>
 
-<th>Rank</th>
-<th>Student Name</th>
-<th>Roll Number</th>
-<th>Average %</th>
-<th>Total Attempts</th>
+            <h1>
+                Student Leaderboard
+            </h1>
 
-</tr>
+            <p>
+                See how you rank among your fellow students
+                based on average quiz performance.
+            </p>
 
-{% for student in leaderboard %}
+        </div>
 
-<tr>
+        <div class="leaderboard-trophy">
+            🏆
+        </div>
 
-<td>
+    </section>
 
-{% if loop.index == 1 %}
-🥇
-{% elif loop.index == 2 %}
-🥈
-{% elif loop.index == 3 %}
-🥉
-{% else %}
-{{ loop.index }}
-{% endif %}
 
-</td>
+    <!-- ================= LEADERBOARD CARD ================= -->
 
-<td>{{ student.full_name }}</td>
+    <section class="leaderboard-card premium-table-card">
 
-<td>{{ student.roll_number }}</td>
+        <div class="table-header">
 
-<td>
+            <div>
 
-<span class="badge excellent-badge">
+                <h2>
+                    Top Performers
+                </h2>
 
-{{ student.average_percentage }}%
+                <p>
+                    Rankings are based on average quiz percentage.
+                </p>
 
-</span>
+            </div>
 
-</td>
+            <div class="ranking-icon">
+                📊
+            </div>
 
-<td>{{ student.total_attempts }}</td>
+        </div>
 
-</tr>
 
-{% endfor %}
+        <div class="table-wrapper">
 
-</table>
+            <table>
 
-</div>
+                <thead>
 
-</div>
+                    <tr>
+
+                        <th>
+                            Rank
+                        </th>
+
+                        <th>
+                            Student
+                        </th>
+
+                        <th>
+                            Roll Number
+                        </th>
+
+                        <th>
+                            Average Score
+                        </th>
+
+                        <th>
+                            Attempts
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                {% for student in leaderboard %}
+
+                    <tr class="
+                        {% if loop.index <= 3 %}
+                            top-rank
+                        {% endif %}
+                    ">
+
+                        <!-- RANK -->
+
+                        <td>
+
+                            {% if loop.index == 1 %}
+
+                                <span class="rank-medal gold">
+                                    🥇
+                                </span>
+
+                            {% elif loop.index == 2 %}
+
+                                <span class="rank-medal silver">
+                                    🥈
+                                </span>
+
+                            {% elif loop.index == 3 %}
+
+                                <span class="rank-medal bronze">
+                                    🥉
+                                </span>
+
+                            {% else %}
+
+                                <span class="rank-number">
+                                    {{ loop.index }}
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- STUDENT -->
+
+                        <td>
+
+                            <div class="student-cell">
+
+                                <div class="student-avatar">
+
+                                    {{ student.full_name[0] | upper }}
+
+                                </div>
+
+                                <div>
+
+                                    <strong>
+                                        {{ student.full_name }}
+                                    </strong>
+
+                                    <small>
+                                        Student
+                                    </small>
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+
+                        <!-- ROLL NUMBER -->
+
+                        <td>
+
+                            <span class="roll-number">
+                                {{ student.roll_number }}
+                            </span>
+
+                        </td>
+
+
+                        <!-- SCORE -->
+
+                        <td>
+
+                            {% if student.average_percentage >= 80 %}
+
+                                <span class="score-badge score-excellent">
+                                    {{ student.average_percentage }}%
+                                </span>
+
+                            {% elif student.average_percentage >= 50 %}
+
+                                <span class="score-badge score-good">
+                                    {{ student.average_percentage }}%
+                                </span>
+
+                            {% else %}
+
+                                <span class="score-badge score-low">
+                                    {{ student.average_percentage }}%
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- ATTEMPTS -->
+
+                        <td>
+
+                            <span class="attempt-count">
+
+                                {{ student.total_attempts }}
+
+                            </span>
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        {% if not leaderboard %}
+
+            <div class="empty-leaderboard">
+
+                <div>
+                    📊
+                </div>
+
+                <h3>
+                    No rankings yet
+                </h3>
+
+                <p>
+                    Students need to complete quizzes before
+                    rankings appear here.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+</main>
+
 
 </div>
 
 <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+
 </body>
 
 </html>

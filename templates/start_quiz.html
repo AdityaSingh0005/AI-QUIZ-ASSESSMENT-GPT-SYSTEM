@@ -1,48 +1,270 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
-<title>Start Quiz</title>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Start Quiz | AI Quiz Assessment System</title>
+
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
+
+
 </head>
 
 <body>
 
-<h1>Quiz Questions</h1>
+<div class="dashboard-page quiz-attempt-page">
 
 
-{% for q in questions %}
+<!-- =====================================================
+     NAVBAR
+====================================================== -->
 
-<hr>
+<nav class="top-navbar">
 
-<h3>
-{{ loop.index }}. {{ q.question }}
-</h3>
+    <div class="quiz-navbar-brand">
 
+        <span class="quiz-brand-icon">
+            🧠
+        </span>
 
-<input type="radio">
-{{ q.option_a }}
+        <div>
 
-<br>
+            <strong>
+                AI Quiz
+            </strong>
 
-<input type="radio">
-{{ q.option_b }}
+            <small>
+                Assessment System
+            </small>
 
-<br>
+        </div>
 
-<input type="radio">
-{{ q.option_c }}
-
-<br>
-
-<input type="radio">
-{{ q.option_d }}
-
-<br>
+    </div>
 
 
-{% endfor %}
+    <div class="quiz-nav-status">
+
+        <span class="live-dot"></span>
+
+        Assessment Mode
+
+    </div>
+
+</nav>
+
+
+
+<!-- =====================================================
+     QUIZ HEADER
+====================================================== -->
+
+<main class="quiz-attempt-container">
+
+
+    <section class="quiz-attempt-header">
+
+        <div class="quiz-header-icon">
+            📝
+        </div>
+
+
+        <div>
+
+            <span class="quiz-header-label">
+                KNOWLEDGE ASSESSMENT
+            </span>
+
+            <h1>
+                Quiz Questions
+            </h1>
+
+            <p>
+                Read each question carefully and select
+                the answer you think is correct.
+            </p>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =================================================
+         QUESTIONS
+    ================================================== -->
+
+    <section class="questions-list">
+
+
+        {% for q in questions %}
+
+        <article class="premium-question-card">
+
+
+            <!-- QUESTION HEADER -->
+
+            <div class="question-top">
+
+                <span class="question-number">
+                    {{ "%02d"|format(loop.index) }}
+                </span>
+
+
+                <span class="question-label">
+                    QUESTION {{ loop.index }}
+                </span>
+
+            </div>
+
+
+
+            <!-- QUESTION -->
+
+            <h2 class="premium-question-text">
+                {{ q.question }}
+            </h2>
+
+
+
+            <!-- OPTIONS -->
+
+            <div class="premium-options">
+
+
+                <label class="premium-option">
+
+                    <input type="radio"
+                           name="question_{{ loop.index }}"
+                           value="A">
+
+                    <span class="option-letter">
+                        A
+                    </span>
+
+                    <span class="option-text">
+                        {{ q.option_a }}
+                    </span>
+
+                    <span class="option-check">
+                        ✓
+                    </span>
+
+                </label>
+
+
+
+                <label class="premium-option">
+
+                    <input type="radio"
+                           name="question_{{ loop.index }}"
+                           value="B">
+
+                    <span class="option-letter">
+                        B
+                    </span>
+
+                    <span class="option-text">
+                        {{ q.option_b }}
+                    </span>
+
+                    <span class="option-check">
+                        ✓
+                    </span>
+
+                </label>
+
+
+
+                <label class="premium-option">
+
+                    <input type="radio"
+                           name="question_{{ loop.index }}"
+                           value="C">
+
+                    <span class="option-letter">
+                        C
+                    </span>
+
+                    <span class="option-text">
+                        {{ q.option_c }}
+                    </span>
+
+                    <span class="option-check">
+                        ✓
+                    </span>
+
+                </label>
+
+
+
+                <label class="premium-option">
+
+                    <input type="radio"
+                           name="question_{{ loop.index }}"
+                           value="D">
+
+                    <span class="option-letter">
+                        D
+                    </span>
+
+                    <span class="option-text">
+                        {{ q.option_d }}
+                    </span>
+
+                    <span class="option-check">
+                        ✓
+                    </span>
+
+                </label>
+
+
+            </div>
+
+
+        </article>
+
+
+        {% endfor %}
+
+
+    </section>
+
+
+
+    <!-- =================================================
+         BOTTOM NOTE
+    ================================================== -->
+
+    <div class="quiz-bottom-note">
+
+        <span>
+            ✦
+        </span>
+
+        <p>
+            Take your time and review each question
+            before submitting your answers.
+        </p>
+
+    </div>
+
+
+</main>
+
+
+</div>
 
 <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+
 </body>
 
 </html>

@@ -1,263 +1,303 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
 
-<title>
-My Performance
-</title>
+<meta charset="UTF-8">
 
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>My Performance | AI Quiz System</title>
 
 <link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+      href="{{ url_for('static', filename='css/style.css') }}">
 
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
 
 
 </head>
 
+<body class="dashboard-page">
 
 
-<body>
+<!-- ================= NAVBAR ================= -->
+
+<nav class="premium-navbar">
+
+    <div class="navbar-brand">
+
+        <div class="navbar-logo">
+            🧠
+        </div>
+
+        <div class="navbar-brand-text">
+
+            <strong>
+                AI Quiz
+            </strong>
+
+            <span>
+                ASSESSMENT SYSTEM
+            </span>
+
+        </div>
+
+    </div>
 
 
+    <div class="navbar-actions">
 
-<div class="dashboard-page">
+        <a href="/student_dashboard"
+           class="navbar-link">
 
+            <span class="navbar-link-icon">
+                🏠
+            </span>
 
+            Dashboard
 
-<nav class="top-navbar">
-
-
-<h2>
-🧠 AI Quiz System
-</h2>
-
-
-
-<div>
-
-<a href="/student_dashboard">
-🏠 Dashboard
-</a>
+        </a>
 
 
-<a href="/logout">
-🚪 Logout
-</a>
+        <a href="/logout"
+           class="navbar-link logout-link">
 
+            <span class="navbar-link-icon">
+                🚪
+            </span>
 
-</div>
+            Logout
 
+        </a>
+
+    </div>
 
 </nav>
 
 
+<!-- ================= MAIN ================= -->
 
+<main class="performance-page">
 
+    <!-- HERO -->
 
+    <section class="performance-hero">
 
+        <div>
 
-<div class="dashboard-container">
+            <div class="performance-eyebrow">
+                <span>✦</span>
+                PERFORMANCE CENTER
+            </div>
 
+            <h1>
+                My Performance
+            </h1>
 
+            <p>
+                Track your quiz history, monitor your progress
+                and keep improving your skills.
+            </p>
 
+        </div>
 
 
-<div class="welcome-box">
+        <div class="performance-hero-icon">
+            📊
+        </div>
 
+    </section>
 
-<h1>
 
-📊 My Performance
+    <!-- ================= HISTORY ================= -->
 
-</h1>
+    <section class="performance-card">
 
+        <div class="performance-card-header">
 
-<p>
+            <div>
 
-Track your quiz progress and improve your skills.
+                <h2>
+                    Quiz History
+                </h2>
 
-</p>
+                <p>
+                    Your recently completed assessments
+                </p>
 
+            </div>
 
-</div>
+            <div class="history-icon">
+                📈
+            </div>
 
+        </div>
 
 
+        {% if results %}
 
+        <div class="performance-table-wrapper">
 
+            <table class="performance-table">
 
+                <thead>
 
+                    <tr>
 
-<div class="result-history-card">
+                        <th>
+                            Quiz
+                        </th>
 
+                        <th>
+                            Score
+                        </th>
 
+                        <th>
+                            Performance
+                        </th>
 
+                        <th>
+                            Date
+                        </th>
 
+                    </tr>
 
-<h2>
+                </thead>
 
-Quiz History
 
-</h2>
+                <tbody>
 
+                    {% for r in results %}
 
+                    <tr>
 
+                        <td>
 
+                            <div class="quiz-name-cell">
 
-<table>
+                                <div class="quiz-history-icon">
+                                    📝
+                                </div>
 
+                                <div>
 
-<tr>
+                                    <strong>
+                                        {{ r.title }}
+                                    </strong>
 
+                                    <span>
+                                        Assessment
+                                    </span>
 
-<th>
-Quiz Name
-</th>
+                                </div>
 
+                            </div>
 
-<th>
-Score
-</th>
+                        </td>
 
 
-<th>
-Percentage
-</th>
+                        <td>
 
+                            <span class="score-value">
+                                {{ r.score }}
+                            </span>
 
-<th>
-Date
-</th>
+                        </td>
 
 
-</tr>
+                        <td>
 
+                            {% if r.percentage >= 80 %}
 
+                            <span class="performance-badge excellent-badge">
+                                <span>✦</span>
+                                {{ r.percentage }}%
+                            </span>
 
+                            {% elif r.percentage >= 50 %}
 
+                            <span class="performance-badge good-badge">
+                                <span>✓</span>
+                                {{ r.percentage }}%
+                            </span>
 
+                            {% else %}
 
-{% for r in results %}
+                            <span class="performance-badge poor-badge">
+                                <span>↗</span>
+                                {{ r.percentage }}%
+                            </span>
 
+                            {% endif %}
 
+                        </td>
 
-<tr>
 
+                        <td>
 
-<td>
+                            <span class="result-date">
+                                {{ r.submitted_at }}
+                            </span>
 
-{{r.title}}
+                        </td>
 
-</td>
+                    </tr>
 
+                    {% endfor %}
 
+                </tbody>
 
+            </table>
 
-<td>
+        </div>
 
-{{r.score}}
+        {% else %}
 
-</td>
+        <!-- EMPTY STATE -->
 
+        <div class="performance-empty">
 
+            <div class="empty-icon">
+                📚
+            </div>
 
+            <h3>
+                No quiz attempts yet
+            </h3>
 
+            <p>
+                Complete your first quiz and your performance
+                will appear here.
+            </p>
 
-<td>
+            <a href="/available_quizzes"
+               class="empty-action">
 
+                Explore Quizzes
+                <span>→</span>
 
-{% if r.percentage >= 80 %}
+            </a>
 
-<span class="badge excellent-badge">
+        </div>
 
-{{r.percentage}}%
+        {% endif %}
 
-</span>
+    </section>
 
 
+</main>
 
-{% elif r.percentage >= 50 %}
-
-
-<span class="badge good-badge">
-
-{{r.percentage}}%
-
-</span>
-
-
-
-
-{% else %}
-
-
-<span class="badge poor-badge">
-
-{{r.percentage}}%
-
-</span>
-
-
-
-{% endif %}
-
-
-
-</td>
-
-
-
-
-<td>
-
-{{r.submitted_at}}
-
-</td>
-
-
-
-
-</tr>
-
-
-
-
-
-{% endfor %}
-
-
-
-
-
-</table>
-
-
-
-
-
-
-</div>
-
-
-
-
-
-
-</div>
-
-
-
-
-</div>
 
 {% include 'footer.html' %}
 
-<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
-</body>
 
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+
+
+</body>
 
 </html>

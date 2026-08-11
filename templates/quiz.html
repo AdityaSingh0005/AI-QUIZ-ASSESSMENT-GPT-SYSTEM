@@ -1,210 +1,370 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
 <title>
-Attempt Quiz
+    Attempt Quiz | AI Quiz Assessment System
 </title>
 
-
 <link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+      href="{{ url_for('static', filename='css/style.css') }}">
 
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
 
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 </head>
 
-
-<body>
-
+<body class="attempt-page">
 
 <div class="dashboard-page">
 
 
-<nav class="top-navbar">
+<!-- =====================================================
+     NAVBAR
+====================================================== -->
+
+<nav class="top-navbar quiz-top-navbar">
+
+    <div class="attempt-brand">
+
+        <div class="attempt-brand-icon">
+            🧠
+        </div>
+
+        <div>
+
+            <strong>
+                AI Quiz
+            </strong>
+
+            <span>
+                Assessment System
+            </span>
+
+        </div>
+
+    </div>
 
 
-<h2>
-🧠 AI Quiz System
-</h2>
+    <div class="attempt-status">
+
+        <span class="status-dot"></span>
+
+        Quiz in Progress
+
+    </div>
 
 
-<div>
+    <div class="attempt-nav-actions">
 
-<a href="/student_dashboard">
-🏠 Dashboard
-</a>
+        <a href="/student_dashboard">
+            🏠 Dashboard
+        </a>
 
-<a href="/logout">
-🚪 Logout
-</a>
+        <a href="/logout">
+            🚪 Logout
+        </a>
 
-
-</div>
-
+    </div>
 
 </nav>
 
 
 
+<!-- =====================================================
+     MAIN
+====================================================== -->
+
+<main class="attempt-container">
 
 
-<div class="quiz-container">
+    <!-- TOP PROGRESS HEADER -->
+
+    <section class="attempt-progress-card">
+
+
+        <div class="attempt-progress-top">
+
+            <div>
+
+                <span class="attempt-eyebrow">
+                    CURRENT QUESTION
+                </span>
+
+                <h1>
+                    Question {{number}}
+                    <span>/ {{total}}</span>
+                </h1>
+
+            </div>
+
+
+            <div class="question-counter">
+
+                {{number}} of {{total}}
+
+            </div>
+
+        </div>
+
+
+        <div class="progress-track">
+
+            <div class="progress-fill"
+                 style="width: {{ (number/total)*100 }}%">
+            </div>
+
+        </div>
+
+
+        <div class="progress-caption">
+
+            <span>
+                Progress
+            </span>
+
+            <strong>
+                {{ ((number/total)*100)|round|int }}%
+            </strong>
+
+        </div>
+
+
+    </section>
 
 
 
-<div class="quiz-card">
+    <!-- =================================================
+         QUESTION CARD
+    ================================================== -->
+
+    <section class="attempt-question-card">
+
+
+        <div class="question-badge">
+
+            <span>
+                ✦
+            </span>
+
+            QUESTION {{number}}
+
+        </div>
+
+
+        <h2 class="attempt-question-text">
+
+            {{question.question}}
+
+        </h2>
+
+
+        <p class="select-hint">
+            Select one answer from the options below.
+        </p>
 
 
 
-<div class="quiz-header">
+        <!-- =================================================
+             OPTIONS
+        ================================================== -->
+
+        <form method="POST"
+              class="attempt-form">
 
 
-<h2>
-Question {{number}} / {{total}}
-</h2>
+            <div class="attempt-options">
 
 
-<div class="progress">
+                <label class="attempt-option">
 
-<div class="progress-bar"
+                    <input
+                        type="radio"
+                        name="answer"
+                        value="A"
+                        required>
 
-style="width: {{ (number/total)*100 }}%">
+                    <span class="attempt-option-letter">
+                        A
+                    </span>
+
+                    <span class="attempt-option-text">
+                        {{question.option_a}}
+                    </span>
+
+                    <span class="attempt-option-check">
+                        ✓
+                    </span>
+
+                </label>
+
+
+
+                <label class="attempt-option">
+
+                    <input
+                        type="radio"
+                        name="answer"
+                        value="B">
+
+                    <span class="attempt-option-letter">
+                        B
+                    </span>
+
+                    <span class="attempt-option-text">
+                        {{question.option_b}}
+                    </span>
+
+                    <span class="attempt-option-check">
+                        ✓
+                    </span>
+
+                </label>
+
+
+
+                <label class="attempt-option">
+
+                    <input
+                        type="radio"
+                        name="answer"
+                        value="C">
+
+                    <span class="attempt-option-letter">
+                        C
+                    </span>
+
+                    <span class="attempt-option-text">
+                        {{question.option_c}}
+                    </span>
+
+                    <span class="attempt-option-check">
+                        ✓
+                    </span>
+
+                </label>
+
+
+
+                <label class="attempt-option">
+
+                    <input
+                        type="radio"
+                        name="answer"
+                        value="D">
+
+                    <span class="attempt-option-letter">
+                        D
+                    </span>
+
+                    <span class="attempt-option-text">
+                        {{question.option_d}}
+                    </span>
+
+                    <span class="attempt-option-check">
+                        ✓
+                    </span>
+
+                </label>
+
+
+            </div>
+
+
+
+            <!-- =================================================
+                 SUBMIT / NEXT
+            ================================================== -->
+
+            <div class="attempt-footer">
+
+
+                <div class="answer-security">
+
+                    <span>
+                        🔒
+                    </span>
+
+                    <p>
+                        Your answer is securely recorded.
+                    </p>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="next-question-btn">
+
+                    {% if number == total %}
+
+                        <span>
+                            Submit Quiz
+                        </span>
+
+                        <span class="btn-icon">
+                            🚀
+                        </span>
+
+                    {% else %}
+
+                        <span>
+                            Next Question
+                        </span>
+
+                        <span class="btn-icon">
+                            →
+                        </span>
+
+                    {% endif %}
+
+                </button>
+
+
+            </div>
+
+
+        </form>
+
+
+    </section>
+
+
+
+    <!-- =================================================
+         HELPER MESSAGE
+    ================================================== -->
+
+    <div class="attempt-helper">
+
+        <span>
+            💡
+        </span>
+
+        <p>
+            Choose the answer carefully before continuing.
+            You won't be able to change your answer after moving ahead.
+        </p>
+
+    </div>
+
+
+</main>
+
 
 </div>
 
-</div>
-
-
-</div>
-
-
-
-
-
-<h1 class="question-text">
-
-{{question.question}}
-
-</h1>
-
-
-
-
-
-<form method="POST">
-
-
-
-<label class="option">
-
-<input 
-type="radio"
-name="answer"
-value="A"
-required>
-
-<span>
-
-{{question.option_a}}
-
-</span>
-
-</label>
-
-
-
-
-
-<label class="option">
-
-<input 
-type="radio"
-name="answer"
-value="B">
-
-<span>
-
-{{question.option_b}}
-
-</span>
-
-</label>
-
-
-
-
-
-<label class="option">
-
-<input 
-type="radio"
-name="answer"
-value="C">
-
-<span>
-
-{{question.option_c}}
-
-</span>
-
-</label>
-
-
-
-
-
-<label class="option">
-
-<input 
-type="radio"
-name="answer"
-value="D">
-
-<span>
-
-{{question.option_d}}
-
-</span>
-
-</label>
-
-
-
-
-
-<button type="submit">
-
-{% if number == total %}
-
-Submit Quiz 🚀
-
-{% else %}
-
-Next Question ➡
-
-{% endif %}
-
-</button>
-
-
-
-</form>
-
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
 
 </body>
-
 
 </html>

@@ -1,247 +1,375 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
-<title>
-AI Quiz Generator
-</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>AI Quiz Generator</title>
 
 <link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+      href="{{ url_for('static', filename='css/style.css') }}">
 
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet">
 
 
 </head>
 
-
-
 <body>
-
-
 
 <div class="dashboard-page">
 
 
+<!-- =========================
+     NAVBAR
+========================== -->
 
 <nav class="top-navbar">
 
+    <h2>
+        🧠 AI Quiz System
+    </h2>
 
-<h2>
-🧠 AI Quiz System
-</h2>
+    <div class="navbar-actions">
 
+        <a href="/teacher_dashboard">
+            🏠 Dashboard
+        </a>
 
-<div>
+        <a href="/logout">
+            🚪 Logout
+        </a>
 
-
-<a href="/teacher_dashboard">
-
-🏠 Dashboard
-
-</a>
-
-
-<a href="/logout">
-
-🚪 Logout
-
-</a>
-
-
-</div>
-
+    </div>
 
 </nav>
 
 
+<!-- =========================
+     AI GENERATOR
+========================== -->
 
+<main class="ai-generator-container">
 
+    <!-- HERO -->
 
+    <section class="ai-generator-hero">
 
+        <div class="ai-hero-content">
 
+            <div class="ai-generator-icon">
+                🤖
+            </div>
 
-<div class="ai-container">
+            <div>
 
+                <span class="ai-badge">
+                    ✨ AI POWERED
+                </span>
 
+                <h1>
+                    AI Quiz Generator
+                </h1>
 
+                <p>
+                    Create intelligent assessment questions
+                    instantly using Artificial Intelligence.
+                </p>
 
+            </div>
 
-<div class="ai-header">
+        </div>
 
+    </section>
 
-<div class="ai-icon">
 
-🤖
+    <!-- MAIN CONTENT -->
 
-</div>
+    <section class="ai-generator-layout">
 
 
+        <!-- LEFT INFORMATION CARD -->
 
-<h1>
+        <div class="ai-info-panel">
 
-AI Quiz Generator
+            <div class="ai-info-icon">
+                🧠
+            </div>
 
-</h1>
+            <h2>
+                Smart Quiz Creation
+            </h2>
 
+            <p>
+                Let AI generate high-quality questions based
+                on your topic and selected difficulty.
+            </p>
 
-<p>
 
-Generate smart assessment questions using Artificial Intelligence
+            <div class="ai-feature-list">
 
-</p>
+                <div class="ai-feature-item">
 
+                    <span class="feature-icon">
+                        ⚡
+                    </span>
 
+                    <div>
 
-</div>
+                        <strong>
+                            Instant Generation
+                        </strong>
 
+                        <small>
+                            Generate questions within seconds
+                        </small>
 
+                    </div>
 
+                </div>
 
 
+                <div class="ai-feature-item">
 
+                    <span class="feature-icon">
+                        🎯
+                    </span>
 
+                    <div>
 
+                        <strong>
+                            Smart Difficulty
+                        </strong>
 
-<div class="ai-card">
+                        <small>
+                            Choose Easy, Medium or Hard
+                        </small>
 
+                    </div>
 
+                </div>
 
 
+                <div class="ai-feature-item">
 
+                    <span class="feature-icon">
+                        📚
+                    </span>
 
-<form method="POST"
-action="/ai_generator">
+                    <div>
 
+                        <strong>
+                            Any Topic
+                        </strong>
 
+                        <small>
+                            Generate quizzes for any subject
+                        </small>
 
+                    </div>
 
+                </div>
 
 
-<label>
+                <div class="ai-feature-item">
 
-Quiz Topic
+                    <span class="feature-icon">
+                        📊
+                    </span>
 
-</label>
+                    <div>
 
+                        <strong>
+                            Better Assessment
+                        </strong>
 
-<input
+                        <small>
+                            Create engaging knowledge tests
+                        </small>
 
-type="text"
+                    </div>
 
-name="subject"
+                </div>
 
-placeholder="Example: Database Management System"
+            </div>
 
-required>
+        </div>
 
 
+        <!-- FORM CARD -->
 
-<label>
+        <div class="ai-form-card">
 
-Difficulty Level
+            <div class="ai-form-heading">
 
-</label>
+                <span>
+                    Quiz Configuration
+                </span>
 
+                <h2>
+                    Create Your Quiz
+                </h2>
 
+                <p>
+                    Configure the quiz details below and let AI
+                    do the rest.
+                </p>
 
-<select name="difficulty">
+            </div>
 
 
-<option>
+            <form method="POST"
+                  action="/ai_generator">
 
-Easy
 
-</option>
+                <!-- TOPIC -->
 
+                <div class="form-group">
 
-<option>
+                    <label for="subject">
+                        Quiz Topic
+                    </label>
 
-Medium
+                    <div class="input-wrapper">
 
-</option>
+                        <span class="input-icon">
+                            📚
+                        </span>
 
+                        <input
+                            type="text"
+                            id="subject"
+                            name="subject"
+                            placeholder="Example: Database Management System"
+                            required>
 
-<option>
+                    </div>
 
-Hard
+                </div>
 
-</option>
 
+                <!-- DIFFICULTY -->
 
-</select>
+                <div class="form-group">
 
+                    <label for="difficulty">
+                        Difficulty Level
+                    </label>
 
+                    <div class="input-wrapper">
 
+                        <span class="input-icon">
+                            🎯
+                        </span>
 
+                        <select
+                            id="difficulty"
+                            name="difficulty">
 
+                            <option value="Easy">
+                                Easy
+                            </option>
 
+                            <option value="Medium">
+                                Medium
+                            </option>
 
-<label>
+                            <option value="Hard">
+                                Hard
+                            </option>
 
-Number of Questions
+                        </select>
 
-</label>
+                    </div>
 
+                </div>
 
 
-<input
+                <!-- QUESTIONS -->
 
-type="number"
+                <div class="form-group">
 
-name="questions"
+                    <label for="questions">
+                        Number of Questions
+                    </label>
 
-placeholder="10"
+                    <div class="input-wrapper">
 
-required>
+                        <span class="input-icon">
+                            🔢
+                        </span>
 
+                        <input
+                            type="number"
+                            id="questions"
+                            name="questions"
+                            placeholder="10"
+                            min="1"
+                            max="50"
+                            required>
 
+                    </div>
 
+                    <small class="input-hint">
+                        You can generate up to 50 questions at once.
+                    </small>
 
+                </div>
 
 
+                <!-- GENERATE BUTTON -->
 
+                <button
+                    type="submit"
+                    class="ai-generate-btn">
 
-<button>
+                    <span>
+                        ✨
+                    </span>
 
-✨ Generate Quiz
+                    Generate Quiz
 
-</button>
+                    <span class="btn-arrow">
+                        →
+                    </span>
 
+                </button>
 
 
+                <!-- SECURITY / INFO -->
 
-</form>
+                <div class="ai-form-note">
 
+                    <span>
+                        🔒
+                    </span>
 
+                    <p>
+                        Your quiz will be generated automatically
+                        based on the information provided above.
+                    </p>
 
+                </div>
 
 
-</div>
+            </form>
 
+        </div>
 
+    </section>
 
-
-
-
-
-</div>
-
-
-
-
+</main>
 
 
 </div>
 
 {% include 'footer.html' %}
 
-    <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
 
 </body>
-
 
 </html>

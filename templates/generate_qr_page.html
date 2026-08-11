@@ -1,167 +1,220 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
-<title>
-Quiz QR Codes
-</title>
 
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Quiz QR Codes | AI Quiz System</title>
 
 <link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+      href="{{ url_for('static', filename='css/style.css') }}">
 
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
 
 
 </head>
 
-
 <body>
-
-
 
 <div class="dashboard-page">
 
 
+<!-- ================= NAVBAR ================= -->
 
 <nav class="top-navbar">
 
+    <h2>
+        🧠 AI Quiz System
+    </h2>
 
-<h2>
-🧠 AI Quiz System
-</h2>
+    <div class="navbar-actions">
 
+        <a href="/teacher_dashboard">
+            🏠 Dashboard
+        </a>
 
+        <a href="/logout">
+            🚪 Logout
+        </a>
 
-<div>
-
-<a href="/teacher_dashboard">
-
-🏠 Dashboard
-
-</a>
-
-
-<a href="/logout">
-
-🚪 Logout
-
-</a>
-
-
-</div>
-
+    </div>
 
 </nav>
 
 
+<!-- ================= MAIN ================= -->
+
+<main class="dashboard-container">
 
 
+    <!-- HERO -->
+
+    <section class="welcome-box qr-library-hero">
+
+        <div>
+
+            <div class="hero-badge">
+                📱 Quick Access
+            </div>
+
+            <h1>
+                Quiz QR Codes
+            </h1>
+
+            <p>
+                Share your quizzes instantly with students
+                using secure QR codes.
+            </p>
+
+        </div>
+
+        <div class="qr-hero-icon">
+            📱
+        </div>
+
+    </section>
 
 
+    <!-- ================= SECTION ================= -->
 
-<div class="dashboard-container">
+    <div class="page-section-heading">
+
+        <div>
+
+            <h2>
+                Your Quiz QR Codes
+            </h2>
+
+            <p>
+                Select a quiz to view and share its QR code.
+            </p>
+
+        </div>
+
+        <div class="quiz-count">
+
+            {{ quizzes|length }}
+
+            <span>
+                Quizzes
+            </span>
+
+        </div>
+
+    </div>
 
 
+    <!-- ================= QUIZ GRID ================= -->
 
-<div class="welcome-box">
-
-
-<h1>
-📱 Quiz QR Codes
-</h1>
+    <div class="quiz-grid premium-qr-grid">
 
 
-<p>
-Share quizzes instantly with students using QR Code
-</p>
+        {% for quiz in quizzes %}
+
+
+        <article class="quiz-card premium-qr-card">
+
+
+            <div class="qr-card-top">
+
+                <div class="quiz-icon qr-icon-modern">
+                    📱
+                </div>
+
+                <span class="qr-status">
+                    ● Ready
+                </span>
+
+            </div>
+
+
+            <div class="qr-card-content">
+
+                <h2>
+                    {{ quiz.title }}
+                </h2>
+
+                <p>
+                    QR code available for student access.
+                </p>
+
+            </div>
+
+
+            <div class="qr-card-footer">
+
+                <span class="share-label">
+                    Share quiz
+                </span>
+
+                <a href="/show_qr/{{ quiz.quiz_id }}"
+                   class="qr-view-btn">
+
+                    <span>
+                        View QR
+                    </span>
+
+                    <span>
+                        →
+                    </span>
+
+                </a>
+
+            </div>
+
+
+        </article>
+
+
+        {% else %}
+
+
+        <!-- EMPTY STATE -->
+
+        <div class="qr-empty-state">
+
+            <div class="empty-icon">
+                📱
+            </div>
+
+            <h2>
+                No quizzes available
+            </h2>
+
+            <p>
+                Create your first quiz to generate
+                a shareable QR code.
+            </p>
+
+            <a href="/create_quiz"
+               class="empty-action-btn">
+
+                Create Quiz
+                <span>→</span>
+
+            </a>
+
+        </div>
+
+
+        {% endfor %}
+
+
+    </div>
+
+
+</main>
 
 
 </div>
-
-
-
-
-
-
-
-<div class="quiz-grid">
-
-
-
-{% for quiz in quizzes %}
-
-
-
-<div class="quiz-card">
-
-
-
-<div class="quiz-icon">
-
-📱
-
-</div>
-
-
-
-<h2>
-
-{{quiz.title}}
-
-</h2>
-
-
-
-<p>
-
-Ready to share
-
-</p>
-
-
-
-
-<a href="/show_qr/{{quiz.quiz_id}}">
-
-
-<button>
-
-View QR Code
-
-</button>
-
-
-</a>
-
-
-
-</div>
-
-
-
-{% endfor %}
-
-
-
-</div>
-
-
-
-
-
-
-
-</div>
-
-
-</div>
-
 
 <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
-</body>
 
+</body>
 
 </html>
