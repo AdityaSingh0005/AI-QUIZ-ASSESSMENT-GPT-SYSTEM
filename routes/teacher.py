@@ -1,8 +1,9 @@
+
 from flask import Blueprint, render_template, request, redirect, session
 from database import get_db_connection
 from utils.qr_generator import generate_qr
 from utils.ai_generator import generate_questions
-
+from psycopg2.extras import RealDictCursor
 
 teacher = Blueprint("teacher", __name__)
 
@@ -27,7 +28,6 @@ def teacher_dashboard():
 # CREATE QUIZ
 # ==========================================
 
-
 @teacher.route("/create_quiz", methods=["GET", "POST"])
 def create_quiz():
 
@@ -40,7 +40,6 @@ def create_quiz():
 
     if request.method == "GET":
         return render_template("create_quiz.html")
-
 
     # =========================
     # CREATE QUIZ
@@ -55,14 +54,11 @@ def create_quiz():
 
     total_questions = easy + medium + hard
 
-
     if total_questions <= 0:
         return "Please select at least one question."
 
-
     db = get_db_connection()
     cursor = db.cursor()
-
 
     try:
 
@@ -73,8 +69,14 @@ def create_quiz():
         cursor.execute(
             """
             INSERT INTO quizzes
-            (teacher_id, title, prompt, total_questions)
+            (
+                teacher_id,
+                title,
+                prompt,
+                total_questions
+            )
             VALUES (%s, %s, %s, %s)
+            RETURNING quiz_id
             """,
             (
                 session["teacher_id"],
@@ -84,11 +86,8 @@ def create_quiz():
             )
         )
 
-        db.commit()
-
-
-        quiz_id = cursor.lastrowid
-
+        # PostgreSQL way of getting the generated ID
+        quiz_id = cursor.fetchone()[0]
 
         # =========================
         # GENERATE AI QUESTIONS
@@ -100,7 +99,6 @@ def create_quiz():
             medium,
             hard
         )
-
 
         # =========================
         # SAVE QUESTIONS
@@ -135,16 +133,11 @@ def create_quiz():
                 )
             )
 
-
-        db.commit()
-
-
         # =========================
         # GENERATE QR
         # =========================
 
         qr_path = generate_qr(quiz_id)
-
 
         cursor.execute(
             """
@@ -158,14 +151,11 @@ def create_quiz():
             )
         )
 
-
         db.commit()
-
 
         print(
             f"✅ Quiz {quiz_id} created successfully"
         )
-
 
         # =========================
         # GO TO MANAGE QUIZ
@@ -190,18 +180,28 @@ def create_quiz():
             ← Back to Create Quiz
         </a>
         """
-        
+
+    finally:
+
+        cursor.close()
+        db.close()
+
+
+# ==========================================
+# GENERATED QUIZ
+# ==========================================
+
 @teacher.route("/quiz_generated/<int:quiz_id>")
 def quiz_generated(quiz_id):
 
     if "teacher_id" not in session:
         return redirect("/")
 
-
     db = get_db_connection()
 
-    cursor = db.cursor(dictionary=True)
-
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
 
     # Quiz information
 
@@ -214,9 +214,7 @@ def quiz_generated(quiz_id):
             total_questions,
             qr_code_path,
             created_at
-
         FROM quizzes
-
         WHERE quiz_id=%s
         AND teacher_id=%s
         """,
@@ -226,14 +224,14 @@ def quiz_generated(quiz_id):
         )
     )
 
-
     quiz = cursor.fetchone()
-
 
     if not quiz:
 
-        return "Quiz not found."
+        cursor.close()
+        db.close()
 
+        return "Quiz not found."
 
     # Questions
 
@@ -248,19 +246,17 @@ def quiz_generated(quiz_id):
             option_d,
             correct_option,
             difficulty
-
         FROM questions
-
         WHERE quiz_id=%s
-
         ORDER BY question_id
         """,
         (quiz_id,)
     )
 
-
     questions = cursor.fetchall()
 
+    cursor.close()
+    db.close()
 
     return render_template(
         "quiz_generated.html",
@@ -282,7 +278,6 @@ def add_questions(quiz_id):
     if "teacher_id" not in session:
         return redirect("/")
 
-
     if request.method == "POST":
 
         question = request.form["question"]
@@ -297,50 +292,54 @@ def add_questions(quiz_id):
             "Medium"
         )
 
-
         db = get_db_connection()
         cursor = db.cursor()
 
+        try:
 
-        cursor.execute(
-            """
-            INSERT INTO questions
-            (
-                quiz_id,
-                question,
-                option_a,
-                option_b,
-                option_c,
-                option_d,
-                correct_option,
-                difficulty
+            cursor.execute(
+                """
+                INSERT INTO questions
+                (
+                    quiz_id,
+                    question,
+                    option_a,
+                    option_b,
+                    option_c,
+                    option_d,
+                    correct_option,
+                    difficulty
+                )
+                VALUES
+                (%s,%s,%s,%s,%s,%s,%s,%s)
+                """,
+                (
+                    quiz_id,
+                    question,
+                    option_a,
+                    option_b,
+                    option_c,
+                    option_d,
+                    correct_option,
+                    difficulty
+                )
             )
-            VALUES
-            (%s,%s,%s,%s,%s,%s,%s,%s)
-            """,
-            (
-                quiz_id,
-                question,
-                option_a,
-                option_b,
-                option_c,
-                option_d,
-                correct_option,
-                difficulty
-            )
-        )
 
+            db.commit()
 
-        db.commit()
+        except Exception:
 
-        cursor.close()
-        db.close()
+            db.rollback()
+            raise
 
+        finally:
+
+            cursor.close()
+            db.close()
 
         return redirect(
             f"/quiz_generated/{quiz_id}"
         )
-
 
     return render_template(
         "add_questions.html",
@@ -358,13 +357,11 @@ def view_results():
     if "teacher_id" not in session:
         return redirect("/")
 
-
     db = get_db_connection()
 
     cursor = db.cursor(
-        dictionary=True
+        cursor_factory=RealDictCursor
     )
-
 
     cursor.execute(
         """
@@ -375,7 +372,6 @@ def view_results():
             results.score,
             results.percentage,
             results.submitted_at
-
         FROM results
 
         INNER JOIN students
@@ -395,13 +391,10 @@ def view_results():
         )
     )
 
-
     results = cursor.fetchall()
-
 
     cursor.close()
     db.close()
-
 
     return render_template(
         "view_results.html",
@@ -419,22 +412,18 @@ def show_qr(quiz_id):
     if "teacher_id" not in session:
         return redirect("/")
 
-
     db = get_db_connection()
 
     cursor = db.cursor(
-        dictionary=True
+        cursor_factory=RealDictCursor
     )
-
 
     cursor.execute(
         """
         SELECT
             title,
             qr_code_path
-
         FROM quizzes
-
         WHERE quiz_id=%s
         AND teacher_id=%s
         """,
@@ -444,13 +433,10 @@ def show_qr(quiz_id):
         )
     )
 
-
     quiz = cursor.fetchone()
-
 
     cursor.close()
     db.close()
-
 
     return render_template(
         "show_qr.html",
@@ -468,13 +454,11 @@ def generate_qr_page():
     if "teacher_id" not in session:
         return redirect("/")
 
-
     db = get_db_connection()
 
     cursor = db.cursor(
-        dictionary=True
+        cursor_factory=RealDictCursor
     )
-
 
     cursor.execute(
         """
@@ -482,11 +466,8 @@ def generate_qr_page():
             quiz_id,
             title,
             qr_code_path
-
         FROM quizzes
-
         WHERE teacher_id=%s
-
         ORDER BY quiz_id DESC
         """,
         (
@@ -494,13 +475,10 @@ def generate_qr_page():
         )
     )
 
-
     quizzes = cursor.fetchall()
-
 
     cursor.close()
     db.close()
-
 
     return render_template(
         "generate_qr_page.html",
@@ -518,13 +496,11 @@ def manage_quizzes():
     if "teacher_id" not in session:
         return redirect("/")
 
-
     db = get_db_connection()
 
     cursor = db.cursor(
-        dictionary=True
+        cursor_factory=RealDictCursor
     )
-
 
     cursor.execute(
         """
@@ -533,11 +509,8 @@ def manage_quizzes():
             title,
             total_questions,
             created_at
-
         FROM quizzes
-
         WHERE teacher_id=%s
-
         ORDER BY quiz_id DESC
         """,
         (
@@ -545,13 +518,10 @@ def manage_quizzes():
         )
     )
 
-
     quizzes = cursor.fetchall()
-
 
     cursor.close()
     db.close()
-
 
     return render_template(
         "manage_quizzes.html",
@@ -569,15 +539,14 @@ def delete_quiz(quiz_id):
     if "teacher_id" not in session:
         return redirect("/")
 
-
     db = get_db_connection()
 
     cursor = db.cursor()
 
-
     try:
 
         # Student answers
+
         cursor.execute(
             """
             DELETE FROM student_answers
@@ -586,8 +555,8 @@ def delete_quiz(quiz_id):
             (quiz_id,)
         )
 
-
         # Results
+
         cursor.execute(
             """
             DELETE FROM results
@@ -596,8 +565,8 @@ def delete_quiz(quiz_id):
             (quiz_id,)
         )
 
-
         # Questions
+
         cursor.execute(
             """
             DELETE FROM questions
@@ -606,8 +575,8 @@ def delete_quiz(quiz_id):
             (quiz_id,)
         )
 
-
         # Quiz
+
         cursor.execute(
             """
             DELETE FROM quizzes
@@ -620,9 +589,7 @@ def delete_quiz(quiz_id):
             )
         )
 
-
         db.commit()
-
 
     except Exception as e:
 
@@ -633,12 +600,10 @@ def delete_quiz(quiz_id):
             e
         )
 
-
     finally:
 
         cursor.close()
         db.close()
-
 
     return redirect(
         "/manage_quizzes"
@@ -659,8 +624,8 @@ def test_ai():
         1
     )
 
-
     return {
         "status": "success",
         "questions": questions
     }
+

@@ -1,10 +1,15 @@
+
 from flask import Blueprint, render_template, redirect, session, request
 from utils.quiz_engine import get_quiz_questions
 from database import get_db_connection
-
+from psycopg2.extras import RealDictCursor
 
 student = Blueprint("student", __name__)
 
+
+# ==========================================
+# STUDENT DASHBOARD
+# ==========================================
 
 @student.route("/student_dashboard")
 def student_dashboard():
@@ -18,6 +23,9 @@ def student_dashboard():
     )
 
 
+# ==========================================
+# AVAILABLE QUIZZES
+# ==========================================
 
 @student.route("/available_quizzes")
 def available_quizzes():
@@ -25,21 +33,25 @@ def available_quizzes():
     if "student_id" not in session:
         return redirect("/")
 
-
     db = get_db_connection()
 
-    cursor = db.cursor(dictionary=True)
-
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
 
     cursor.execute("""
-        SELECT quiz_id, title, total_questions
+        SELECT
+            quiz_id,
+            title,
+            total_questions
         FROM quizzes
         ORDER BY quiz_id DESC
     """)
 
-
     quizzes = cursor.fetchall()
 
+    cursor.close()
+    db.close()
 
     return render_template(
         "available_quizzes.html",
@@ -47,6 +59,9 @@ def available_quizzes():
     )
 
 
+# ==========================================
+# START QUIZ
+# ==========================================
 
 @student.route("/start_quiz/<int:quiz_id>")
 def start_quiz(quiz_id):
@@ -54,27 +69,35 @@ def start_quiz(quiz_id):
     if "student_id" not in session:
         return redirect("/")
 
-
     questions = get_quiz_questions(quiz_id)
 
+    if not questions:
+        return "No questions found for this quiz."
 
     session["quiz_id"] = quiz_id
     session["questions"] = questions
     session["current_question"] = 0
     session["answers"] = {}
 
-
     return redirect("/quiz")
 
 
+# ==========================================
+# QUIZ
+# ==========================================
 
-@student.route("/quiz", methods=["GET","POST"])
+@student.route("/quiz", methods=["GET", "POST"])
 def quiz():
 
-    questions = session["questions"]
+    if "student_id" not in session:
+        return redirect("/")
 
-    index = session["current_question"]
+    questions = session.get("questions", [])
 
+    if not questions:
+        return redirect("/available_quizzes")
+
+    index = session.get("current_question", 0)
 
     if request.method == "POST":
 
@@ -84,11 +107,13 @@ def quiz():
             questions[index]["question_id"]
         )
 
+        answers = session.get("answers", {})
 
-        session["answers"][question_id] = answer
+        answers[question_id] = answer
 
+        session["answers"] = answers
 
-        if index < len(questions)-1:
+        if index < len(questions) - 1:
 
             session["current_question"] = index + 1
 
@@ -98,19 +123,19 @@ def quiz():
 
             return redirect("/submit_quiz")
 
-
-
     question = questions[index]
-
 
     return render_template(
         "quiz.html",
         question=question,
-        number=index+1,
+        number=index + 1,
         total=len(questions)
     )
 
 
+# ==========================================
+# SUBMIT QUIZ
+# ==========================================
 
 @student.route("/submit_quiz")
 def submit_quiz():
@@ -118,99 +143,157 @@ def submit_quiz():
     if "student_id" not in session:
         return redirect("/")
 
+    questions = session.get("questions", [])
+    answers = session.get("answers", {})
 
-    questions = session["questions"]
-    answers = session["answers"]
+    if not questions:
+        return redirect("/available_quizzes")
 
     score = 0
-    db = get_db_connection()
 
+    db = get_db_connection()
     cursor = db.cursor()
 
-    for q in questions:
+    try:
 
-        q_id = q["question_id"]
+        # ==================================
+        # SAVE STUDENT ANSWERS
+        # ==================================
 
-        selected = answers.get(str(q_id))
+        for q in questions:
 
+            q_id = q["question_id"]
+
+            selected = answers.get(str(q_id))
+
+            cursor.execute(
+                """
+                INSERT INTO student_answers
+                (
+                    student_id,
+                    quiz_id,
+                    question_id,
+                    selected_option
+                )
+                VALUES (%s,%s,%s,%s)
+                """,
+                (
+                    session["student_id"],
+                    session["quiz_id"],
+                    q_id,
+                    selected
+                )
+            )
+
+        # ==================================
+        # CALCULATE SCORE
+        # ==================================
+
+        for q in questions:
+
+            q_id = str(
+                q["question_id"]
+            )
+
+            if q_id in answers:
+
+                if answers[q_id] == q["correct_option"]:
+
+                    score += 1
+
+        # ==================================
+        # CALCULATE PERCENTAGE
+        # ==================================
+
+        total = len(questions)
+
+        percentage = (
+            (score / total) * 100
+        )
+
+        # ==================================
+        # SAVE RESULT
+        # ==================================
 
         cursor.execute(
             """
-            INSERT INTO student_answers
-            (student_id, quiz_id, question_id, selected_option)
-            VALUES(%s,%s,%s,%s)
+            INSERT INTO results
+            (
+                student_id,
+                quiz_id,
+                score,
+                percentage
+            )
+            VALUES (%s,%s,%s,%s)
             """,
             (
                 session["student_id"],
                 session["quiz_id"],
-                q_id,
-                selected
+                score,
+                percentage
             )
         )
 
+        db.commit()
 
-    for q in questions:
+        # ==================================
+        # CLEAR QUIZ SESSION
+        # ==================================
 
-        q_id = str(q["question_id"])
+        session.pop("questions", None)
+        session.pop("answers", None)
+        session.pop("current_question", None)
 
-
-        if q_id in answers:
-
-            if answers[q_id] == q["correct_option"]:
-                score += 1
-
-
-
-    total = len(questions)
-
-
-    percentage = (score / total) * 100
-
-
-
-    
-
-
-    cursor.execute(
-        """
-        INSERT INTO results
-        (student_id, quiz_id, score, percentage)
-        VALUES(%s,%s,%s,%s)
-        """,
-        (
-            session["student_id"],
-            session["quiz_id"],
-            score,
-            percentage
+        return render_template(
+            "result.html",
+            score=score,
+            total=total,
+            percentage=percentage
         )
-    )
+
+    except Exception as e:
+
+        db.rollback()
+
+        print(
+            "❌ SUBMIT QUIZ ERROR:",
+            e
+        )
+
+        return f"""
+        <h2>❌ Error while submitting quiz</h2>
+        <p>{e}</p>
+        <br>
+        <a href="/student_dashboard">
+            ← Back to Student Dashboard
+        </a>
+        """
+
+    finally:
+
+        cursor.close()
+        db.close()
 
 
-    db.commit()
+# ==========================================
+# MY RESULTS
+# ==========================================
 
-
-    return render_template(
-        "result.html",
-        score=score,
-        total=total,
-        percentage=percentage
-    )
-    
 @student.route("/my_results")
 def my_results():
 
     if "student_id" not in session:
         return redirect("/")
 
-
     db = get_db_connection()
 
-    cursor = db.cursor(dictionary=True)
-
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
 
     cursor.execute(
         """
-        SELECT 
+        SELECT
             quizzes.title,
             results.score,
             results.percentage,
@@ -225,17 +308,25 @@ def my_results():
 
         ORDER BY results.submitted_at DESC
         """,
-        (session["student_id"],)
+        (
+            session["student_id"],
+        )
     )
-
 
     results = cursor.fetchall()
 
+    cursor.close()
+    db.close()
 
     return render_template(
         "my_results.html",
         results=results
     )
+
+
+# ==========================================
+# LEADERBOARD
+# ==========================================
 
 @student.route("/leaderboard")
 def leaderboard():
@@ -244,32 +335,53 @@ def leaderboard():
         return redirect("/")
 
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
 
-    cursor.execute("""
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+    cursor.execute(
+        """
         SELECT
             students.full_name,
             students.roll_number,
-            ROUND(AVG(results.percentage),2) AS average_percentage,
+            ROUND(
+                AVG(results.percentage),
+                2
+            ) AS average_percentage,
             COUNT(results.result_id) AS total_attempts
 
         FROM students
 
         JOIN results
-        ON students.student_id = results.student_id
+        ON students.student_id =
+           results.student_id
 
-        GROUP BY students.student_id
+        GROUP BY
+            students.student_id,
+            students.full_name,
+            students.roll_number
 
-        ORDER BY average_percentage DESC
-    """)
+        ORDER BY
+            average_percentage DESC
+        """
+    )
 
     leaderboard = cursor.fetchall()
+
+    cursor.close()
+    db.close()
 
     return render_template(
         "leaderboard.html",
         leaderboard=leaderboard
     )
-    
+
+
+# ==========================================
+# STUDENT PROFILE
+# ==========================================
+
 @student.route("/student_profile")
 def student_profile():
 
@@ -277,10 +389,17 @@ def student_profile():
         return redirect("/")
 
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
 
-    # Student Details
-    cursor.execute("""
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+    # ==================================
+    # STUDENT DETAILS
+    # ==================================
+
+    cursor.execute(
+        """
         SELECT
             full_name,
             roll_number,
@@ -290,24 +409,43 @@ def student_profile():
             created_at
         FROM students
         WHERE student_id=%s
-    """, (session["student_id"],))
+        """,
+        (
+            session["student_id"],
+        )
+    )
 
-    student = cursor.fetchone()
+    student_data = cursor.fetchone()
 
-    # Statistics
-    cursor.execute("""
+    # ==================================
+    # STATISTICS
+    # ==================================
+
+    cursor.execute(
+        """
         SELECT
             COUNT(*) AS total_quizzes,
             MAX(score) AS best_score,
-            ROUND(AVG(percentage),2) AS average_percentage
+            ROUND(
+                AVG(percentage),
+                2
+            ) AS average_percentage
         FROM results
         WHERE student_id=%s
-    """, (session["student_id"],))
+        """,
+        (
+            session["student_id"],
+        )
+    )
 
     stats = cursor.fetchone()
 
+    cursor.close()
+    db.close()
+
     return render_template(
         "student_profile.html",
-        student=student,
+        student=student_data,
         stats=stats
     )
+
