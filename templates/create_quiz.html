@@ -1,91 +1,267 @@
-
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
-    <title>Create AI Quiz</title>
+```
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
+<title>Create AI Quiz | AI Quiz Assessment System</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet">
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
+```
 
 </head>
 
-
 <body>
 
-<div class="dashboard-page">
+<div class="dashboard-page create-quiz-page">
+
+```
+<!-- =====================================================
+     NAVBAR
+====================================================== -->
+
+<nav class="top-navbar">
+
+    <div class="quiz-navbar-brand">
+        <span class="quiz-navbar-icon">🧠</span>
+
+        <div>
+            <strong>AI Quiz</strong>
+            <small>Assessment System</small>
+        </div>
+    </div>
 
 
-    <!-- NAVBAR -->
+    <div class="navbar-actions">
 
-    <nav class="top-navbar">
+        <a href="/teacher_dashboard" class="nav-dashboard-link">
+            <span>⌂</span>
+            Dashboard
+        </a>
 
-        <h2>
-            🧠 AI Quiz System
-        </h2>
+        <a href="/logout" class="nav-logout-link">
+            <span>↪</span>
+            Logout
+        </a>
+
+    </div>
+
+</nav>
+
+
+
+<!-- =====================================================
+     MAIN CONTENT
+====================================================== -->
+
+<main class="create-quiz-container">
+
+
+    <!-- PAGE HEADER -->
+
+    <section class="create-quiz-header">
 
         <div>
 
-            <a href="/teacher_dashboard">
-                🏠 Dashboard
-            </a>
-
-            <a href="/logout">
-                🚪 Logout
-            </a>
-
-        </div>
-
-    </nav>
-
-
-    <!-- MAIN -->
-
-    <div class="ai-create-container">
-
-
-        <!-- LEFT CARD -->
-
-        <div class="ai-info-card">
-
-            <div class="robot">
-                🤖
+            <div class="page-eyebrow">
+                <span>✦</span>
+                AI POWERED ASSESSMENT
             </div>
-
-            <h2>
-                AI Quiz Generator
-            </h2>
-
-            <p>
-                Create smart quizzes using Ollama AI
-            </p>
-
-            <div class="feature">
-                ✨ Automatic Question Generation
-            </div>
-
-            <div class="feature">
-                🎯 Difficulty Based Questions
-            </div>
-
-            <div class="feature">
-                📊 Instant Assessment
-            </div>
-
-        </div>
-
-
-        <!-- RIGHT CARD -->
-
-        <div class="quiz-form-card">
 
             <h1>
-                Create New Quiz 🚀
+                Create a new quiz
             </h1>
+
+            <p>
+                Turn your topic into an intelligent assessment
+                with AI-generated questions.
+            </p>
+
+        </div>
+
+
+        <div class="ai-status">
+
+            <span class="status-dot"></span>
+
+            <span>
+                AI Generator Ready
+            </span>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =================================================
+         CONTENT GRID
+    ================================================== -->
+
+    <section class="create-quiz-grid">
+
+
+        <!-- =================================================
+             LEFT — AI INFORMATION
+        ================================================== -->
+
+        <aside class="ai-info-card">
+
+
+            <div class="ai-card-glow"></div>
+
+
+            <div class="ai-info-content">
+
+
+                <div class="ai-robot-icon">
+                    🤖
+                </div>
+
+
+                <div class="ai-card-label">
+                    SMART GENERATION
+                </div>
+
+
+                <h2>
+                    Let AI build
+                    your assessment.
+                </h2>
+
+
+                <p>
+                    Describe your topic, choose the difficulty
+                    distribution and let the AI generate
+                    questions automatically.
+                </p>
+
+
+
+                <!-- FEATURES -->
+
+                <div class="ai-feature-list">
+
+
+                    <div class="ai-feature">
+
+                        <span class="ai-feature-icon">
+                            ✨
+                        </span>
+
+                        <div>
+                            <strong>
+                                Automatic generation
+                            </strong>
+
+                            <small>
+                                Questions generated from your topic
+                            </small>
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="ai-feature">
+
+                        <span class="ai-feature-icon">
+                            ◈
+                        </span>
+
+                        <div>
+                            <strong>
+                                Difficulty control
+                            </strong>
+
+                            <small>
+                                Balance Easy, Medium & Hard questions
+                            </small>
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="ai-feature">
+
+                        <span class="ai-feature-icon">
+                            ✓
+                        </span>
+
+                        <div>
+                            <strong>
+                                Instant assessment
+                            </strong>
+
+                            <small>
+                                Generate a complete quiz in seconds
+                            </small>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- AI TIP -->
+
+                <div class="ai-tip">
+
+                    <span>💡</span>
+
+                    <p>
+                        <strong>Tip:</strong>
+                        Be specific about your topic for
+                        better questions.
+                    </p>
+
+                </div>
+
+
+            </div>
+
+        </aside>
+
+
+
+        <!-- =================================================
+             RIGHT — QUIZ FORM
+        ================================================== -->
+
+        <section class="quiz-form-card">
+
+
+            <div class="quiz-form-header">
+
+                <div>
+
+                    <span class="form-step">
+                        STEP 01
+                    </span>
+
+                    <h2>
+                        Quiz details
+                    </h2>
+
+                    <p>
+                        Configure the content and question
+                        distribution for your quiz.
+                    </p>
+
+                </div>
+
+            </div>
+
 
 
             <form action="/create_quiz"
@@ -93,139 +269,273 @@
                   id="quizForm">
 
 
-                <!-- TITLE -->
 
-                <label>
-                    Quiz Title
-                </label>
+                <!-- QUIZ TITLE -->
 
-                <input
-                    type="text"
-                    name="title"
-                    placeholder="Example: DSA Quiz"
-                    required>
+                <div class="create-form-group">
+
+                    <label for="quizTitle">
+                        Quiz title
+                    </label>
+
+                    <div class="create-input-wrapper">
+
+                        <span class="create-input-icon">
+                            ✦
+                        </span>
+
+                        <input
+                            type="text"
+                            id="quizTitle"
+                            name="title"
+                            placeholder="e.g. Data Structures & Algorithms"
+                            autocomplete="off"
+                            required>
+
+                    </div>
+
+                </div>
+
 
 
                 <!-- TOPIC -->
 
-                <label>
-                    Topic / Prompt
-                </label>
+                <div class="create-form-group">
 
-                <textarea
-                    name="prompt"
-                    placeholder="Example: Data Structures and Algorithms"
-                    required></textarea>
+                    <label for="quizPrompt">
+                        Topic / AI prompt
+                    </label>
+
+                    <div class="create-input-wrapper textarea-wrapper">
+
+                        <span class="create-input-icon textarea-icon">
+                            ✎
+                        </span>
+
+                        <textarea
+                            id="quizPrompt"
+                            name="prompt"
+                            placeholder="Describe what you want the AI to create questions about..."
+                            required></textarea>
+
+                    </div>
+
+                    <small class="field-hint">
+                        Example: "Data Structures, arrays, linked lists and time complexity"
+                    </small>
+
+                </div>
+
 
 
                 <!-- DIFFICULTY -->
 
-                <h3>
-                    Select Question Distribution
-                </h3>
+                <div class="difficulty-section">
 
-                <p>
-                    Choose how many Easy, Medium and Hard questions
-                    AI should generate.
-                </p>
+                    <div class="difficulty-header">
 
+                        <div>
 
-                <div class="row">
+                            <span class="form-step">
+                                STEP 02
+                            </span>
 
+                            <h3>
+                                Question distribution
+                            </h3>
 
-                    <!-- EASY -->
+                        </div>
 
-                    <div>
-
-                        <label>
-                            🟢 Easy
-                        </label>
-
-                        <input
-                            type="number"
-                            name="easy"
-                            id="easy"
-                            value="0"
-                            min="0"
-                            max="50">
+                        <span class="difficulty-info">
+                            Choose your balance
+                        </span>
 
                     </div>
 
 
-                    <!-- MEDIUM -->
+                    <p class="difficulty-description">
+                        Select how many questions AI should
+                        generate at each difficulty level.
+                    </p>
 
-                    <div>
 
-                        <label>
-                            🟡 Medium
-                        </label>
 
-                        <input
-                            type="number"
-                            name="medium"
-                            id="medium"
-                            value="0"
-                            min="0"
-                            max="50">
+                    <div class="difficulty-grid">
+
+
+                        <!-- EASY -->
+
+                        <div class="difficulty-card easy-card">
+
+                            <div class="difficulty-card-top">
+
+                                <span class="difficulty-dot easy-dot"></span>
+
+                                <span>
+                                    Easy
+                                </span>
+
+                            </div>
+
+
+                            <input
+                                type="number"
+                                name="easy"
+                                id="easy"
+                                value="0"
+                                min="0"
+                                max="50"
+                                aria-label="Easy questions">
+
+                            <small>
+                                Basic concepts
+                            </small>
+
+                        </div>
+
+
+
+                        <!-- MEDIUM -->
+
+                        <div class="difficulty-card medium-card">
+
+                            <div class="difficulty-card-top">
+
+                                <span class="difficulty-dot medium-dot"></span>
+
+                                <span>
+                                    Medium
+                                </span>
+
+                            </div>
+
+
+                            <input
+                                type="number"
+                                name="medium"
+                                id="medium"
+                                value="0"
+                                min="0"
+                                max="50"
+                                aria-label="Medium questions">
+
+                            <small>
+                                Applied concepts
+                            </small>
+
+                        </div>
+
+
+
+                        <!-- HARD -->
+
+                        <div class="difficulty-card hard-card">
+
+                            <div class="difficulty-card-top">
+
+                                <span class="difficulty-dot hard-dot"></span>
+
+                                <span>
+                                    Hard
+                                </span>
+
+                            </div>
+
+
+                            <input
+                                type="number"
+                                name="hard"
+                                id="hard"
+                                value="0"
+                                min="0"
+                                max="50"
+                                aria-label="Hard questions">
+
+                            <small>
+                                Advanced concepts
+                            </small>
+
+                        </div>
 
                     </div>
 
 
-                    <!-- HARD -->
+                    <!-- TOTAL -->
 
-                    <div>
+                    <div class="quiz-total-box">
 
-                        <label>
-                            🔴 Hard
-                        </label>
+                        <div>
 
-                        <input
-                            type="number"
-                            name="hard"
-                            id="hard"
-                            value="0"
-                            min="0"
-                            max="50">
+                            <span class="total-icon">
+                                #
+                            </span>
+
+                            <div>
+                                <strong>
+                                    Total questions
+                                </strong>
+
+                                <small>
+                                    Your quiz size
+                                </small>
+                            </div>
+
+                        </div>
+
+
+                        <strong
+                            id="totalQuestions"
+                            class="total-number">
+                            0
+                        </strong>
 
                     </div>
-
 
                 </div>
 
 
-                <!-- TOTAL -->
 
-                <div class="total-box">
+                <!-- GENERATE BUTTON -->
 
-                    Total Questions:
+                <button
+                    type="submit"
+                    class="generate-quiz-button">
 
-                    <strong id="totalQuestions">
-                        0
-                    </strong>
+                    <span class="generate-icon">
+                        ✦
+                    </span>
 
-                </div>
+                    <span>
+                        Generate AI Quiz
+                    </span>
 
-
-                <!-- BUTTON -->
-
-                <button type="submit">
-
-                    🤖 Generate Quiz
+                    <span class="generate-arrow">
+                        →
+                    </span>
 
                 </button>
 
 
+                <p class="generate-note">
+                    AI will generate questions based on your
+                    selected topic and difficulty.
+                </p>
+
+
             </form>
 
+        </section>
 
-        </div>
+    </section>
 
-    </div>
+</main>
+```
 
 </div>
 
-
-<!-- JAVASCRIPT -->
+<!-- =========================================================
+     JAVASCRIPT
+========================================================= -->
 
 <script>
 
@@ -268,10 +578,12 @@ easyInput.addEventListener(
     updateTotal
 );
 
+
 mediumInput.addEventListener(
     "input",
     updateTotal
 );
+
 
 hardInput.addEventListener(
     "input",
@@ -279,7 +591,8 @@ hardInput.addEventListener(
 );
 
 
-document.getElementById("quizForm")
+document
+    .getElementById("quizForm")
     .addEventListener("submit", function(event) {
 
         const easy =
@@ -314,8 +627,6 @@ updateTotal();
 
 </script>
 
-
 </body>
 
 </html>
-
