@@ -12668,3 +12668,412 @@ VERY SMALL PHONES
     width: 200px;
   }
 }
+
+/* =========================================================
+   PREMIUM FOOTER
+========================================================= */
+
+.premium-footer {
+    width: 100%;
+    margin-top: 50px;
+    padding: 28px 6% 18px;
+
+    background: #ffffff;
+
+    border-top: 1px solid var(--border);
+
+    box-shadow:
+        0 -8px 30px rgba(31, 41, 55, 0.04);
+}
+
+
+/* =========================================================
+   FOOTER CONTENT
+========================================================= */
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 30px;
+}
+
+
+/* =========================================================
+   BRAND
+========================================================= */
+
+.footer-brand {
+    display: flex;
+
+    align-items: center;
+
+    gap: 13px;
+}
+
+
+.footer-logo {
+    width: 48px;
+    height: 48px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 14px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #eef2ff,
+            #f3e8ff
+        );
+
+    font-size: 23px;
+}
+
+
+.footer-brand h3 {
+    margin: 0;
+
+    color: #20283a;
+
+    font-size: 15px;
+
+    font-weight: 700;
+}
+
+
+.footer-brand p {
+    margin: 4px 0 0;
+
+    color: var(--muted);
+
+    font-size: 10px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   CREATOR INFORMATION
+========================================================= */
+
+.footer-creator {
+    padding-left: 25px;
+
+    border-left: 1px solid #e9ebf2;
+}
+
+
+.creator-label {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #9ca3af;
+
+    font-size: 9px;
+
+    font-weight: 600;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.7px;
+}
+
+
+.footer-creator h4 {
+    margin: 0;
+
+    color: #4f46e5;
+
+    font-size: 14px;
+
+    font-weight: 700;
+}
+
+
+.footer-creator p {
+    margin: 3px 0 0;
+
+    color: #7c8498;
+
+    font-size: 10px;
+
+    line-height: 1.5;
+}
+
+
+.footer-creator strong {
+    color: #374151;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.footer-status {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 8px 12px;
+
+    border-radius: 999px;
+
+    background: #f0fdf4;
+
+    border: 1px solid #dcfce7;
+
+    color: #15803d;
+
+    font-size: 9px;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: #22c55e;
+
+    box-shadow:
+        0 0 0 4px rgba(34, 197, 94, 0.10);
+}
+
+
+/* =========================================================
+   FOOTER BOTTOM
+========================================================= */
+
+.footer-bottom {
+    max-width: 1200px;
+
+    margin: 22px auto 0;
+
+    padding-top: 15px;
+
+    border-top: 1px solid #f0f1f5;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 15px;
+
+    color: #9ca3af;
+
+    font-size: 9px;
+}
+
+
+.footer-bottom strong {
+    color: #6366f1;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 900px) {
+
+    .premium-footer {
+        padding: 25px 5% 16px;
+    }
+
+
+    .footer-content {
+        flex-wrap: wrap;
+
+        justify-content: center;
+
+        text-align: center;
+
+        gap: 22px;
+    }
+
+
+    .footer-brand {
+        justify-content: center;
+
+        width: 100%;
+    }
+
+
+    .footer-creator {
+        padding-left: 0;
+
+        border-left: none;
+
+        width: 100%;
+    }
+
+
+    .footer-status {
+        margin: 0 auto;
+    }
+
+
+    .footer-bottom {
+        flex-direction: column;
+
+        justify-content: center;
+
+        text-align: center;
+
+        gap: 5px;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 600px) {
+
+    .premium-footer {
+        margin-top: 35px;
+
+        padding: 23px 18px 15px;
+    }
+
+
+    .footer-content {
+        gap: 20px;
+    }
+
+
+    .footer-brand {
+        gap: 10px;
+    }
+
+
+    .footer-logo {
+        width: 43px;
+        height: 43px;
+
+        border-radius: 12px;
+
+        font-size: 20px;
+    }
+
+
+    .footer-brand h3 {
+        font-size: 13px;
+    }
+
+
+    .footer-brand p {
+        font-size: 9px;
+
+        max-width: 230px;
+    }
+
+
+    .footer-creator {
+        width: 100%;
+
+        padding: 13px 0;
+
+        border-top: 1px solid #f0f1f5;
+
+        border-bottom: 1px solid #f0f1f5;
+    }
+
+
+    .creator-label {
+        font-size: 8px;
+    }
+
+
+    .footer-creator h4 {
+        font-size: 13px;
+    }
+
+
+    .footer-creator p {
+        font-size: 9px;
+    }
+
+
+    .footer-status {
+        font-size: 8px;
+
+        padding: 7px 10px;
+    }
+
+
+    .footer-bottom {
+        margin-top: 15px;
+
+        padding-top: 12px;
+
+        font-size: 8px;
+
+        line-height: 1.5;
+    }
+
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 380px) {
+
+    .premium-footer {
+        padding-left: 13px;
+
+        padding-right: 13px;
+    }
+
+
+    .footer-brand h3 {
+        font-size: 12px;
+    }
+
+
+    .footer-brand p {
+        font-size: 8px;
+    }
+
+
+    .footer-creator h4 {
+        font-size: 12px;
+    }
+
+
+    .footer-status {
+        font-size: 7px;
+    }
+
+}
