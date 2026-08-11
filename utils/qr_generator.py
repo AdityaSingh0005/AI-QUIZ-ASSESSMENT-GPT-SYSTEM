@@ -4,7 +4,14 @@ import os
 
 def generate_qr(quiz_id):
 
-    url = f"http://127.0.0.1:5000/start_quiz/{quiz_id}"
+    # Production URL
+    base_url = os.getenv(
+        "APP_URL",
+        "https://ai-quiz-assessment-gpt-system.onrender.com"
+    ).rstrip("/")
+
+    # QR will open this public URL
+    url = f"{base_url}/start_quiz/{quiz_id}"
 
     print("QR URL:", url)
 

@@ -66,13 +66,18 @@ def available_quizzes():
 @student.route("/start_quiz/<int:quiz_id>")
 def start_quiz(quiz_id):
 
+    # Student is not logged in
     if "student_id" not in session:
+
+        # Remember which quiz the QR requested
+        session["pending_quiz_id"] = quiz_id
+
         return redirect("/")
 
     questions = get_quiz_questions(quiz_id)
 
     if not questions:
-        return "No questions found for this quiz."
+        return "Quiz not found or no questions available."
 
     session["quiz_id"] = quiz_id
     session["questions"] = questions
@@ -80,11 +85,6 @@ def start_quiz(quiz_id):
     session["answers"] = {}
 
     return redirect("/quiz")
-
-
-# ==========================================
-# QUIZ
-# ==========================================
 
 @student.route("/quiz", methods=["GET", "POST"])
 def quiz():
