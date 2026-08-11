@@ -1,15 +1,43 @@
-
 import json
-import ollama
+import os
+from ollama import Client
 
+
+# ============================================================
+# OLLAMA CLOUD CLIENT
+# ============================================================
+
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
+
+if not OLLAMA_API_KEY:
+    raise Exception("OLLAMA_API_KEY environment variable is not set")
+
+
+client = Client(
+    host="https://ollama.com",
+    headers={
+        "Authorization": f"Bearer {OLLAMA_API_KEY}"
+    }
+)
+
+
+# ============================================================
+# GENERATE QUESTIONS
+# ============================================================
 
 def generate_questions(topic, easy, medium, hard):
 
     total = easy + medium + hard
 
     if total <= 0:
-        raise Exception("Total questions must be greater than 0")
+        raise Exception(
+            "Total questions must be greater than 0"
+        )
 
+
+    # ========================================================
+    # GENERATE QUESTIONS BY DIFFICULTY
+    # ========================================================
 
     def generate_by_difficulty(difficulty, count):
 
@@ -24,17 +52,22 @@ Generate exactly {count} multiple-choice questions about:
 
 Difficulty level: {difficulty}
 
-IMPORTANT:
+IMPORTANT RULES:
 
-Return ONLY a JSON object containing a key called "questions".
+Return ONLY valid JSON.
 
-The value of "questions" MUST be an array.
+The JSON must contain exactly one key:
+
+"questions"
+
+The value of "questions" must be an array.
 
 Do not write explanations.
 Do not write markdown.
 Do not write headings.
+Do not use ```.
 
-Every question must contain:
+Every question MUST contain these fields:
 
 question
 option_a
@@ -44,24 +77,29 @@ option_d
 correct_option
 difficulty
 
-correct_option must be exactly:
-A, B, C, or D
+correct_option MUST be exactly one of:
 
-difficulty must be exactly:
+A
+B
+C
+D
+
+difficulty MUST be exactly:
+
 {difficulty}
 
-Generate exactly {count} questions.
+Generate EXACTLY {count} questions.
 
-Example format:
+JSON FORMAT:
 
 {{
     "questions": [
         {{
-            "question": "What is a stack?",
-            "option_a": "LIFO data structure",
-            "option_b": "FIFO data structure",
-            "option_c": "Database",
-            "option_d": "Operating System",
+            "question": "Example question?",
+            "option_a": "Option A",
+            "option_b": "Option B",
+            "option_c": "Option C",
+            "option_d": "Option D",
             "correct_option": "A",
             "difficulty": "{difficulty}"
         }}
@@ -69,6 +107,10 @@ Example format:
 }}
 """
 
+
+        # ====================================================
+        # RETRY 3 TIMES
+        # ====================================================
 
         for attempt in range(1, 4):
 
@@ -80,9 +122,10 @@ Example format:
 
             try:
 
-                response = ollama.chat(
+                response = client.chat(
 
-                    model="llama3.2:3b",
+                    # Ollama cloud model
+                    model="gpt-oss:20b",
 
                     messages=[
                         {
@@ -99,15 +142,23 @@ Example format:
                 )
 
 
-                content = response[
-                    "message"
-                ][
-                    "content"
-                ].strip()
+                # =================================================
+                # GET RESPONSE CONTENT
+                # =================================================
+
+                content = response["message"]["content"]
+
+                if not content:
+                    print("❌ Empty AI response")
+                    continue
+
+
+                content = content.strip()
 
 
                 print(
-                    f"\n========== {difficulty.upper()} RESPONSE =========="
+                    f"\n========== "
+                    f"{difficulty.upper()} RESPONSE =========="
                 )
 
                 print(content)
@@ -117,7 +168,9 @@ Example format:
                 )
 
 
-                # Remove markdown if present
+                # =================================================
+                # REMOVE MARKDOWN IF AI ADDS IT
+                # =================================================
 
                 content = content.replace(
                     "```json",
@@ -127,32 +180,37 @@ Example format:
                 content = content.replace(
                     "```",
                     ""
-                ).strip()
+                )
 
+                content = content.strip()
+
+
+                # =================================================
+                # PARSE JSON
+                # =================================================
 
                 try:
 
                     data = json.loads(content)
 
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
 
                     print(
-                        "❌ Invalid JSON"
+                        "❌ Invalid JSON:",
+                        e
                     )
 
                     continue
 
 
-                # We asked for:
-                #
-                # {
-                #   "questions": [...]
-                # }
+                # =================================================
+                # VALIDATE OBJECT
+                # =================================================
 
                 if not isinstance(data, dict):
 
                     print(
-                        "❌ Response is not JSON object"
+                        "❌ AI response is not an object"
                     )
 
                     continue
@@ -182,6 +240,10 @@ Example format:
                     continue
 
 
+                # =================================================
+                # CHECK QUESTION COUNT
+                # =================================================
+
                 if len(questions) != count:
 
                     print(
@@ -193,7 +255,9 @@ Example format:
                     continue
 
 
-                # Validate questions
+                # =================================================
+                # REQUIRED FIELDS
+                # =================================================
 
                 required_keys = [
 
@@ -211,6 +275,10 @@ Example format:
                 valid = True
 
 
+                # =================================================
+                # VALIDATE EVERY QUESTION
+                # =================================================
+
                 for index, q in enumerate(
                     questions
                 ):
@@ -220,21 +288,20 @@ Example format:
                         dict
                     ):
 
-                        valid = False
-
                         print(
                             f"❌ Question "
-                            f"{index + 1} invalid"
+                            f"{index + 1} is invalid"
                         )
 
+                        valid = False
                         break
 
+
+                    # Check required keys
 
                     for key in required_keys:
 
                         if key not in q:
-
-                            valid = False
 
                             print(
                                 f"❌ Question "
@@ -242,6 +309,7 @@ Example format:
                                 f"missing {key}"
                             )
 
+                            valid = False
                             break
 
 
@@ -249,16 +317,16 @@ Example format:
                         break
 
 
-                    # Normalize correct option
+                    # =================================================
+                    # NORMALIZE CORRECT OPTION
+                    # =================================================
 
                     q["correct_option"] = str(
                         q["correct_option"]
                     ).strip().upper()
 
 
-                    if q[
-                        "correct_option"
-                    ] not in [
+                    if q["correct_option"] not in [
 
                         "A",
                         "B",
@@ -267,43 +335,45 @@ Example format:
 
                     ]:
 
-                        valid = False
-
                         print(
-                            "❌ Invalid "
-                            "correct option"
+                            f"❌ Question "
+                            f"{index + 1} "
+                            f"has invalid correct option"
                         )
 
+                        valid = False
                         break
 
 
-                    # Normalize difficulty
+                    # =================================================
+                    # NORMALIZE DIFFICULTY
+                    # =================================================
 
                     q["difficulty"] = str(
                         q["difficulty"]
                     ).strip().capitalize()
 
 
-                    if q[
-                        "difficulty"
-                    ] != difficulty:
-
-                        valid = False
+                    if q["difficulty"] != difficulty:
 
                         print(
-                            f"❌ Expected "
-                            f"{difficulty} "
-                            f"question but got "
-                            f"{q['difficulty']}"
+                            f"❌ Question "
+                            f"{index + 1}: "
+                            f"expected {difficulty}, "
+                            f"got {q['difficulty']}"
                         )
 
+                        valid = False
                         break
 
 
                 if not valid:
-
                     continue
 
+
+                # =================================================
+                # SUCCESS
+                # =================================================
 
                 print(
                     f"✅ {difficulty}: "
@@ -322,6 +392,10 @@ Example format:
                 )
 
 
+        # ========================================================
+        # ALL 3 ATTEMPTS FAILED
+        # ========================================================
+
         raise Exception(
             f"Failed to generate "
             f"{difficulty} questions "
@@ -329,12 +403,12 @@ Example format:
         )
 
 
-    # =====================================
-    # Generate separately
-    # =====================================
+    # ============================================================
+    # GENERATE EASY
+    # ============================================================
 
     print("\n==============================")
-    print("OLLAMA QUIZ GENERATION")
+    print("OLLAMA CLOUD QUIZ GENERATION")
     print("==============================")
 
     print("Topic:", topic)
@@ -352,11 +426,19 @@ Example format:
     )
 
 
+    # ============================================================
+    # GENERATE MEDIUM
+    # ============================================================
+
     medium_questions = generate_by_difficulty(
         "Medium",
         medium
     )
 
+
+    # ============================================================
+    # GENERATE HARD
+    # ============================================================
 
     hard_questions = generate_by_difficulty(
         "Hard",
@@ -364,7 +446,9 @@ Example format:
     )
 
 
-    # Combine all questions
+    # ============================================================
+    # COMBINE
+    # ============================================================
 
     questions = (
         easy_questions
@@ -373,7 +457,9 @@ Example format:
     )
 
 
-    # Final safety check
+    # ============================================================
+    # FINAL CHECK
+    # ============================================================
 
     if len(questions) != total:
 
@@ -407,4 +493,3 @@ Example format:
 
 
     return questions
-
