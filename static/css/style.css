@@ -46,7 +46,7 @@ html {
 
 body {
     min-height: 100vh;
-    font-family: "Poppins", sans-serif;
+    font-family: "Inter", sans-serif;
     color: var(--text);
     background: var(--bg);
     line-height: 1.6;
@@ -68,46 +68,71 @@ textarea {
    LOGIN PAGE
    ========================================================= */
 
+/* =========================================================
+LOGIN PAGE — PREMIUM AUTH EXPERIENCE
+========================================================= */
+
 .login-body {
     min-height: 100vh;
     padding: 30px;
+
     display: flex;
     align-items: center;
     justify-content: center;
 
     background:
-        radial-gradient(circle at 10% 20%, rgba(99,102,241,.25), transparent 30%),
-        radial-gradient(circle at 90% 80%, rgba(139,92,246,.25), transparent 30%),
-        linear-gradient(135deg, #eef2ff, #f8f7ff);
+        radial-gradient(
+            circle at 10% 10%,
+            rgba(99, 102, 241, 0.20),
+            transparent 32%
+        ),
+        radial-gradient(
+            circle at 90% 90%,
+            rgba(139, 92, 246, 0.18),
+            transparent 32%
+        ),
+        linear-gradient(
+            135deg,
+            #eef2ff 0%,
+            #f8f7ff 50%,
+            #f5f3ff 100%
+        );
+
+    overflow-x: hidden;
 }
 
 
-/* Main login container */
+/* =========================================================
+LOGIN WRAPPER
+========================================================= */
 
 .login-wrapper {
-    width: min(1120px, 100%);
-    min-height: 650px;
+    width: min(1180px, 100%);
+    min-height: 680px;
 
     display: flex;
 
-    background: rgba(255,255,255,.92);
-    border: 1px solid rgba(255,255,255,.8);
-
-    border-radius: var(--radius-xl);
-
     overflow: hidden;
 
-    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: var(--radius-xl);
 
-    backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.94);
 
-    animation: loginAppear .7s ease;
+    box-shadow:
+        0 30px 80px rgba(31, 41, 55, 0.14),
+        0 8px 30px rgba(99, 102, 241, 0.08);
+
+    backdrop-filter: blur(24px);
+
+    animation: loginAppear 0.65s cubic-bezier(.22, 1, .36, 1);
 }
+
 
 @keyframes loginAppear {
     from {
         opacity: 0;
-        transform: translateY(25px) scale(.98);
+        transform: translateY(22px) scale(0.985);
     }
 
     to {
@@ -118,323 +143,646 @@ textarea {
 
 
 /* =========================================================
-   LEFT BRAND PANEL
-   ========================================================= */
+LEFT BRAND PANEL
+========================================================= */
 
 .brand-panel {
     position: relative;
 
     width: 52%;
-    padding: 65px;
+    padding: 64px;
 
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    align-items: center;
 
     color: white;
 
     overflow: hidden;
 
     background:
-        radial-gradient(circle at 85% 15%, rgba(255,255,255,.18), transparent 25%),
-        radial-gradient(circle at 10% 90%, rgba(255,255,255,.12), transparent 30%),
-        linear-gradient(145deg, #4f46e5, #6366f1 45%, #7c3aed);
+        radial-gradient(
+            circle at 85% 15%,
+            rgba(255,255,255,.20),
+            transparent 26%
+        ),
+        radial-gradient(
+            circle at 10% 90%,
+            rgba(255,255,255,.12),
+            transparent 32%
+        ),
+        linear-gradient(
+            145deg,
+            #4338ca 0%,
+            #4f46e5 42%,
+            #7c3aed 100%
+        );
 }
 
 
-/* Decorative circles */
+/* Decorative shapes */
 
 .brand-panel::before,
 .brand-panel::after {
     content: "";
+
     position: absolute;
 
     border-radius: 50%;
 
-    background: rgba(255,255,255,.08);
-
     pointer-events: none;
 }
 
-.brand-panel::before {
-    width: 300px;
-    height: 300px;
 
-    right: -120px;
-    top: -100px;
+.brand-panel::before {
+    width: 360px;
+    height: 360px;
+
+    top: -180px;
+    right: -130px;
+
+    background: rgba(255,255,255,.07);
+
+    border: 1px solid rgba(255,255,255,.08);
 }
+
 
 .brand-panel::after {
-    width: 230px;
-    height: 230px;
+    width: 280px;
+    height: 280px;
 
-    left: -120px;
-    bottom: -90px;
+    bottom: -170px;
+    left: -130px;
+
+    background: rgba(255,255,255,.06);
+
+    border: 1px solid rgba(255,255,255,.07);
 }
 
 
-/* Logo */
+/* =========================================================
+BRAND CONTENT
+========================================================= */
 
-.logo {
+.brand-content {
     position: relative;
     z-index: 2;
 
-    width: 78px;
-    height: 78px;
+    width: 100%;
+    max-width: 500px;
+}
+
+
+/* =========================================================
+AI BADGE
+========================================================= */
+
+.brand-badge {
+    width: fit-content;
+
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 8px 13px;
+
+    margin-bottom: 24px;
+
+    border: 1px solid rgba(255,255,255,.20);
+    border-radius: 999px;
+
+    background: rgba(255,255,255,.10);
+
+    color: rgba(255,255,255,.95);
+
+    font-size: 12px;
+    font-weight: 600;
+
+    letter-spacing: .2px;
+
+    backdrop-filter: blur(10px);
+}
+
+
+.brand-icon {
+    display: inline-flex;
+
+    font-size: 14px;
+
+    color: #ddd6fe;
+}
+
+
+/* =========================================================
+BRAND LOGO
+========================================================= */
+
+.brand-logo {
+    width: 76px;
+    height: 76px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    font-size: 38px;
+    margin-bottom: 28px;
 
+    border: 1px solid rgba(255,255,255,.22);
     border-radius: 22px;
 
-    background: rgba(255,255,255,.16);
-
-    border: 1px solid rgba(255,255,255,.25);
+    background: rgba(255,255,255,.13);
 
     box-shadow:
-        0 15px 35px rgba(0,0,0,.15),
-        inset 0 1px 0 rgba(255,255,255,.2);
+        0 18px 40px rgba(0,0,0,.16),
+        inset 0 1px 0 rgba(255,255,255,.20);
 
-    margin-bottom: 30px;
-}
+    font-size: 38px;
 
-
-/* Brand heading */
-
-.brand-panel h1 {
-    position: relative;
-    z-index: 2;
-
-    font-size: clamp(34px, 4vw, 48px);
-
-    line-height: 1.12;
-
-    font-weight: 700;
-
-    letter-spacing: -1.5px;
-}
-
-
-/* Brand description */
-
-.brand-panel p {
-    position: relative;
-    z-index: 2;
-
-    margin-top: 22px;
-
-    max-width: 470px;
-
-    font-size: 17px;
-
-    color: rgba(255,255,255,.86);
-}
-
-
-/* Features */
-
-.feature-list {
-    position: relative;
-    z-index: 2;
-
-    margin-top: 40px;
-
-    display: grid;
-
-    gap: 12px;
-}
-
-.feature-list div {
-    padding: 13px 16px;
-
-    border-radius: 13px;
-
-    font-size: 14px;
-
-    color: rgba(255,255,255,.95);
-
-    background: rgba(255,255,255,.10);
-
-    border: 1px solid rgba(255,255,255,.12);
-
-    backdrop-filter: blur(10px);
-
-    transition: .25s ease;
-}
-
-.feature-list div:hover {
-    transform: translateX(6px);
-
-    background: rgba(255,255,255,.16);
+    backdrop-filter: blur(12px);
 }
 
 
 /* =========================================================
-   LOGIN CARD
-   ========================================================= */
+BRAND HEADING
+========================================================= */
 
-.login-card {
-    width: 48%;
+.brand-panel h1 {
+    margin: 0;
 
-    padding: 65px 70px;
+    font-size: clamp(36px, 4vw, 52px);
+
+    line-height: 1.08;
+
+    font-weight: 800;
+
+    letter-spacing: -2px;
+}
+
+
+.brand-panel h1 span {
+    display: block;
+
+    margin-top: 6px;
+
+    color: #ddd6fe;
+}
+
+
+/* =========================================================
+BRAND DESCRIPTION
+========================================================= */
+
+.brand-description {
+    max-width: 470px;
+
+    margin-top: 22px;
+
+    color: rgba(255,255,255,.78);
+
+    font-size: 15px;
+
+    line-height: 1.75;
+}
+
+
+/* =========================================================
+FEATURE LIST
+========================================================= */
+
+.feature-list {
+    display: grid;
+
+    gap: 10px;
+
+    margin-top: 32px;
+}
+
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+
+    padding: 11px 13px;
+
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 13px;
+
+    background: rgba(255,255,255,.07);
+
+    backdrop-filter: blur(10px);
+
+    transition:
+        transform .25s ease,
+        background .25s ease,
+        border-color .25s ease;
+}
+
+
+.feature-item:hover {
+    transform: translateX(5px);
+
+    background: rgba(255,255,255,.12);
+
+    border-color: rgba(255,255,255,.18);
+}
+
+
+.feature-item > span {
+    width: 28px;
+    height: 28px;
+
+    flex-shrink: 0;
 
     display: flex;
-    flex-direction: column;
+    align-items: center;
     justify-content: center;
+
+    border-radius: 9px;
+
+    background: rgba(255,255,255,.14);
+
+    color: #ffffff;
+
+    font-size: 13px;
+    font-weight: 800;
+}
+
+
+.feature-item strong {
+    display: block;
+
+    color: #ffffff;
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+
+.feature-item small {
+    display: block;
+
+    margin-top: 2px;
+
+    color: rgba(255,255,255,.62);
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+BRAND FOOTER
+========================================================= */
+
+.brand-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-top: 34px;
+
+    color: rgba(255,255,255,.48);
+
+    font-size: 10px;
+}
+
+
+/* =========================================================
+LOGIN SECTION
+========================================================= */
+
+.login-section {
+    width: 48%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 60px 70px;
 
     background: #ffffff;
 }
 
 
-/* Login title */
+/* =========================================================
+LOGIN CARD
+========================================================= */
 
-.login-card h2 {
+.login-card {
+    width: 100%;
+    max-width: 390px;
+
+    background: transparent;
+}
+
+
+/* =========================================================
+LOGIN HEADER
+========================================================= */
+
+.login-header {
+    margin-bottom: 30px;
+}
+
+
+.mobile-logo {
+    display: none;
+}
+
+
+.welcome-icon {
+    width: 46px;
+    height: 46px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-bottom: 17px;
+
+    border-radius: 14px;
+
+    background: #eef2ff;
+
+    font-size: 22px;
+}
+
+
+.login-header h2 {
+    margin: 0;
+
+    color: #151b2e;
+
     font-size: 32px;
 
     line-height: 1.2;
 
-    font-weight: 700;
+    font-weight: 800;
 
-    letter-spacing: -.7px;
-
-    color: #151b2e;
+    letter-spacing: -1px;
 }
 
 
-/* Login subtitle */
-
-.login-card > p {
-    margin-top: 10px;
-    margin-bottom: 32px;
+.login-header p {
+    margin-top: 9px;
 
     color: var(--muted);
 
-    font-size: 14px;
+    font-size: 13px;
+
+    line-height: 1.6;
 }
 
 
-/* Labels */
+/* =========================================================
+FORM
+========================================================= */
 
-.login-card label {
+.login-form {
+    width: 100%;
+}
+
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+
+.form-group label {
     display: block;
 
-    margin-top: 18px;
-    margin-bottom: 8px;
+    margin: 0 0 8px;
 
     color: #30384d;
 
-    font-size: 13px;
+    font-size: 12px;
 
-    font-weight: 600;
+    font-weight: 700;
+
+    letter-spacing: .1px;
 }
 
 
-/* Inputs */
+/* =========================================================
+INPUT WRAPPER
+========================================================= */
 
-.login-card input,
-.login-card select {
+.input-wrapper {
+    position: relative;
 
     width: 100%;
+}
 
+
+.input-icon {
+    position: absolute;
+
+    left: 15px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    z-index: 2;
+
+    color: #8b93a7;
+
+    font-size: 15px;
+
+    pointer-events: none;
+}
+
+
+.input-wrapper input,
+.input-wrapper select {
+    width: 100%;
     height: 52px;
 
-    padding: 0 16px;
+    padding: 0 15px 0 44px;
 
+    border: 1px solid #e5e7ef;
     border-radius: 13px;
-
-    border: 1px solid var(--border);
 
     background: #f9fafc;
 
     color: #1f2937;
 
-    font-size: 14px;
+    font-size: 13px;
 
     outline: none;
 
-    transition: .25s ease;
+    transition:
+        border-color .2s ease,
+        background .2s ease,
+        box-shadow .2s ease,
+        transform .2s ease;
 }
 
-.login-card input::placeholder {
-    color: #a0a7b5;
+
+.input-wrapper select {
+    cursor: pointer;
+    appearance: auto;
 }
 
-.login-card input:hover,
-.login-card select:hover {
-    border-color: #cdd2e4;
-    background: #fff;
+
+.input-wrapper input::placeholder {
+    color: #a3a9b8;
 }
 
-.login-card input:focus,
-.login-card select:focus {
+
+.input-wrapper input:hover,
+.input-wrapper select:hover {
+    border-color: #cfd4e2;
+
+    background: #ffffff;
+}
+
+
+.input-wrapper input:focus,
+.input-wrapper select:focus {
     border-color: var(--primary);
 
-    background: #fff;
+    background: #ffffff;
 
     box-shadow:
         0 0 0 4px rgba(99,102,241,.10);
 }
 
 
-/* Login button */
+/* =========================================================
+LOGIN BUTTON
+========================================================= */
 
-.login-card button {
+.login-button {
     width: 100%;
+    height: 53px;
 
-    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 
-    margin-top: 28px;
+    margin-top: 26px;
+
+    padding: 0 18px;
 
     border: none;
-
-    border-radius: 14px;
-
-    color: white;
-
-    font-size: 15px;
-
-    font-weight: 600;
-
-    cursor: pointer;
+    border-radius: 13px;
 
     background:
         linear-gradient(
             135deg,
-            var(--primary),
-            var(--secondary)
+            #6366f1,
+            #7c3aed
         );
 
-    box-shadow:
-        0 12px 25px rgba(99,102,241,.25);
+    color: #ffffff;
 
-    transition: .25s ease;
+    font-size: 14px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 12px 25px rgba(99,102,241,.24);
+
+    transition:
+        transform .2s ease,
+        box-shadow .2s ease;
 }
 
-.login-card button:hover {
+
+.login-button:hover {
     transform: translateY(-2px);
 
     box-shadow:
-        0 16px 32px rgba(99,102,241,.32);
+        0 16px 32px rgba(99,102,241,.30);
 }
 
-.login-card button:active {
+
+.login-button:active {
     transform: translateY(0);
+
+    box-shadow:
+        0 8px 18px rgba(99,102,241,.20);
 }
 
 
-/* Bottom text */
+.button-arrow {
+    font-size: 18px;
 
-.bottom-text {
-    margin-top: 30px;
+    transition: transform .2s ease;
+}
 
-    text-align: center;
 
-    color: #9ca3af;
+.login-button:hover .button-arrow {
+    transform: translateX(4px);
+}
 
-    font-size: 12px;
+
+/* =========================================================
+LOGIN DIVIDER
+========================================================= */
+
+.login-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    margin: 28px 0 20px;
+
+    color: #a0a6b5;
+
+    font-size: 10px;
+
+    text-transform: uppercase;
+
+    letter-spacing: .8px;
+}
+
+
+.login-divider::before,
+.login-divider::after {
+    content: "";
+
+    flex: 1;
+
+    height: 1px;
+
+    background: #edf0f5;
+}
+
+
+/* =========================================================
+SECURITY MESSAGE
+========================================================= */
+
+.login-security {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 10px 12px;
+
+    border: 1px solid #eef0f5;
+    border-radius: 11px;
+
+    background: #fafbfc;
+}
+
+
+.login-security > span {
+    font-size: 13px;
+}
+
+
+.login-security p {
+    margin: 0;
+
+    color: #8b93a3;
+
+    font-size: 10px;
+
+    line-height: 1.4;
 }
 
 
@@ -1087,9 +1435,9 @@ footer {
     }
 
     .brand-panel,
-    .login-card {
-        width: 100%;
-    }
+.login-section {
+    width: 100%;
+}
 
     .brand-panel {
         padding: 35px 28px;
@@ -1097,14 +1445,14 @@ footer {
         min-height: auto;
     }
 
-    .logo {
-        width: 62px;
-        height: 62px;
+    .brand-logo {
+    width: 62px;
+    height: 62px;
 
-        font-size: 30px;
+    font-size: 30px;
 
-        margin-bottom: 22px;
-    }
+    margin-bottom: 22px;
+}
 
     .brand-panel h1 {
         font-size: 31px;
