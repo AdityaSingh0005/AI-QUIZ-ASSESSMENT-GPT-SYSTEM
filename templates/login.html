@@ -1,211 +1,263 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="icon" 
-href="{{ url_for('static', filename='images/logo.jpg') }}">
-<title>
-AI Quiz Assessment System
-</title>
+    <link rel="icon"
+          href="{{ url_for('static', filename='images/logo.jpg') }}">
 
+    <title>AI Quiz Assessment System</title>
 
-<link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
 
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
 
 </head>
 
-
 <body class="login-body">
-
 
 <div class="login-wrapper">
 
+    <!-- ================= LEFT BRAND PANEL ================= -->
 
+    <section class="brand-panel">
 
-<!-- LEFT BRAND SECTION -->
+        <div class="brand-content">
 
-<div class="brand-panel">
+            <div class="brand-badge">
+                <span class="brand-icon">✦</span>
+                AI Powered
+            </div>
 
+            <div class="brand-logo">
+                🧠
+            </div>
 
-<div class="logo">
+            <h1>
+                AI Quiz
+                <span>Assessment System</span>
+            </h1>
 
-🧠
+            <p class="brand-description">
+                Create intelligent assessments, share quizzes instantly
+                and analyze student performance — all from one platform.
+            </p>
 
-</div>
+            <div class="feature-list">
 
+                <div class="feature-item">
+                    <span>✓</span>
+                    <div>
+                        <strong>AI Quiz Generation</strong>
+                        <small>Generate questions automatically</small>
+                    </div>
+                </div>
 
-<h1>
-AI Quiz
-<br>
-Assessment System
-</h1>
+                <div class="feature-item">
+                    <span>✓</span>
+                    <div>
+                        <strong>QR Code Access</strong>
+                        <small>Students join quizzes instantly</small>
+                    </div>
+                </div>
 
+                <div class="feature-item">
+                    <span>✓</span>
+                    <div>
+                        <strong>Performance Analytics</strong>
+                        <small>Track student results easily</small>
+                    </div>
+                </div>
 
-<p>
+                <div class="feature-item">
+                    <span>✓</span>
+                    <div>
+                        <strong>Smart Evaluation</strong>
+                        <small>Fast and organized assessment</small>
+                    </div>
+                </div>
 
-Smart Learning Platform
-with AI Powered Assessment
+            </div>
 
-</p>
+            <div class="brand-footer">
+                <span>AI Quiz Assessment System</span>
+                <span>•</span>
+                <span>Smart Education Platform</span>
+            </div>
 
+        </div>
 
+    </section>
 
-<div class="feature-list">
 
+    <!-- ================= LOGIN PANEL ================= -->
 
-<div>
-✓ AI Based Quiz Generation
-</div>
+    <section class="login-section">
 
+        <div class="login-card">
 
-<div>
-✓ QR Code Quiz Access
-</div>
+            <div class="login-header">
 
+                <div class="mobile-logo">
+                    🧠
+                </div>
 
-<div>
-✓ Student Performance Analytics
-</div>
+                <div class="welcome-icon">
+                    👋
+                </div>
 
+                <h2>
+                    Welcome back
+                </h2>
 
-<div>
-✓ Smart Evaluation System
-</div>
+                <p>
+                    Sign in to access your assessment dashboard.
+                </p>
 
+            </div>
 
-</div>
 
+            <form action="/login" method="POST" class="login-form">
 
+                <!-- ROLE -->
 
-</div>
+                <div class="form-group">
 
+                    <label for="role">
+                        Account Type
+                    </label>
 
+                    <div class="input-wrapper">
 
+                        <span class="input-icon">
+                            👤
+                        </span>
 
+                        <select
+                            id="role"
+                            name="role"
+                            required>
 
-<!-- LOGIN CARD -->
+                            <option value="">
+                                Select account type
+                            </option>
 
+                            <option value="teacher">
+                                Teacher
+                            </option>
 
-<div class="login-card">
+                            <option value="student">
+                                Student
+                            </option>
 
+                        </select>
 
-<h2>
-Welcome Back 👋
-</h2>
+                    </div>
 
+                </div>
 
-<p>
-Login to continue your journey
-</p>
 
+                <!-- USERNAME -->
 
+                <div class="form-group">
 
+                    <label for="username">
+                        Username
+                    </label>
 
-<form action="/login" method="POST">
+                    <div class="input-wrapper">
 
+                        <span class="input-icon">
+                            ✉
+                        </span>
 
+                        <input
+                            id="username"
+                            type="text"
+                            name="username"
+                            placeholder="Email / Roll Number"
+                            autocomplete="username"
+                            required>
 
-<label>
-Role
-</label>
+                    </div>
 
+                </div>
 
-<select name="role" required>
 
+                <!-- PASSWORD -->
 
-<option value="">
-Select Role
-</option>
+                <div class="form-group">
 
+                    <label for="password">
+                        Password
+                    </label>
 
-<option value="teacher">
-👨‍🏫 Teacher
-</option>
+                    <div class="input-wrapper">
 
+                        <span class="input-icon">
+                            🔒
+                        </span>
 
-<option value="student">
-👨‍🎓 Student
-</option>
+                        <input
+                            id="password"
+                            type="password"
+                            name="password"
+                            placeholder="Enter your password"
+                            autocomplete="current-password"
+                            required>
 
+                    </div>
 
-</select>
+                </div>
 
 
+                <button
+                    type="submit"
+                    class="login-button">
 
+                    <span>
+                        Sign in
+                    </span>
 
+                    <span class="button-arrow">
+                        →
+                    </span>
 
-<label>
-Username
-</label>
+                </button>
 
+            </form>
 
-<input
 
-type="text"
+            <div class="login-divider">
+                <span>AI Powered Education</span>
+            </div>
 
-name="username"
 
-placeholder="Email / Roll Number"
+            <div class="login-security">
 
-required>
+                <span>🔐</span>
 
+                <p>
+                    Your assessment data is securely managed.
+                </p>
 
+            </div>
 
+        </div>
 
-<label>
-Password
-</label>
-
-
-<input
-
-type="password"
-
-name="password"
-
-placeholder="Enter Password"
-
-required>
-
-
-
-
-
-<button type="submit">
-
-🚀 Login
-
-</button>
-
-
-
-</form>
-
-
-
-
-<div class="bottom-text">
-
-AI Powered Education Platform
-
-</div>
-
-
-</div>
-
-
+    </section>
 
 </div>
 
 
 <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
-</body>
 
+</body>
 
 </html>
