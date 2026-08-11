@@ -1,240 +1,474 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 
 <head>
 
-<title>Add Question</title>
+```
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Add Question | AI Quiz Assessment System</title>
 
 <link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+      href="{{ url_for('static', filename='css/style.css') }}">
 
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
+```
 
 </head>
 
-
 <body>
 
+<div class="dashboard-page question-editor-page">
 
-<div class="dashboard-page">
-
+```
+<!-- =====================================================
+     NAVBAR
+====================================================== -->
 
 <nav class="top-navbar">
 
-<h2>
-🧠 AI Quiz System
-</h2>
+    <div class="quiz-navbar-brand">
+
+        <span class="quiz-navbar-icon">
+            🧠
+        </span>
+
+        <div>
+            <strong>AI Quiz</strong>
+            <small>Assessment System</small>
+        </div>
+
+    </div>
 
 
-<div>
+    <div class="navbar-actions">
 
-<a href="/teacher_dashboard">
-🏠 Dashboard
-</a>
+        <a href="/teacher_dashboard"
+           class="nav-dashboard-link">
+
+            <span>⌂</span>
+            Dashboard
+
+        </a>
 
 
-<a href="/logout">
-🚪 Logout
-</a>
+        <a href="/logout"
+           class="nav-logout-link">
 
-</div>
+            <span>↪</span>
+            Logout
+
+        </a>
+
+    </div>
 
 </nav>
 
 
 
-<div class="question-container">
+<!-- =====================================================
+     MAIN
+====================================================== -->
+
+<main class="question-editor-container">
+
+
+    <!-- PAGE HEADER -->
+
+    <div class="question-page-header">
+
+        <div>
+
+            <div class="page-eyebrow">
+                <span>✦</span>
+                QUESTION AUTHORING
+            </div>
+
+            <h1>
+                Add a question
+            </h1>
+
+            <p>
+                Create a multiple-choice question for your assessment.
+            </p>
+
+        </div>
+
+
+        <div class="quiz-id-badge">
+
+            <span>
+                QUIZ ID
+            </span>
+
+            <strong>
+                #{{ quiz_id }}
+            </strong>
+
+        </div>
+
+    </div>
 
 
 
-<div class="question-card">
+    <!-- =================================================
+         QUESTION CARD
+    ================================================== -->
+
+    <section class="question-editor-card">
+
+
+        <!-- CARD HEADER -->
+
+        <div class="question-editor-header">
+
+            <div class="question-number">
+
+                <span>
+                    Q
+                </span>
+
+            </div>
+
+
+            <div>
+
+                <span class="editor-step">
+                    QUESTION 01
+                </span>
+
+                <h2>
+                    Question details
+                </h2>
+
+                <p>
+                    Enter the question and provide four answer choices.
+                </p>
+
+            </div>
+
+        </div>
 
 
 
-<div class="question-icon">
-📝
+        <form method="POST">
+
+
+
+            <!-- =================================================
+                 QUESTION
+            ================================================== -->
+
+            <div class="question-form-section">
+
+                <label for="questionText">
+                    Question
+                </label>
+
+
+                <div class="question-textarea-wrapper">
+
+                    <span class="question-textarea-icon">
+                        ?
+                    </span>
+
+                    <textarea
+                        id="questionText"
+                        name="question"
+                        placeholder="Write your question here..."
+                        required></textarea>
+
+                </div>
+
+
+                <small class="question-hint">
+                    Keep the question clear, specific and easy to understand.
+                </small>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 OPTIONS
+            ================================================== -->
+
+            <div class="answers-section">
+
+
+                <div class="answers-section-header">
+
+                    <div>
+
+                        <span class="editor-step">
+                            ANSWER CHOICES
+                        </span>
+
+                        <h3>
+                            Add four options
+                        </h3>
+
+                    </div>
+
+
+                    <span class="answer-count">
+                        4 OPTIONS
+                    </span>
+
+                </div>
+
+
+
+                <div class="option-grid">
+
+
+                    <!-- OPTION A -->
+
+                    <div class="option-card option-a">
+
+                        <div class="option-label">
+                            A
+                        </div>
+
+                        <div class="option-input">
+
+                            <label for="optionA">
+                                Option A
+                            </label>
+
+                            <input
+                                id="optionA"
+                                type="text"
+                                name="option_a"
+                                placeholder="Enter option A"
+                                required>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- OPTION B -->
+
+                    <div class="option-card option-b">
+
+                        <div class="option-label">
+                            B
+                        </div>
+
+                        <div class="option-input">
+
+                            <label for="optionB">
+                                Option B
+                            </label>
+
+                            <input
+                                id="optionB"
+                                type="text"
+                                name="option_b"
+                                placeholder="Enter option B"
+                                required>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- OPTION C -->
+
+                    <div class="option-card option-c">
+
+                        <div class="option-label">
+                            C
+                        </div>
+
+                        <div class="option-input">
+
+                            <label for="optionC">
+                                Option C
+                            </label>
+
+                            <input
+                                id="optionC"
+                                type="text"
+                                name="option_c"
+                                placeholder="Enter option C"
+                                required>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- OPTION D -->
+
+                    <div class="option-card option-d">
+
+                        <div class="option-label">
+                            D
+                        </div>
+
+                        <div class="option-input">
+
+                            <label for="optionD">
+                                Option D
+                            </label>
+
+                            <input
+                                id="optionD"
+                                type="text"
+                                name="option_d"
+                                placeholder="Enter option D"
+                                required>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 CORRECT ANSWER
+            ================================================== -->
+
+            <div class="correct-answer-section">
+
+
+                <div class="correct-answer-header">
+
+                    <div>
+
+                        <span class="editor-step">
+                            ANSWER KEY
+                        </span>
+
+                        <h3>
+                            Select the correct answer
+                        </h3>
+
+                    </div>
+
+
+                    <span class="correct-status">
+                        ✓ Required
+                    </span>
+
+                </div>
+
+
+                <div class="correct-select-wrapper">
+
+                    <span class="correct-select-icon">
+                        ✓
+                    </span>
+
+
+                    <select
+                        name="correct_option"
+                        id="correctOption"
+                        required>
+
+                        <option value="A">
+                            Option A
+                        </option>
+
+                        <option value="B">
+                            Option B
+                        </option>
+
+                        <option value="C">
+                            Option C
+                        </option>
+
+                        <option value="D">
+                            Option D
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <p class="correct-answer-note">
+                    This answer will be used to evaluate student responses.
+                </p>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 ACTION
+            ================================================== -->
+
+            <div class="question-form-actions">
+
+
+                <a href="/teacher_dashboard"
+                   class="cancel-question-button">
+
+                    Cancel
+
+                </a>
+
+
+                <button
+                    type="submit"
+                    class="save-question-button">
+
+                    <span>
+                        ✓
+                    </span>
+
+                    <span>
+                        Save Question
+                    </span>
+
+                    <strong>
+                        →
+                    </strong>
+
+                </button>
+
+            </div>
+
+
+        </form>
+
+    </section>
+
+
+
+    <!-- SECURITY / INFO -->
+
+    <div class="question-editor-footer">
+
+        <span>
+            🔒
+        </span>
+
+        <p>
+            Your question will be securely saved to Quiz
+            <strong>#{{ quiz_id }}</strong>.
+        </p>
+
+    </div>
+
+
+</main>
+```
+
 </div>
-
-
-
-<h1>
-Add Question
-</h1>
-
-
-<p>
-Quiz ID : {{ quiz_id }}
-</p>
-
-
-
-
-<form method="POST">
-
-
-
-<label>
-Question
-</label>
-
-
-<textarea
-
-name="question"
-
-placeholder="Enter your question here..."
-
-required>
-
-</textarea>
-
-
-
-
-
-<div class="option-grid">
-
-
-<div>
-
-<label>
-Option A
-</label>
-
-<input
-
-type="text"
-
-name="option_a"
-
-placeholder="Option A"
-
-required>
-
-</div>
-
-
-
-<div>
-
-<label>
-Option B
-</label>
-
-<input
-
-type="text"
-
-name="option_b"
-
-placeholder="Option B"
-
-required>
-
-</div>
-
-
-
-<div>
-
-<label>
-Option C
-</label>
-
-<input
-
-type="text"
-
-name="option_c"
-
-placeholder="Option C"
-
-required>
-
-</div>
-
-
-
-<div>
-
-<label>
-Option D
-</label>
-
-<input
-
-type="text"
-
-name="option_d"
-
-placeholder="Option D"
-
-required>
-
-</div>
-
-
-</div>
-
-
-
-
-
-<label>
-Correct Answer
-</label>
-
-
-<select name="correct_option">
-
-
-<option value="A">
-Option A
-</option>
-
-
-<option value="B">
-Option B
-</option>
-
-
-<option value="C">
-Option C
-</option>
-
-
-<option value="D">
-Option D
-</option>
-
-
-</select>
-
-
-
-
-
-<button type="submit">
-
-💾 Save Question
-
-</button>
-
-
-
-</form>
-
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
 
 </body>
 
