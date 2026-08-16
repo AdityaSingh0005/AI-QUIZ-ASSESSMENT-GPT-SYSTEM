@@ -95,80 +95,6 @@
 
     </section>
 
-<!-- =====================================================
-     DIRECT QUIZ ACCESS
-====================================================== -->
-
-<div class="direct-quiz-access">
-
-    <div class="direct-quiz-divider">
-        <span>OR</span>
-    </div>
-
-    <div class="direct-quiz-header">
-
-        <span class="direct-quiz-icon">
-            🎯
-        </span>
-
-        <div>
-
-            <strong>
-                Have a Quiz ID?
-            </strong>
-
-            <small>
-                Attempt a quiz without logging in
-            </small>
-
-        </div>
-
-    </div>
-
-
-    <form
-        action="/guest_quiz"
-        method="POST"
-        class="direct-quiz-form"
-    >
-
-        <div class="direct-quiz-input">
-
-            <span>
-                #
-            </span>
-
-            <input
-                type="number"
-                name="quiz_id"
-                placeholder="Enter Quiz ID"
-                min="1"
-                required
-            >
-
-        </div>
-
-
-        <button
-            type="submit"
-            class="direct-quiz-button"
-        >
-
-            Start Quiz
-            <span>→</span>
-
-        </button>
-
-    </form>
-
-
-    <p class="direct-quiz-note">
-
-        No registration or password required.
-
-    </p>
-
-</div>
 
     <!-- ================= LOGIN PANEL ================= -->
 
@@ -308,10 +234,86 @@
             </form>
 
 
+            <!-- =====================================================
+     DIRECT QUIZ ACCESS
+====================================================== -->
+
+<div class="direct-quiz-access">
+
+    <div class="direct-quiz-divider">
+        <span>OR</span>
+    </div>
+
+    <div class="direct-quiz-header">
+
+        <span class="direct-quiz-icon">
+            🎯
+        </span>
+
+        <div>
+
+            <strong>
+                Have a Quiz ID?
+            </strong>
+
+            <small>
+                Attempt a quiz without logging in
+            </small>
+
+        </div>
+
+    </div>
+
+
+    <form
+        action="/guest_quiz"
+        method="POST"
+        class="direct-quiz-form"
+    >
+
+        <div class="direct-quiz-input">
+
+            <span>
+                #
+            </span>
+
+            <input
+                type="number"
+                name="quiz_id"
+                placeholder="Enter Quiz ID"
+                min="1"
+                required
+            >
+
+        </div>
+
+
+        <button
+            type="submit"
+            class="direct-quiz-button"
+        >
+
+            Start Quiz
+            <span>→</span>
+
+        </button>
+
+    </form>
+
+
+    <p class="direct-quiz-note">
+
+        No registration or password required.
+
+    </p>
+
+</div>
+
             <div class="login-divider">
                 <span>AI Powered Education</span>
             </div>
 
+            
 
             <div class="login-security">
 
