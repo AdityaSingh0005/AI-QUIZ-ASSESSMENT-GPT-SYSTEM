@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Quiz Generated | AI Quiz Assessment System
+    </title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Inter", sans-serif;
+            background: #f5f7fb;
+            color: #172033;
+        }
+
+        .page {
+            min-height: 100vh;
+        }
+
+        /* ==========================================
+           NAVBAR
+        ========================================== */
+
+        .navbar {
+            height: 72px;
+            background: #ffffff;
+            border-bottom: 1px solid #e8ebf2;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 0 6%;
+
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 12px;
+
+            background: linear-gradient(
+                135deg,
+                #6366f1,
+                #8b5cf6
+            );
+
+            color: white;
+            font-size: 21px;
+        }
+
+        .brand-text strong {
+            display: block;
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .brand-text small {
+            display: block;
+            color: #8b93a5;
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+
+            font-size: 12px;
+            font-weight: 700;
+
+            transition: 0.2s ease;
+        }
+
+        .dashboard-btn {
+            color: #4f46e5;
+            background: #eef2ff;
+        }
+
+        .dashboard-btn:hover {
+            background: #e0e7ff;
+        }
+
+        .logout-btn {
+            color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .logout-btn:hover {
+            background: #fee2e2;
+        }
+
+
+        /* ==========================================
+           MAIN
+        ========================================== */
+
+        .container {
+            width: min(1180px, 92%);
+            margin: 40px auto 60px;
+        }
+
+
+        /* ==========================================
+           SUCCESS HEADER
+        ========================================== */
+
+        .success-card {
+            background: white;
+
+            border-radius: 22px;
+
+            padding: 34px;
+
+            border: 1px solid #e8ebf2;
+
+            box-shadow:
+                0 15px 40px rgba(30, 41, 59, 0.06);
+
+            margin-bottom: 24px;
+
+            position: relative;
+            overflow: hidden;
+        }
+
+        .success-card::before {
+            content: "";
+
+            position: absolute;
+
+            top: 0;
+            left: 0;
+            right: 0;
+
+            height: 4px;
+
+            background: linear-gradient(
+                90deg,
+                #6366f1,
+                #8b5cf6,
+                #ec4899
+            );
+        }
+
+        .success-content {
+            display: flex;
+            align-items: center;
+            gap: 22px;
+        }
+
+        .success-icon {
+            width: 68px;
+            height: 68px;
+
+            flex-shrink: 0;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 20px;
+
+            background: #ecfdf5;
+
+            font-size: 32px;
+        }
+
+        .success-text h1 {
+            margin: 0 0 7px;
+
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .success-text p {
+            margin: 0;
+
+            color: #7c8496;
+            font-size: 13px;
+        }
+
+
+        /* ==========================================
+           QUIZ INFORMATION
+        ========================================== */
+
+        .quiz-info-grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(4, 1fr);
+
+            gap: 15px;
+
+            margin-bottom: 24px;
+        }
+
+        .info-card {
+            background: white;
+
+            border: 1px solid #e8ebf2;
+
+            border-radius: 16px;
+
+            padding: 20px;
+
+            box-shadow:
+                0 8px 25px rgba(30, 41, 59, 0.04);
+        }
+
+        .info-label {
+            font-size: 10px;
+            font-weight: 700;
+
+            color: #969daf;
+
+            text-transform: uppercase;
+
+            letter-spacing: 0.5px;
+
+            margin-bottom: 8px;
+        }
+
+        .info-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: #172033;
+        }
+
+
+        /* ==========================================
+           TWO COLUMN
+        ========================================== */
+
+        .main-grid {
+            display: grid;
+
+            grid-template-columns:
+                minmax(0, 1fr)
+                340px;
+
+            gap: 24px;
+
+            align-items: start;
+        }
+
+
+        /* ==========================================
+           QUESTIONS
+        ========================================== */
+
+        .questions-card {
+            background: white;
+
+            border: 1px solid #e8ebf2;
+
+            border-radius: 20px;
+
+            padding: 26px;
+
+            box-shadow:
+                0 10px 30px rgba(30, 41, 59, 0.05);
+        }
+
+        .section-header {
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            margin-bottom: 22px;
+        }
+
+        .section-header h2 {
+            margin: 0;
+
+            font-size: 19px;
+            font-weight: 800;
+        }
+
+        .question-count {
+            padding: 7px 11px;
+
+            background: #eef2ff;
+
+            color: #4f46e5;
+
+            border-radius: 20px;
+
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+
+        /* ==========================================
+           QUESTION CARD
+        ========================================== */
+
+        .question {
+            border: 1px solid #e9ecf3;
+
+            border-radius: 16px;
+
+            padding: 20px;
+
+            margin-bottom: 15px;
+
+            transition: 0.2s ease;
+        }
+
+        .question:hover {
+            border-color: #c7d2fe;
+
+            box-shadow:
+                0 8px 22px rgba(79, 70, 229, 0.06);
+        }
+
+        .question:last-child {
+            margin-bottom: 0;
+        }
+
+        .question-top {
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: flex-start;
+
+            gap: 15px;
+
+            margin-bottom: 13px;
+        }
+
+        .question-number {
+            width: 32px;
+            height: 32px;
+
+            flex-shrink: 0;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 10px;
+
+            background: #eef2ff;
+
+            color: #4f46e5;
+
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .question-text {
+            flex: 1;
+
+            font-size: 14px;
+            font-weight: 700;
+
+            line-height: 1.6;
+        }
+
+        .difficulty {
+            padding: 5px 9px;
+
+            border-radius: 20px;
+
+            font-size: 9px;
+            font-weight: 800;
+
+            text-transform: uppercase;
+
+            white-space: nowrap;
+        }
+
+        .difficulty.easy {
+            background: #ecfdf5;
+            color: #059669;
+        }
+
+        .difficulty.medium {
+            background: #fff7ed;
+            color: #ea580c;
+        }
+
+        .difficulty.hard {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+
+        /* ==========================================
+           OPTIONS
+        ========================================== */
+
+        .options {
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, 1fr);
+
+            gap: 10px;
+
+            margin-left: 47px;
+        }
+
+        .option {
+            padding: 12px 14px;
+
+            border-radius: 10px;
+
+            background: #f8f9fc;
+
+            border: 1px solid #edf0f5;
+
+            font-size: 12px;
+
+            color: #596274;
+
+            line-height: 1.4;
+        }
+
+        .option strong {
+            color: #4f46e5;
+
+            margin-right: 5px;
+        }
+
+
+        /* ==========================================
+           RIGHT SIDEBAR
+        ========================================== */
+
+        .sidebar {
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 18px;
+        }
+
+
+        /* ==========================================
+           QR CARD
+        ========================================== */
+
+        .qr-card {
+            background: white;
+
+            border: 1px solid #e8ebf2;
+
+            border-radius: 20px;
+
+            padding: 25px;
+
+            text-align: center;
+
+            box-shadow:
+                0 10px 30px rgba(30, 41, 59, 0.05);
+        }
+
+        .qr-card h3 {
+            margin: 0 0 6px;
+
+            font-size: 17px;
+            font-weight: 800;
+        }
+
+        .qr-card p {
+            margin: 0 0 18px;
+
+            color: #8991a3;
+
+            font-size: 11px;
+
+            line-height: 1.5;
+        }
+
+        .qr-image {
+            width: 190px;
+            height: 190px;
+
+            object-fit: contain;
+
+            padding: 8px;
+
+            border: 1px solid #edf0f5;
+
+            border-radius: 14px;
+
+            background: white;
+        }
+
+        .quiz-id {
+            margin-top: 13px;
+
+            font-size: 11px;
+
+            color: #8a92a3;
+        }
+
+        .quiz-id strong {
+            color: #4f46e5;
+        }
+
+
+        /* ==========================================
+           ACTIONS
+        ========================================== */
+
+        .action-card {
+            background: white;
+
+            border: 1px solid #e8ebf2;
+
+            border-radius: 20px;
+
+            padding: 22px;
+
+            box-shadow:
+                0 10px 30px rgba(30, 41, 59, 0.05);
+        }
+
+        .action-card h3 {
+            margin: 0 0 14px;
+
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .action-btn {
+            width: 100%;
+
+            display: block;
+
+            padding: 13px 15px;
+
+            margin-top: 10px;
+
+            border-radius: 11px;
+
+            text-align: center;
+
+            text-decoration: none;
+
+            font-size: 12px;
+
+            font-weight: 800;
+
+            transition: 0.2s ease;
+        }
+
+        .primary-btn {
+            background: linear-gradient(
+                135deg,
+                #6366f1,
+                #7c3aed
+            );
+
+            color: white;
+
+            box-shadow:
+                0 8px 18px rgba(99,102,241,0.20);
+        }
+
+        .primary-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .secondary-btn {
+            background: #f5f7ff;
+
+            color: #4f46e5;
+        }
+
+        .secondary-btn:hover {
+            background: #eef2ff;
+        }
+
+
+        /* ==========================================
+           AVAILABILITY
+        ========================================== */
+
+        .availability-card {
+            background: #f8f9ff;
+
+            border: 1px solid #e5e7eb;
+
+            border-radius: 15px;
+
+            padding: 17px;
+        }
+
+        .availability-card h4 {
+            margin: 0 0 9px;
+
+            font-size: 12px;
+
+            font-weight: 800;
+        }
+
+        .availability-card p {
+            margin: 5px 0;
+
+            color: #697386;
+
+            font-size: 10px;
+
+            line-height: 1.5;
+        }
+
+
+        /* ==========================================
+           MOBILE
+        ========================================== */
+
+        @media (max-width: 900px) {
+
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                order: -1;
+            }
+
+            .quiz-info-grid {
+                grid-template-columns:
+                    repeat(2, 1fr);
+            }
+
+        }
+
+
+        @media (max-width: 600px) {
+
+            .navbar {
+                padding: 0 4%;
+            }
+
+            .nav-dashboard-link {
+                display: none;
+            }
+
+            .container {
+                width: 94%;
+                margin-top: 25px;
+            }
+
+            .success-card {
+                padding: 24px;
+            }
+
+            .success-content {
+                align-items: flex-start;
+            }
+
+            .success-text h1 {
+                font-size: 22px;
+            }
+
+            .quiz-info-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .questions-card {
+                padding: 18px;
+            }
+
+            .options {
+                grid-template-columns: 1fr;
+
+                margin-left: 0;
+            }
+
+            .question-top {
+                flex-wrap: wrap;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="page">
+
+
+    <!-- ==========================================
+         NAVBAR
+    ========================================== -->
+
+    <nav class="navbar">
+
+        <div class="brand">
+
+            <div class="brand-icon">
+                🧠
+            </div>
+
+            <div class="brand-text">
+
+                <strong>
+                    AI Quiz
+                </strong>
+
+                <small>
+                    Assessment System
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <div class="nav-actions">
+
+            <a href="/teacher_dashboard"
+               class="nav-btn dashboard-btn">
+
+                ⌂ Dashboard
+
+            </a>
+
+            <a href="/logout"
+               class="nav-btn logout-btn">
+
+                ↪ Logout
+
+            </a>
+
+        </div>
+
+    </nav>
+
+
+
+    <!-- ==========================================
+         MAIN
+    ========================================== -->
+
+    <main class="container">
+
+
+        <!-- SUCCESS -->
+
+        <section class="success-card">
+
+            <div class="success-content">
+
+                <div class="success-icon">
+                    ✓
+                </div>
+
+                <div class="success-text">
+
+                    <h1>
+                        Quiz Generated Successfully!
+                    </h1>
+
+                    <p>
+                        Your AI-powered assessment is ready.
+                        Students can now access it using the QR code.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ==========================================
+             QUIZ INFO
+        ========================================== -->
+
+        <section class="quiz-info-grid">
+
+
+            <div class="info-card">
+
+                <div class="info-label">
+                    Quiz Title
+                </div>
+
+                <div class="info-value">
+                    {{ quiz.title }}
+                </div>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <div class="info-label">
+                    Questions
+                </div>
+
+                <div class="info-value">
+                    {{ questions|length }}
+                </div>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <div class="info-label">
+                    Duration
+                </div>
+
+                <div class="info-value">
+                    {{ quiz.duration_minutes }} min
+                </div>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <div class="info-label">
+                    Time / Question
+                </div>
+
+                <div class="info-value">
+                    {{ quiz.question_time_seconds }} sec
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- ==========================================
+             MAIN GRID
+        ========================================== -->
+
+        <section class="main-grid">
+
+
+            <!-- ======================================
+                 QUESTIONS
+            ======================================= -->
+
+            <div class="questions-card">
+
+                <div class="section-header">
+
+                    <h2>
+                        Generated Questions
+                    </h2>
+
+                    <span class="question-count">
+
+                        {{ questions|length }}
+                        Questions
+
+                    </span>
+
+                </div>
+
+
+                {% for q in questions %}
+
+                <div class="question">
+
+
+                    <div class="question-top">
+
+                        <div class="question-number">
+                            {{ loop.index }}
+                        </div>
+
+
+                        <div class="question-text">
+
+                            {{ q.question }}
+
+                        </div>
+
+
+                        {% if q.difficulty %}
+
+                        <span class="difficulty
+                            {{ q.difficulty|lower }}">
+
+                            {{ q.difficulty }}
+
+                        </span>
+
+                        {% endif %}
+
+                    </div>
+
+
+
+                    <!-- OPTIONS -->
+
+                    <div class="options">
+
+
+                        <div class="option">
+
+                            <strong>A.</strong>
+
+                            {{ q.option_a }}
+
+                        </div>
+
+
+                        <div class="option">
+
+                            <strong>B.</strong>
+
+                            {{ q.option_b }}
+
+                        </div>
+
+
+                        <div class="option">
+
+                            <strong>C.</strong>
+
+                            {{ q.option_c }}
+
+                        </div>
+
+
+                        <div class="option">
+
+                            <strong>D.</strong>
+
+                            {{ q.option_d }}
+
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+                {% endfor %}
+
+
+            </div>
+
+
+
+            <!-- ======================================
+                 SIDEBAR
+            ======================================= -->
+
+            <aside class="sidebar">
+
+
+                <!-- QR -->
+
+                <div class="qr-card">
+
+                    <h3>
+                        📱 Student QR Code
+                    </h3>
+
+                    <p>
+                        Students can scan this QR code
+                        to start the quiz.
+                    </p>
+
+
+                    {% if quiz.qr_code_path %}
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename=quiz.qr_code_path
+                                    |replace('static/', '')
+                            ) }}"
+                            class="qr-image"
+                            alt="Quiz QR Code">
+
+                    {% else %}
+
+                        <div
+                            style="
+                            padding:40px 10px;
+                            color:#ef4444;
+                            font-size:12px;
+                            ">
+
+                            QR code not available.
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <div class="quiz-id">
+
+                        Quiz ID:
+
+                        <strong>
+                            #{{ quiz.quiz_id }}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- ACTIONS -->
+
+                <div class="action-card">
+
+                    <h3>
+                        ⚡ Quiz Actions
+                    </h3>
+
+
+                    <a href="/show_qr/{{ quiz.quiz_id }}"
+                       class="action-btn primary-btn">
+
+                        📱 Show QR Code
+
+                    </a>
+
+
+                    <a href="/add_questions/{{ quiz.quiz_id }}"
+                       class="action-btn secondary-btn">
+
+                        ➕ Add Question
+
+                    </a>
+
+
+                    <a href="/manage_quizzes"
+                       class="action-btn secondary-btn">
+
+                        📋 Manage Quizzes
+
+                    </a>
+
+
+                    <a href="/teacher_dashboard"
+                       class="action-btn secondary-btn">
+
+                        ← Back to Dashboard
+
+                    </a>
+
+                </div>
+
+
+
+                <!-- AVAILABILITY -->
+
+                <div class="availability-card">
+
+                    <h4>
+                        📅 Quiz Availability
+                    </h4>
+
+
+                    <p>
+
+                        <strong>
+                            Available From:
+                        </strong>
+
+                        {{ quiz.available_from }}
+
+                    </p>
+
+
+                    {% if quiz.available_until %}
+
+                    <p>
+
+                        <strong>
+                            Available Until:
+                        </strong>
+
+                        {{ quiz.available_until }}
+
+                    </p>
+
+                    {% else %}
+
+                    <p>
+
+                        ♾️ This quiz never expires.
+
+                    </p>
+
+                    {% endif %}
+
+                </div>
+
+
+            </aside>
+
+
+        </section>
+
+
+    </main>
+
+</div>
+
+</body>
+
+</html>
