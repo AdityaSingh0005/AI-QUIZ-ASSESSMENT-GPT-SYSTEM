@@ -1,9 +1,10 @@
-
 from flask import Blueprint, render_template, request, redirect, session
 from database import get_db_connection
 from utils.qr_generator import generate_qr
 from utils.ai_generator import generate_questions
 from psycopg2.extras import RealDictCursor
+from datetime import datetime, timedelta, timezone
+
 
 teacher = Blueprint("teacher", __name__)
 
@@ -34,76 +35,230 @@ def create_quiz():
     if "teacher_id" not in session:
         return redirect("/")
 
-    # =========================
+    # ==========================================
     # OPEN CREATE QUIZ PAGE
-    # =========================
+    # ==========================================
 
     if request.method == "GET":
-        return render_template("create_quiz.html")
 
-    # =========================
-    # CREATE QUIZ
-    # =========================
+        return render_template(
+            "create_quiz.html"
+        )
+
+    # ==========================================
+    # BASIC QUIZ DETAILS
+    # ==========================================
 
     title = request.form.get("title")
     prompt = request.form.get("prompt")
 
-    easy = int(request.form.get("easy", 0))
-    medium = int(request.form.get("medium", 0))
-    hard = int(request.form.get("hard", 0))
-    
-    duration_minutes = int(
-    request.form.get("duration_minutes", 30)
-)
-    
-    question_time_seconds = int(
-    request.form.get("question_time", 60)
-)
+    easy = int(
+        request.form.get("easy", 0)
+    )
 
-    total_questions = easy + medium + hard
+    medium = int(
+        request.form.get("medium", 0)
+    )
+
+    hard = int(
+        request.form.get("hard", 0)
+    )
+
+    # ==========================================
+    # QUIZ DURATION
+    # ==========================================
+
+    duration_minutes = int(
+        request.form.get(
+            "duration_minutes",
+            30
+        )
+    )
+
+    # ==========================================
+    # TIME PER QUESTION
+    # ==========================================
+
+    question_time_seconds = int(
+        request.form.get(
+            "question_time_seconds",
+            60
+        )
+    )
+
+    # ==========================================
+    # QUIZ AVAILABILITY
+    # ==========================================
+
+    availability = request.form.get(
+        "availability",
+        "1_day"
+    )
+
+    # ==========================================
+    # TOTAL QUESTIONS
+    # ==========================================
+
+    total_questions = (
+        easy +
+        medium +
+        hard
+    )
 
     if total_questions <= 0:
-        return "Please select at least one question."
+
+        return """
+        <h2>❌ Please select at least one question.</h2>
+
+        <a href="/create_quiz">
+            ← Back to Create Quiz
+        </a>
+        """
+
+    # ==========================================
+    # VALIDATE QUIZ DURATION
+    # ==========================================
+
+    if duration_minutes <= 0:
+
+        return """
+        <h2>❌ Quiz duration must be greater than 0.</h2>
+
+        <a href="/create_quiz">
+            ← Back to Create Quiz
+        </a>
+        """
+
+    # ==========================================
+    # VALIDATE QUESTION TIME
+    # ==========================================
+
+    if question_time_seconds <= 0:
+
+        return """
+        <h2>❌ Question time must be greater than 0.</h2>
+
+        <a href="/create_quiz">
+            ← Back to Create Quiz
+        </a>
+        """
+
+    # ==========================================
+    # CALCULATE QUIZ AVAILABILITY
+    # ==========================================
+
+    # IMPORTANT:
+    # Database columns are TIMESTAMPTZ.
+    # Therefore we use timezone-aware UTC datetime.
+
+    available_from = datetime.now(timezone.utc)
+
+    if availability == "1_hour":
+
+        available_until = (
+            available_from +
+            timedelta(hours=1)
+        )
+
+    elif availability == "1_day":
+
+        available_until = (
+            available_from +
+            timedelta(days=1)
+        )
+
+    elif availability == "1_week":
+
+        available_until = (
+            available_from +
+            timedelta(weeks=1)
+        )
+
+    elif availability == "1_month":
+
+        available_until = (
+            available_from +
+            timedelta(days=30)
+        )
+
+    elif availability == "1_year":
+
+        available_until = (
+            available_from +
+            timedelta(days=365)
+        )
+
+    elif availability == "never":
+
+        available_until = None
+
+    else:
+
+        available_until = (
+            available_from +
+            timedelta(days=1)
+        )
+
+    # ==========================================
+    # DATABASE CONNECTION
+    # ==========================================
 
     db = get_db_connection()
     cursor = db.cursor()
 
     try:
 
-        # =========================
+        # ==========================================
         # INSERT QUIZ
-        # =========================
+        # ==========================================
 
         cursor.execute(
-    """
-    INSERT INTO quizzes
-    (
-        teacher_id,
-        title,
-        prompt,
-        total_questions,
-        duration_minutes
-        question_time_seconds
-    )
-    VALUES (%s, %s, %s, %s, %s, %s)
-    RETURNING quiz_id
-    """,
-    (
-        session["teacher_id"],
-        title,
-        prompt,
-        total_questions,
-        duration_minutes,
-        question_time_seconds
-    )
-)
+            """
+            INSERT INTO quizzes
+            (
+                teacher_id,
+                title,
+                prompt,
+                total_questions,
+                duration_minutes,
+                question_time_seconds,
+                available_from,
+                available_until
+            )
+            VALUES
+            (
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s
+            )
+            RETURNING quiz_id
+            """,
+            (
+                session["teacher_id"],
+                title,
+                prompt,
+                total_questions,
+                duration_minutes,
+                question_time_seconds,
+                available_from,
+                available_until
+            )
+        )
 
-        # PostgreSQL way of getting the generated ID
+        # ==========================================
+        # GET GENERATED QUIZ ID
+        # ==========================================
+
         quiz_id = cursor.fetchone()[0]
 
-        # =========================
+        # ==========================================
         # GENERATE AI QUESTIONS
-        # =========================
+        # ==========================================
 
         questions = generate_questions(
             prompt,
@@ -112,9 +267,19 @@ def create_quiz():
             hard
         )
 
-        # =========================
+        # ==========================================
+        # CHECK AI QUESTIONS
+        # ==========================================
+
+        if not questions:
+
+            raise Exception(
+                "AI could not generate questions."
+            )
+
+        # ==========================================
         # SAVE QUESTIONS
-        # =========================
+        # ==========================================
 
         for q in questions:
 
@@ -131,7 +296,17 @@ def create_quiz():
                     correct_option,
                     difficulty
                 )
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                VALUES
+                (
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s
+                )
                 """,
                 (
                     quiz_id,
@@ -145,11 +320,17 @@ def create_quiz():
                 )
             )
 
-        # =========================
-        # GENERATE QR
-        # =========================
+        # ==========================================
+        # GENERATE QR CODE
+        # ==========================================
 
-        qr_path = generate_qr(quiz_id)
+        qr_path = generate_qr(
+            quiz_id
+        )
+
+        # ==========================================
+        # SAVE QR PATH
+        # ==========================================
 
         cursor.execute(
             """
@@ -163,17 +344,31 @@ def create_quiz():
             )
         )
 
+        # ==========================================
+        # COMMIT EVERYTHING
+        # ==========================================
+
         db.commit()
 
         print(
             f"✅ Quiz {quiz_id} created successfully"
         )
 
-        # =========================
-        # GO TO MANAGE QUIZ
-        # =========================
+        print(
+            f"📅 Available From: {available_from}"
+        )
 
-        return redirect("/teacher_dashboard")
+        print(
+            f"📅 Available Until: {available_until}"
+        )
+
+        # ==========================================
+        # OPEN GENERATED QUIZ
+        # ==========================================
+
+        return redirect(
+            f"/quiz_generated/{quiz_id}"
+        )
 
     except Exception as e:
 
@@ -186,8 +381,11 @@ def create_quiz():
 
         return f"""
         <h2>❌ Error while creating quiz</h2>
+
         <p>{e}</p>
+
         <br>
+
         <a href="/create_quiz">
             ← Back to Create Quiz
         </a>
@@ -215,7 +413,9 @@ def quiz_generated(quiz_id):
         cursor_factory=RealDictCursor
     )
 
-    # Quiz information
+    # ==========================================
+    # QUIZ INFORMATION
+    # ==========================================
 
     cursor.execute(
         """
@@ -224,6 +424,10 @@ def quiz_generated(quiz_id):
             title,
             prompt,
             total_questions,
+            duration_minutes,
+            question_time_seconds,
+            available_from,
+            available_until,
             qr_code_path,
             created_at
         FROM quizzes
@@ -245,7 +449,9 @@ def quiz_generated(quiz_id):
 
         return "Quiz not found."
 
-    # Questions
+    # ==========================================
+    # QUESTIONS
+    # ==========================================
 
     cursor.execute(
         """
@@ -323,7 +529,16 @@ def add_questions(quiz_id):
                     difficulty
                 )
                 VALUES
-                (%s,%s,%s,%s,%s,%s,%s,%s)
+                (
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s
+                )
                 """,
                 (
                     quiz_id,
@@ -477,7 +692,9 @@ def generate_qr_page():
         SELECT
             quiz_id,
             title,
-            qr_code_path
+            qr_code_path,
+            available_from,
+            available_until
         FROM quizzes
         WHERE teacher_id=%s
         ORDER BY quiz_id DESC
@@ -520,6 +737,10 @@ def manage_quizzes():
             quiz_id,
             title,
             total_questions,
+            duration_minutes,
+            question_time_seconds,
+            available_from,
+            available_until,
             created_at
         FROM quizzes
         WHERE teacher_id=%s
@@ -557,7 +778,9 @@ def delete_quiz(quiz_id):
 
     try:
 
-        # Student answers
+        # ==========================================
+        # STUDENT ANSWERS
+        # ==========================================
 
         cursor.execute(
             """
@@ -567,7 +790,9 @@ def delete_quiz(quiz_id):
             (quiz_id,)
         )
 
-        # Results
+        # ==========================================
+        # RESULTS
+        # ==========================================
 
         cursor.execute(
             """
@@ -577,7 +802,9 @@ def delete_quiz(quiz_id):
             (quiz_id,)
         )
 
-        # Questions
+        # ==========================================
+        # QUESTIONS
+        # ==========================================
 
         cursor.execute(
             """
@@ -587,7 +814,9 @@ def delete_quiz(quiz_id):
             (quiz_id,)
         )
 
-        # Quiz
+        # ==========================================
+        # QUIZ
+        # ==========================================
 
         cursor.execute(
             """
@@ -640,4 +869,3 @@ def test_ai():
         "status": "success",
         "questions": questions
     }
-
