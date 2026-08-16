@@ -13229,3 +13229,238 @@ VERY SMALL PHONES
     }
 
 }
+
+/* ============================================================
+   DIRECT QUIZ ACCESS
+============================================================ */
+
+.direct-quiz-access {
+    width: 100%;
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px solid #e5e7eb;
+}
+
+
+/* HEADER */
+
+.direct-quiz-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+
+.direct-quiz-icon {
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    background: #eef2ff;
+    border-radius: 12px;
+
+    font-size: 20px;
+}
+
+
+.direct-quiz-text {
+    min-width: 0;
+}
+
+
+.direct-quiz-text strong {
+    display: block;
+
+    color: #1e293b;
+
+    font-size: 14px;
+    font-weight: 800;
+
+    margin-bottom: 3px;
+}
+
+
+.direct-quiz-text span {
+    display: block;
+
+    color: #64748b;
+
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+
+/* FORM */
+
+.direct-quiz-form {
+    display: flex;
+    gap: 10px;
+
+    width: 100%;
+}
+
+
+.direct-quiz-input {
+    flex: 1;
+
+    min-width: 0;
+
+    height: 48px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 0 13px;
+
+    background: #ffffff;
+
+    border: 1px solid #dbe3ef;
+
+    border-radius: 12px;
+
+    transition: 0.2s ease;
+}
+
+
+.direct-quiz-input:focus-within {
+    border-color: #6366f1;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(99, 102, 241, 0.10);
+}
+
+
+.direct-quiz-input > span {
+    color: #6366f1;
+
+    font-size: 17px;
+
+    font-weight: 800;
+}
+
+
+.direct-quiz-input input {
+    width: 100%;
+
+    min-width: 0;
+
+    border: none;
+    outline: none;
+
+    background: transparent;
+
+    color: #1e293b;
+
+    font-family: inherit;
+
+    font-size: 14px;
+}
+
+
+.direct-quiz-input input::placeholder {
+    color: #94a3b8;
+}
+
+
+/* BUTTON */
+
+.direct-quiz-button {
+    height: 48px;
+
+    padding: 0 18px;
+
+    flex-shrink: 0;
+
+    border: none;
+
+    border-radius: 12px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #4f46e5,
+            #6366f1
+        );
+
+    color: white;
+
+    font-family: inherit;
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+
+    white-space: nowrap;
+}
+
+
+.direct-quiz-button:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 8px 20px
+        rgba(79, 70, 229, 0.20);
+}
+
+
+.direct-quiz-button span {
+    margin-left: 5px;
+}
+
+
+/* NOTE */
+
+.direct-quiz-note {
+    margin: 10px 0 0;
+
+    text-align: center;
+
+    color: #94a3b8;
+
+    font-size: 11px;
+
+    line-height: 1.4;
+}
+
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media (max-width: 600px) {
+
+    .direct-quiz-access {
+        margin-top: 20px;
+        padding-top: 20px;
+    }
+
+
+    .direct-quiz-form {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+
+    .direct-quiz-input {
+        width: 100%;
+    }
+
+
+    .direct-quiz-button {
+        width: 100%;
+    }
+
+}
