@@ -4,7 +4,6 @@
 
 <head>
 
-
 <meta charset="UTF-8">
 
 <meta name="viewport"
@@ -20,10 +19,276 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet">
 
+<style>
+
+/* =========================================================
+   QUIZ TIMER
+========================================================= */
+
+.quiz-timer-area {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 18px;
+
+    margin-top: 20px;
+
+    padding: 16px 18px;
+
+    border-radius: 16px;
+
+    background: #f8f9ff;
+
+    border: 1px solid #e8eaf5;
+
+}
+
+
+/* Overall timer */
+
+.overall-timer {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+}
+
+
+.timer-icon {
+
+    width: 42px;
+
+    height: 42px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: #eef2ff;
+
+    font-size: 20px;
+
+}
+
+
+.timer-info {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 3px;
+
+}
+
+
+.timer-label {
+
+    color: #8a91a3;
+
+    font-size: 9px;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: .6px;
+
+}
+
+
+.overall-time {
+
+    color: #252d40;
+
+    font-size: 18px;
+
+    font-weight: 800;
+
+}
+
+
+/* Question timer */
+
+.question-timer {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    padding: 9px 13px;
+
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    border: 1px solid #e4e6ef;
+
+}
+
+
+.question-timer-icon {
+
+    font-size: 16px;
+
+}
+
+
+.question-time {
+
+    min-width: 45px;
+
+    color: #4f46e5;
+
+    font-size: 16px;
+
+    font-weight: 800;
+
+    text-align: center;
+
+}
+
+
+/* Timer warning */
+
+.timer-warning {
+
+    background: #fff7ed;
+
+    border-color: #fed7aa;
+
+}
+
+
+.timer-warning .question-time {
+
+    color: #ea580c;
+
+}
+
+
+.timer-danger {
+
+    background: #fef2f2;
+
+    border-color: #fecaca;
+
+    animation: timerPulse 1s infinite;
+
+}
+
+
+.timer-danger .question-time {
+
+    color: #dc2626;
+
+}
+
+
+@keyframes timerPulse {
+
+    50% {
+
+        transform: scale(1.02);
+
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 650px) {
+
+    .quiz-timer-area {
+
+        flex-direction: column;
+
+        align-items: stretch;
+
+        gap: 12px;
+
+    }
+
+    .overall-timer {
+
+        justify-content: space-between;
+
+    }
+
+    .question-timer {
+
+        justify-content: center;
+
+    }
+
+    .overall-time {
+
+        font-size: 17px;
+
+    }
+
+}
+
+
+/* =========================================================
+   VERY SMALL MOBILE
+========================================================= */
+
+@media (max-width: 400px) {
+
+    .quiz-timer-area {
+
+        padding: 13px;
+
+    }
+
+    .timer-icon {
+
+        width: 38px;
+
+        height: 38px;
+
+        font-size: 17px;
+
+    }
+
+    .overall-time {
+
+        font-size: 16px;
+
+    }
+
+    .question-time {
+
+        font-size: 15px;
+
+    }
+
+}
+
+</style>
 
 </head>
 
+
 <body class="attempt-page">
+
 
 <div class="dashboard-page">
 
@@ -33,6 +298,7 @@
 ====================================================== -->
 
 <nav class="top-navbar quiz-top-navbar">
+
 
     <div class="attempt-brand">
 
@@ -76,6 +342,7 @@
 
     </div>
 
+
 </nav>
 
 
@@ -87,12 +354,15 @@
 <main class="attempt-container">
 
 
-    <!-- TOP PROGRESS HEADER -->
+    <!-- =================================================
+         TOP PROGRESS HEADER
+    ================================================== -->
 
     <section class="attempt-progress-card">
 
 
         <div class="attempt-progress-top">
+
 
             <div>
 
@@ -100,9 +370,15 @@
                     CURRENT QUESTION
                 </span>
 
+
                 <h1>
+
                     Question {{number}}
-                    <span>/ {{total}}</span>
+
+                    <span>
+                        / {{total}}
+                    </span>
+
                 </h1>
 
             </div>
@@ -114,13 +390,18 @@
 
             </div>
 
+
         </div>
 
 
+
+        <!-- PROGRESS BAR -->
+
         <div class="progress-track">
 
-            <div class="progress-fill"
-                 style="width: {{ (number/total)*100 }}%">
+            <div
+                class="progress-fill"
+                style="width: {{ (number/total)*100 }}%">
             </div>
 
         </div>
@@ -135,6 +416,78 @@
             <strong>
                 {{ ((number/total)*100)|round|int }}%
             </strong>
+
+        </div>
+
+
+
+        <!-- =================================================
+             TIMER AREA
+        ================================================== -->
+
+        <div class="quiz-timer-area">
+
+
+            <!-- OVERALL QUIZ TIMER -->
+
+            <div class="overall-timer">
+
+
+                <div class="timer-icon">
+                    ⏱️
+                </div>
+
+
+                <div class="timer-info">
+
+                    <span class="timer-label">
+                        Quiz Time Remaining
+                    </span>
+
+
+                    <span
+                        id="overallTimer"
+                        class="overall-time">
+
+                        --:--
+
+                    </span>
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- QUESTION TIMER -->
+
+            <div
+                id="questionTimerBox"
+                class="question-timer">
+
+
+                <span class="question-timer-icon">
+                    ⏳
+                </span>
+
+
+                <span class="timer-label">
+                    Question Time
+                </span>
+
+
+                <strong
+                    id="questionTimer"
+                    class="question-time">
+
+                    --:--
+
+                </strong>
+
+
+            </div>
+
 
         </div>
 
@@ -161,6 +514,7 @@
         </div>
 
 
+
         <h2 class="attempt-question-text">
 
             {{question.question}}
@@ -168,8 +522,11 @@
         </h2>
 
 
+
         <p class="select-hint">
+
             Select one answer from the options below.
+
         </p>
 
 
@@ -178,12 +535,16 @@
              OPTIONS
         ================================================== -->
 
-        <form method="POST"
-              class="attempt-form">
+        <form
+            method="POST"
+            class="attempt-form"
+            id="quizForm">
 
 
             <div class="attempt-options">
 
+
+                <!-- OPTION A -->
 
                 <label class="attempt-option">
 
@@ -209,6 +570,8 @@
 
 
 
+                <!-- OPTION B -->
+
                 <label class="attempt-option">
 
                     <input
@@ -232,6 +595,8 @@
 
 
 
+                <!-- OPTION C -->
+
                 <label class="attempt-option">
 
                     <input
@@ -254,6 +619,8 @@
                 </label>
 
 
+
+                <!-- OPTION D -->
 
                 <label class="attempt-option">
 
@@ -303,9 +670,12 @@
 
                 <button
                     type="submit"
-                    class="next-question-btn">
+                    class="next-question-btn"
+                    id="nextButton">
+
 
                     {% if number == total %}
+
 
                         <span>
                             Submit Quiz
@@ -315,7 +685,9 @@
                             🚀
                         </span>
 
+
                     {% else %}
+
 
                         <span>
                             Next Question
@@ -325,7 +697,9 @@
                             →
                         </span>
 
+
                     {% endif %}
+
 
                 </button>
 
@@ -351,8 +725,11 @@
         </span>
 
         <p>
+
             Choose the answer carefully before continuing.
-            You won't be able to change your answer after moving ahead.
+            You won't be able to change your answer after
+            moving ahead.
+
         </p>
 
     </div>
@@ -363,7 +740,259 @@
 
 </div>
 
-<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+
+
+<!-- =====================================================
+     TIMER JAVASCRIPT
+====================================================== -->
+
+<script>
+
+const quizForm =
+    document.getElementById("quizForm");
+
+
+const overallTimer =
+    document.getElementById("overallTimer");
+
+
+const questionTimer =
+    document.getElementById("questionTimer");
+
+
+const questionTimerBox =
+    document.getElementById("questionTimerBox");
+
+
+/* =====================================================
+   TIMER VALUES FROM FLASK
+===================================================== */
+
+let overallSeconds =
+    Number("{{ remaining_seconds }}");
+
+
+let questionSeconds =
+    Number("{{ question_time_seconds }}");
+
+
+/* =====================================================
+   FORMAT TIME
+===================================================== */
+
+function formatTime(seconds) {
+
+    seconds = Math.max(
+        0,
+        Math.floor(seconds)
+    );
+
+    const minutes =
+        Math.floor(seconds / 60);
+
+    const secs =
+        seconds % 60;
+
+    return (
+        String(minutes).padStart(2, "0")
+        + ":"
+        + String(secs).padStart(2, "0")
+    );
+}
+
+
+/* =====================================================
+   UPDATE OVERALL TIMER
+===================================================== */
+
+function updateOverallTimer() {
+
+    overallTimer.textContent =
+        formatTime(overallSeconds);
+
+
+    if (overallSeconds <= 60) {
+
+        overallTimer.style.color =
+            "#dc2626";
+
+    }
+
+
+    if (overallSeconds <= 0) {
+
+        clearInterval(overallInterval);
+
+        clearInterval(questionInterval);
+
+        quizForm.submit();
+
+        return;
+
+    }
+
+
+    overallSeconds--;
+
+}
+
+
+/* =====================================================
+   UPDATE QUESTION TIMER
+===================================================== */
+
+function updateQuestionTimer() {
+
+    questionTimer.textContent =
+        formatTime(questionSeconds);
+
+
+    /* Warning */
+
+    if (
+        questionSeconds <= 10 &&
+        questionSeconds > 5
+    ) {
+
+        questionTimerBox.classList.add(
+            "timer-warning"
+        );
+
+    }
+
+
+    /* Danger */
+
+    if (questionSeconds <= 5) {
+
+        questionTimerBox.classList.remove(
+            "timer-warning"
+        );
+
+        questionTimerBox.classList.add(
+            "timer-danger"
+        );
+
+    }
+
+
+    /* Timer finished */
+
+    if (questionSeconds <= 0) {
+
+        clearInterval(questionInterval);
+
+        /*
+         * Automatically move to next question.
+         *
+         * If student selected an answer,
+         * it will be submitted.
+         *
+         * If no answer is selected,
+         * browser validation is bypassed
+         * using requestSubmit only when possible.
+         */
+
+        const selectedAnswer =
+            document.querySelector(
+                'input[name="answer"]:checked'
+            );
+
+
+        if (selectedAnswer) {
+
+            quizForm.submit();
+
+        }
+
+        else {
+
+            /*
+             * Submit empty answer.
+             * Server will record NULL.
+             */
+
+            quizForm.submit();
+
+        }
+
+        return;
+
+    }
+
+
+    questionSeconds--;
+
+}
+
+
+/* =====================================================
+   INITIAL DISPLAY
+===================================================== */
+
+overallTimer.textContent =
+    formatTime(overallSeconds);
+
+
+questionTimer.textContent =
+    formatTime(questionSeconds);
+
+
+/* =====================================================
+   START TIMERS
+===================================================== */
+
+const overallInterval =
+    setInterval(
+        updateOverallTimer,
+        1000
+    );
+
+
+const questionInterval =
+    setInterval(
+        updateQuestionTimer,
+        1000
+    );
+
+
+/* =====================================================
+   PREVENT DOUBLE SUBMISSION
+===================================================== */
+
+let submitted = false;
+
+
+quizForm.addEventListener(
+    "submit",
+    function() {
+
+        if (submitted) {
+
+            return;
+
+        }
+
+        submitted = true;
+
+        clearInterval(
+            overallInterval
+        );
+
+        clearInterval(
+            questionInterval
+        );
+
+    }
+);
+
+</script>
+
+
+
+<script src="{{ url_for('static', filename='js/darkmode.js') }}">
+</script>
+
 
 </body>
 

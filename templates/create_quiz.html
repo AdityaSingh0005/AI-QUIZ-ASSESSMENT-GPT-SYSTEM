@@ -458,6 +458,87 @@
                         </div>
 
                     </div>
+                <div class="form-group">
+    <label for="duration_minutes">
+        ⏱️ Quiz Duration
+    </label>
+
+    <div class="input-wrapper">
+        <span class="input-icon">⏱️</span>
+
+        <select
+            name="duration_minutes"
+            id="duration_minutes"
+            required>
+
+            <option value="10">10 Minutes</option>
+            <option value="15">15 Minutes</option>
+            <option value="20">20 Minutes</option>
+            <option value="30" selected>30 Minutes</option>
+            <option value="45">45 Minutes</option>
+            <option value="60">60 Minutes</option>
+            <option value="90">90 Minutes</option>
+
+        </select>
+    </div>
+
+    <small class="input-hint">
+        Quiz automatically submit ho jayega jab time khatam hoga.
+    </small>
+</div>
+
+
+<div class="form-group">
+
+    <label for="question_time">
+        ⏱️ Time Per Question
+    </label>
+
+    <div class="input-wrapper">
+
+        <span class="input-icon">
+            ⏱️
+        </span>
+
+        <select
+            name="question_time"
+            id="question_time"
+            required>
+
+            <option value="15">
+                15 Seconds
+            </option>
+
+            <option value="30">
+                30 Seconds
+            </option>
+
+            <option value="45">
+                45 Seconds
+            </option>
+
+            <option value="60" selected>
+                60 Seconds
+            </option>
+
+            <option value="90">
+                90 Seconds
+            </option>
+
+            <option value="120">
+                2 Minutes
+            </option>
+
+        </select>
+
+    </div>
+
+    <small class="input-hint">
+        Time ends automatically and the next question will appear.
+    </small>
+
+</div>
+
 
 
                     <!-- TOTAL -->

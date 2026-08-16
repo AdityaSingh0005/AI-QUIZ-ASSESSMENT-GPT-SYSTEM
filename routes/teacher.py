@@ -51,6 +51,14 @@ def create_quiz():
     easy = int(request.form.get("easy", 0))
     medium = int(request.form.get("medium", 0))
     hard = int(request.form.get("hard", 0))
+    
+    duration_minutes = int(
+    request.form.get("duration_minutes", 30)
+)
+    
+    question_time_seconds = int(
+    request.form.get("question_time", 60)
+)
 
     total_questions = easy + medium + hard
 
@@ -67,24 +75,28 @@ def create_quiz():
         # =========================
 
         cursor.execute(
-            """
-            INSERT INTO quizzes
-            (
-                teacher_id,
-                title,
-                prompt,
-                total_questions
-            )
-            VALUES (%s, %s, %s, %s)
-            RETURNING quiz_id
-            """,
-            (
-                session["teacher_id"],
-                title,
-                prompt,
-                total_questions
-            )
-        )
+    """
+    INSERT INTO quizzes
+    (
+        teacher_id,
+        title,
+        prompt,
+        total_questions,
+        duration_minutes
+        question_time_seconds
+    )
+    VALUES (%s, %s, %s, %s, %s, %s)
+    RETURNING quiz_id
+    """,
+    (
+        session["teacher_id"],
+        title,
+        prompt,
+        total_questions,
+        duration_minutes,
+        question_time_seconds
+    )
+)
 
         # PostgreSQL way of getting the generated ID
         quiz_id = cursor.fetchone()[0]
