@@ -13077,3 +13077,155 @@ VERY SMALL PHONES
     }
 
 }
+/* ============================================================
+   DIRECT QUIZ ACCESS
+============================================================ */
+
+.direct-quiz-access {
+    margin-top: 24px;
+    padding: 20px;
+    border: 1px solid rgba(79, 70, 229, 0.15);
+    border-radius: 18px;
+    background: rgba(248, 250, 252, 0.8);
+}
+
+
+.direct-quiz-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+
+.direct-quiz-divider::before,
+.direct-quiz-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+
+.direct-quiz-divider span {
+    font-size: 11px;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 1px;
+}
+
+
+.direct-quiz-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+
+.direct-quiz-icon {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: #eef2ff;
+    font-size: 20px;
+}
+
+
+.direct-quiz-header strong {
+    display: block;
+    color: #1e293b;
+    font-size: 14px;
+    margin-bottom: 3px;
+}
+
+
+.direct-quiz-header small {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+}
+
+
+.direct-quiz-form {
+    display: flex;
+    gap: 10px;
+}
+
+
+.direct-quiz-input {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    height: 48px;
+    border: 1px solid #dbe3ef;
+    border-radius: 12px;
+    background: white;
+}
+
+
+.direct-quiz-input span {
+    color: #6366f1;
+    font-weight: 800;
+}
+
+
+.direct-quiz-input input {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+
+.direct-quiz-button {
+    height: 48px;
+    padding: 0 17px;
+    border: none;
+    border-radius: 12px;
+    background: #4f46e5;
+    color: white;
+    font-family: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+
+.direct-quiz-button span {
+    margin-left: 5px;
+}
+
+
+.direct-quiz-button:hover {
+    background: #4338ca;
+    transform: translateY(-1px);
+}
+
+
+.direct-quiz-note {
+    margin: 12px 0 0;
+    text-align: center;
+    color: #64748b;
+    font-size: 11px;
+}
+
+
+@media (max-width: 480px) {
+
+    .direct-quiz-form {
+        flex-direction: column;
+    }
+
+    .direct-quiz-button {
+        width: 100%;
+    }
+
+}

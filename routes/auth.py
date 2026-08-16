@@ -154,7 +154,96 @@ def login():
         cursor.close()
         db.close()
 
+# ============================================================
+# GUEST QUIZ - ENTER QUIZ ID
+# ============================================================
 
+@auth.route("/guest_quiz", methods=["POST"])
+def guest_quiz():
+
+    quiz_id = request.form.get("quiz_id", "").strip()
+
+    # ========================================================
+    # QUIZ ID VALIDATION
+    # ========================================================
+
+    if not quiz_id.isdigit():
+
+        return render_template(
+            "guest_quiz.html",
+            error="Please enter a valid Quiz ID."
+        )
+
+    quiz_id = int(quiz_id)
+
+    db = get_db_connection()
+
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+    try:
+
+        # ====================================================
+        # CHECK QUIZ
+        # ====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                quiz_id,
+                title,
+                total_questions,
+                duration_minutes,
+                question_time_seconds,
+                available_from,
+                available_until
+
+            FROM quizzes
+
+            WHERE quiz_id=%s
+
+            AND available_from <= NOW()
+
+            AND
+            (
+                available_until IS NULL
+                OR available_until > NOW()
+            )
+            """,
+            (quiz_id,)
+        )
+
+        quiz = cursor.fetchone()
+
+    finally:
+
+        cursor.close()
+        db.close()
+
+    # ========================================================
+    # QUIZ NOT FOUND / NOT AVAILABLE
+    # ========================================================
+
+    if not quiz:
+
+        return render_template(
+            "guest_quiz.html",
+            error=(
+                "Quiz not found or this quiz is "
+                "currently unavailable."
+            )
+        )
+
+    # ========================================================
+    # QUIZ FOUND
+    # ========================================================
+
+    return render_template(
+        "guest_quiz.html",
+        quiz=quiz
+    )
+    
 # ============================================================
 # LOGOUT
 # ============================================================
