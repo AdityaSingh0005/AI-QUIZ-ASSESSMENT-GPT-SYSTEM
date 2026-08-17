@@ -7,6 +7,18 @@ import time
 
 student = Blueprint("student", __name__)
 
+# ==========================================
+# QUIZ ACCESS CHECK
+# ==========================================
+
+def quiz_access_allowed():
+
+    return (
+        "student_id" in session
+        or
+        session.get("guest_attempt") is True
+    )
+
 
 # ==========================================
 # STUDENT DASHBOARD
@@ -83,6 +95,159 @@ def available_quizzes():
 
 
 # ==========================================
+# GUEST QUIZ - ENTER QUIZ ID
+# ==========================================
+
+@student.route("/guest_quiz", methods=["POST"])
+def guest_quiz():
+
+    quiz_id = request.form.get("quiz_id", "").strip()
+
+    # ==========================================
+    # VALIDATE QUIZ ID
+    # ==========================================
+
+    if not quiz_id or not quiz_id.isdigit():
+
+        return """
+        <h2>❌ Invalid Quiz ID</h2>
+
+        <p>
+            Please enter a valid Quiz ID.
+        </p>
+
+        <a href="/">
+            ← Back to Login
+        </a>
+        """
+
+    quiz_id = int(quiz_id)
+
+    # ==========================================
+    # CHECK QUIZ
+    # ==========================================
+
+    db = get_db_connection()
+
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+    try:
+
+        cursor.execute(
+            """
+            SELECT
+                quiz_id,
+                title,
+                total_questions,
+                duration_minutes,
+                question_time_seconds,
+                available_from,
+                available_until
+
+            FROM quizzes
+
+            WHERE quiz_id=%s
+            """,
+            (quiz_id,)
+        )
+
+        quiz = cursor.fetchone()
+
+    finally:
+
+        cursor.close()
+        db.close()
+
+    # ==========================================
+    # QUIZ NOT FOUND
+    # ==========================================
+
+    if not quiz:
+
+        return """
+        <h2>❌ Quiz Not Found</h2>
+
+        <p>
+            No quiz exists with this Quiz ID.
+        </p>
+
+        <a href="/">
+            ← Back to Login
+        </a>
+        """
+
+    # ==========================================
+    # CHECK AVAILABILITY
+    # ==========================================
+
+    db = get_db_connection()
+
+    cursor = db.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            SELECT
+                CASE
+                    WHEN available_from > NOW()
+                        THEN 'upcoming'
+
+                    WHEN available_until IS NOT NULL
+                         AND available_until <= NOW()
+                        THEN 'expired'
+
+                    ELSE 'active'
+                END
+            FROM quizzes
+            WHERE quiz_id=%s
+            """,
+            (quiz_id,)
+        )
+
+        status = cursor.fetchone()[0]
+
+    finally:
+
+        cursor.close()
+        db.close()
+
+    # ==========================================
+    # NOT ACTIVE
+    # ==========================================
+
+    if status != "active":
+
+        message = (
+            "This quiz has not started yet."
+            if status == "upcoming"
+            else
+            "This quiz has expired."
+        )
+
+        return f"""
+        <h2>⏰ Quiz Unavailable</h2>
+
+        <p>
+            {message}
+        </p>
+
+        <a href="/">
+            ← Back to Login
+        </a>
+        """
+
+    # ==========================================
+    # SHOW STUDENT DETAILS FORM
+    # ==========================================
+
+    return render_template(
+        "guest_quiz_details.html",
+        quiz=quiz
+    )
+# ==========================================
 # START QUIZ
 # ==========================================
 
@@ -93,11 +258,7 @@ def start_quiz(quiz_id):
     # STUDENT LOGIN CHECK
     # ==========================================
 
-    if "student_id" not in session:
-
-        # Remember quiz requested through QR
-        session["pending_quiz_id"] = quiz_id
-
+    if not quiz_access_allowed():
         return redirect("/")
 
     # ==========================================
@@ -395,7 +556,12 @@ def start_quiz(quiz_id):
 @student.route("/quiz", methods=["GET", "POST"])
 def quiz():
 
-    if "student_id" not in session:
+    # ==========================================
+    # LOGIN OR GUEST ACCESS
+    # ==========================================
+
+    if not quiz_access_allowed():
+
         return redirect("/")
 
     questions = session.get(
@@ -482,32 +648,118 @@ def quiz():
 
     if request.method == "POST":
 
-        answer = request.form.get(
-            "answer"
+    # ==========================================
+    # CHECK QUESTION TIMER
+    # ==========================================
+
+        question_start_time = session.get(
+        "question_start_time"
+    )
+
+    question_time_expired = False
+
+    if question_start_time:
+
+        question_elapsed_time = (
+            time.time()
+            -
+            question_start_time
         )
 
-        question_id = str(
+        if (
+            
+            question_elapsed_time >= question_time_seconds # type: ignore
+        ):
+
+            question_time_expired = True
+
+    # ==========================================
+    # ANSWER
+    # ==========================================
+
+    answer = request.form.get(
+        "answer"
+    )
+
+    question_id = str(
+        questions[index]["question_id"]
+    )
+
+    answers = session.get(
+        "answers",
+        {}
+    )
+
+    # ==========================================
+    # TIMER EXPIRED
+    # ==========================================
+
+    if question_time_expired:
+
+        # No answer is saved when time expires.
+
+        answers[question_id] = None
+
+    else:
+
+        answers[question_id] = answer
+
+    session["answers"] = answers
+
+    # ==========================================
+    # NEXT QUESTION
+    # ==========================================
+
+    if index < len(questions) - 1:
+
+        session["current_question"] = (
+            index + 1
+        )
+
+        # ======================================
+        # RESET QUESTION TIMER
+        # ======================================
+
+        session["question_start_time"] = (
+            time.time()
+        )
+
+        return redirect("/quiz")
+
+    # ==========================================
+    # LAST QUESTION
+    # ==========================================
+
+    return redirect(
+        "/submit_quiz"
+    )
+
+    question_id = str(
             questions[index]["question_id"]
         )
 
-        answers = session.get(
+    answers = session.get(
             "answers",
             {}
         )
 
-        answers[question_id] = answer
+    answers[question_id] = answer
 
-        session["answers"] = answers
+    session["answers"] = answers
 
         # ==========================================
         # NEXT QUESTION
         # ==========================================
 
-        if index < len(questions) - 1:
+    if index < len(questions) - 1:
 
             session["current_question"] = (
                 index + 1
             )
+            
+            session["question_start_time"] = (
+    time.time()
+)
 
             return redirect("/quiz")
 
@@ -515,7 +767,7 @@ def quiz():
         # LAST QUESTION
         # ==========================================
 
-        return redirect(
+    return redirect(
             "/submit_quiz"
         )
 
@@ -553,33 +805,81 @@ def quiz():
         "question_time_seconds",
         60
     )
+    
+    
+    
+    # ==========================================
+    # QUESTION TIMER
+    # ==========================================
+
+    question_start_time = session.get(
+                "question_start_time"
+            )
+
+    if not question_start_time:
+
+                question_start_time = time.time()
+
+                session["question_start_time"] = (
+                    question_start_time
+                )
+
+
+                question_elapsed_time = (
+                time.time() - question_start_time
+            )
+
+
+    question_remaining_seconds = max(
+                0,
+                int(
+                    question_time_seconds -
+                    question_elapsed_time
+                )
+            )
 
     # ==========================================
     # RENDER QUIZ
     # ==========================================
 
     return render_template(
-        "quiz.html",
+    "quiz.html",
 
-        question=question,
+    question=question,
 
-        number=index + 1,
+    number=index + 1,
 
-        total=len(questions),
+    total=len(questions),
 
-        quiz_duration_minutes=(
-            duration_minutes
-        ),
+    quiz_duration_minutes=(
+        duration_minutes
+    ),
 
-        question_time_seconds=(
-            question_time_seconds
-        ),
+    question_time_seconds=(
+        question_time_seconds
+    ),
 
-        remaining_seconds=(
-            remaining_seconds
-        )
+    remaining_seconds=(
+        remaining_seconds
+    ),
+
+    question_remaining_seconds=(
+        question_remaining_seconds
+    ),
+
+    guest_attempt=session.get(
+        "guest_attempt",
+        False
+    ),
+
+    guest_name=session.get(
+        "guest_name"
+    ),
+
+    guest_roll_number=session.get(
+        "guest_roll_number"
     )
-
+)
 
 # ==========================================
 # SUBMIT QUIZ
@@ -588,7 +888,12 @@ def quiz():
 @student.route("/submit_quiz")
 def submit_quiz():
 
-    if "student_id" not in session:
+    # ==========================================
+    # LOGIN OR GUEST ACCESS
+    # ==========================================
+
+    if not quiz_access_allowed():
+
         return redirect("/")
 
     questions = session.get(
@@ -627,30 +932,42 @@ def submit_quiz():
                 str(q_id)
             )
 
-            cursor.execute(
-                """
-                INSERT INTO student_answers
-                (
-                    student_id,
-                    quiz_id,
-                    question_id,
-                    selected_option
-                )
-                VALUES
-                (
-                    %s,
-                    %s,
-                    %s,
-                    %s
-                )
-                """,
-                (
-                    session["student_id"],
-                    session["quiz_id"],
-                    q_id,
-                    selected
-                )
-            )
+        student_id = session.get(
+            "student_id"
+        )
+
+        guest_name = session.get(
+            "guest_name"
+        )
+
+        guest_roll_number = session.get(
+            "guest_roll_number"
+        )
+        
+        cursor.execute(
+    """
+    INSERT INTO student_answers
+    (
+        student_id,
+        quiz_id,
+        question_id,
+        selected_option
+    )
+    VALUES
+    (
+        %s,
+        %s,
+        %s,
+        %s
+    )
+    """,
+    (
+        student_id,
+        session["quiz_id"],
+        q_id,
+        selected
+    )
+)
 
         # ==========================================
         # CALCULATE SCORE
@@ -693,29 +1010,59 @@ def submit_quiz():
         # ==========================================
 
         cursor.execute(
-            """
-            INSERT INTO results
-            (
-                student_id,
-                quiz_id,
-                score,
-                percentage
-            )
-            VALUES
-            (
-                %s,
-                %s,
-                %s,
-                %s
-            )
-            """,
-            (
-                session["student_id"],
-                session["quiz_id"],
-                score,
-                percentage
-            )
+        """
+        INSERT INTO results
+        (
+            student_id,
+            quiz_id,
+            score,
+            percentage
         )
+        VALUES
+        (
+            %s,
+            %s,
+            %s,
+            %s
+        )
+        """,
+        (
+            session.get("student_id"),
+            session["quiz_id"],
+            score,
+            percentage
+        )
+    )
+        
+        # ==========================================
+        # UPDATE QUIZ ATTEMPT
+        # ==========================================
+
+        attempt_id = session.get(
+            "quiz_attempt_id"
+        )
+
+        if attempt_id:
+
+            cursor.execute(
+                """
+                UPDATE quiz_attempts
+
+                SET
+                    submitted_at = NOW(),
+                    status = %s,
+                    score = %s,
+                    percentage = %s
+
+                WHERE attempt_id = %s
+                """,
+                (
+                    "submitted",
+                    score,
+                    percentage,
+                    attempt_id
+                )
+            )
 
         db.commit()
 
@@ -762,6 +1109,31 @@ def submit_quiz():
             "quiz_id",
             None
         )
+        
+        session.pop(
+                "guest_attempt",
+                None
+            )
+
+        session.pop(
+                "guest_name",
+                None
+            )
+
+        session.pop(
+                "guest_roll_number",
+                None
+            )
+
+        session.pop(
+                "quiz_attempt_id",
+                None
+            )
+
+        session.pop(
+                "question_start_time",
+                None
+            )
 
         # ==========================================
         # RESULT PAGE

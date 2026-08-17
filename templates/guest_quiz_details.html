@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Join Quiz | AI Quiz Assessment System
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+</head>
+
+
+<body class="login-body">
+
+
+<div class="login-wrapper">
+
+
+    <!-- ==========================================
+         BRAND PANEL
+    =========================================== -->
+
+    <section class="brand-panel">
+
+        <div class="brand-content">
+
+            <div class="brand-badge">
+
+                <span class="brand-icon">
+                    ✦
+                </span>
+
+                AI Powered
+
+            </div>
+
+
+            <div class="brand-logo">
+                🧠
+            </div>
+
+
+            <h1>
+
+                AI Quiz
+
+                <span>
+                    Assessment System
+                </span>
+
+            </h1>
+
+
+            <p class="brand-description">
+
+                You're almost ready!
+
+                Enter your details to start
+                the assessment.
+
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <!-- ==========================================
+         DETAILS PANEL
+    =========================================== -->
+
+    <section class="login-section">
+
+
+        <div class="login-card">
+
+
+            <div class="login-header">
+
+                <div class="welcome-icon">
+                    🎯
+                </div>
+
+
+                <h2>
+                    Join Quiz
+                </h2>
+
+
+                <p>
+                    Enter your details to begin
+                    the assessment.
+                </p>
+
+            </div>
+
+
+            <!-- QUIZ INFO -->
+
+            <div
+                style="
+                    background:#f8faff;
+                    border:1px solid #e5e7eb;
+                    border-radius:14px;
+                    padding:16px;
+                    margin-bottom:22px;
+                "
+            >
+
+                <strong>
+                    {{ quiz.title }}
+                </strong>
+
+                <div
+                    style="
+                        margin-top:8px;
+                        color:#64748b;
+                        font-size:13px;
+                    "
+                >
+
+                    Quiz ID:
+                    <strong>
+                        #{{ quiz.quiz_id }}
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <!-- ==================================
+                 GUEST FORM
+            =================================== -->
+
+            <form
+                action="/guest_start_quiz"
+                method="POST"
+                class="login-form"
+            >
+
+                <input
+                    type="hidden"
+                    name="quiz_id"
+                    value="{{ quiz.quiz_id }}"
+                >
+
+
+                <!-- NAME -->
+
+                <div class="form-group">
+
+                    <label for="name">
+
+                        Full Name
+
+                    </label>
+
+
+                    <div class="input-wrapper">
+
+                        <span class="input-icon">
+                            👤
+                        </span>
+
+
+                        <input
+                            id="name"
+                            type="text"
+                            name="name"
+                            placeholder="Enter your full name"
+                            autocomplete="name"
+                            maxlength="100"
+                            required
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- ROLL NUMBER -->
+
+                <div class="form-group">
+
+                    <label for="roll_number">
+
+                        Roll Number
+
+                    </label>
+
+
+                    <div class="input-wrapper">
+
+                        <span class="input-icon">
+                            🎓
+                        </span>
+
+
+                        <input
+                            id="roll_number"
+                            type="text"
+                            name="roll_number"
+                            placeholder="Enter your roll number"
+                            maxlength="30"
+                            required
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- START -->
+
+                <button
+                    type="submit"
+                    class="login-button"
+                >
+
+                    <span>
+                        Start Quiz
+                    </span>
+
+                    <span class="button-arrow">
+                        →
+                    </span>
+
+                </button>
+
+            </form>
+
+
+            <div class="login-security">
+
+                <span>
+                    🔐
+                </span>
+
+                <p>
+
+                    No registration or password
+                    required.
+
+                </p>
+
+            </div>
+
+
+        </div>
+
+    </section>
+
+
+</div>
+
+
+</body>
+
+</html>
