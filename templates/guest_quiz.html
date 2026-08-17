@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Join Quiz | AI Quiz Assessment System</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
+
+</head>
+
+
+<body class="login-body">
+
+
+<div class="login-wrapper">
+
+
+    <!-- =====================================================
+         BRAND PANEL
+    ====================================================== -->
+
+    <section class="brand-panel">
+
+        <div class="brand-content">
+
+            <div class="brand-badge">
+
+                <span class="brand-icon">
+                    ✦
+                </span>
+
+                AI Powered
+
+            </div>
+
+
+            <div class="brand-logo">
+                🧠
+            </div>
+
+
+            <h1>
+
+                AI Quiz
+                <span>Assessment System</span>
+
+            </h1>
+
+
+            <p class="brand-description">
+
+                Join your assessment instantly.
+                No student registration or password is required.
+
+            </p>
+
+
+            <div class="feature-list">
+
+                <div class="feature-item">
+
+                    <span>✓</span>
+
+                    <div>
+
+                        <strong>
+                            No Registration
+                        </strong>
+
+                        <small>
+                            Join directly using Quiz ID
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <div class="feature-item">
+
+                    <span>✓</span>
+
+                    <div>
+
+                        <strong>
+                            Timed Assessment
+                        </strong>
+
+                        <small>
+                            Question and quiz timers are active
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <div class="feature-item">
+
+                    <span>✓</span>
+
+                    <div>
+
+                        <strong>
+                            Instant Evaluation
+                        </strong>
+
+                        <small>
+                            Your score is calculated automatically
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         QUIZ JOIN PANEL
+    ====================================================== -->
+
+    <section class="login-section">
+
+
+        <div class="login-card">
+
+
+            <div class="login-header">
+
+                <div class="mobile-logo">
+                    🧠
+                </div>
+
+
+                <div class="welcome-icon">
+                    🎯
+                </div>
+
+
+                <h2>
+                    Join Quiz
+                </h2>
+
+
+                <p>
+                    Enter your details before starting
+                    the assessment.
+                </p>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 QUIZ INFORMATION
+            ================================================== -->
+
+            {% if quiz %}
+
+            <div style="
+                padding:18px;
+                margin-bottom:22px;
+                border-radius:16px;
+                background:#f8faff;
+                border:1px solid #e2e8f0;
+            ">
+
+                <div style="
+                    font-size:12px;
+                    font-weight:700;
+                    color:#6366f1;
+                    text-transform:uppercase;
+                    margin-bottom:6px;
+                ">
+                    QUIZ
+                </div>
+
+
+                <h3 style="
+                    margin:0 0 8px 0;
+                    color:#111827;
+                ">
+                    {{ quiz.title }}
+                </h3>
+
+
+                <div style="
+                    color:#64748b;
+                    font-size:14px;
+                    line-height:1.7;
+                ">
+
+                    <div>
+                        📝
+                        {{ quiz.total_questions }}
+                        Questions
+                    </div>
+
+                    <div>
+                        ⏱️
+                        {{ quiz.duration_minutes or 30 }}
+                        Minutes
+                    </div>
+
+                    <div>
+                        ⚡
+                        {{ quiz.question_time_seconds or 60 }}
+                        Seconds per question
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 STUDENT DETAILS
+            ================================================== -->
+
+            <form
+                action="/guest_start"
+                method="POST"
+                class="login-form"
+            >
+
+                <input
+                    type="hidden"
+                    name="quiz_id"
+                    value="{{ quiz.quiz_id }}"
+                >
+
+
+                <!-- NAME -->
+
+                <div class="form-group">
+
+                    <label for="student_name">
+                        Full Name
+                    </label>
+
+
+                    <div class="input-wrapper">
+
+                        <span class="input-icon">
+                            👤
+                        </span>
+
+
+                        <input
+                            id="student_name"
+                            type="text"
+                            name="student_name"
+                            placeholder="Enter your full name"
+                            required
+                            autocomplete="name"
+                        >
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- ROLL NUMBER -->
+
+                <div class="form-group">
+
+                    <label for="roll_number">
+                        Roll Number
+                    </label>
+
+
+                    <div class="input-wrapper">
+
+                        <span class="input-icon">
+                            #
+                        </span>
+
+
+                        <input
+                            id="roll_number"
+                            type="text"
+                            name="roll_number"
+                            placeholder="Enter your roll number"
+                            required
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                </div>
+
+
+
+                <button
+                    type="submit"
+                    class="login-button"
+                >
+
+                    <span>
+                        Start Quiz
+                    </span>
+
+                    <span class="button-arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+            </form>
+
+
+            <div class="login-security">
+
+                <span>
+                    🔐
+                </span>
+
+                <p>
+                    No account or password is required.
+                </p>
+
+            </div>
+
+
+            {% else %}
+
+            <!-- =================================================
+                 ERROR
+            ================================================== -->
+
+            <div style="
+                text-align:center;
+                padding:20px;
+                border-radius:16px;
+                background:#fff7ed;
+                border:1px solid #fed7aa;
+                color:#c2410c;
+            ">
+
+                <div style="
+                    font-size:40px;
+                    margin-bottom:10px;
+                ">
+                    ⚠️
+                </div>
+
+
+                <h3 style="
+                    margin-bottom:8px;
+                ">
+                    Quiz Unavailable
+                </h3>
+
+
+                <p style="
+                    color:#78716c;
+                    margin:0;
+                    line-height:1.6;
+                ">
+                    {{ error or "This quiz is currently unavailable." }}
+                </p>
+
+            </div>
+
+
+            <a
+                href="/"
+                style="
+                    display:block;
+                    text-align:center;
+                    margin-top:20px;
+                    text-decoration:none;
+                    font-weight:600;
+                    color:#4f46e5;
+                "
+            >
+                ← Back to Login
+
+            </a>
+
+            {% endif %}
+
+
+        </div>
+
+    </section>
+
+
+</div>
+
+
+</body>
+
+</html>

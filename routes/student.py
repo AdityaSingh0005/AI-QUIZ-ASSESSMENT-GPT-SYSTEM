@@ -95,36 +95,49 @@ def available_quizzes():
 
 
 # ==========================================
-# GUEST QUIZ - ENTER QUIZ ID
+# GUEST START QUIZ
 # ==========================================
 
-@student.route("/guest_quiz", methods=["POST"])
-def guest_quiz():
+@student.route("/guest_start", methods=["POST"])
+def guest_start():
 
-    quiz_id = request.form.get("quiz_id", "").strip()
+    student_name = request.form.get(
+        "student_name",
+        ""
+    ).strip()
+
+    roll_number = request.form.get(
+        "roll_number",
+        ""
+    ).strip()
+
+    quiz_id = request.form.get(
+        "quiz_id",
+        ""
+    ).strip()
 
     # ==========================================
-    # VALIDATE QUIZ ID
+    # VALIDATION
     # ==========================================
 
-    if not quiz_id or not quiz_id.isdigit():
+    if not student_name or not roll_number:
 
         return """
-        <h2>❌ Invalid Quiz ID</h2>
+        <h2>Student details are required.</h2>
+        <a href="/">← Back</a>
+        """
 
-        <p>
-            Please enter a valid Quiz ID.
-        </p>
+    if not quiz_id.isdigit():
 
-        <a href="/">
-            ← Back to Login
-        </a>
+        return """
+        <h2>Invalid Quiz ID.</h2>
+        <a href="/">← Back</a>
         """
 
     quiz_id = int(quiz_id)
 
     # ==========================================
-    # CHECK QUIZ
+    # DATABASE
     # ==========================================
 
     db = get_db_connection()
@@ -149,104 +162,154 @@ def guest_quiz():
             FROM quizzes
 
             WHERE quiz_id=%s
+
+            AND available_from <= NOW()
+
+            AND
+            (
+                available_until IS NULL
+                OR available_until > NOW()
+            )
             """,
             (quiz_id,)
         )
 
         quiz = cursor.fetchone()
 
-    finally:
+        if not quiz:
 
-        cursor.close()
-        db.close()
+            return """
+            <h2>Quiz not available.</h2>
+            <a href="/">← Back</a>
+            """
 
-    # ==========================================
-    # QUIZ NOT FOUND
-    # ==========================================
+        # ==========================================
+        # GET QUESTIONS
+        # ==========================================
 
-    if not quiz:
+        questions = get_quiz_questions(
+            quiz_id
+        )
 
-        return """
-        <h2>❌ Quiz Not Found</h2>
+        if not questions:
 
-        <p>
-            No quiz exists with this Quiz ID.
-        </p>
+            return """
+            <h2>❌ This quiz has no questions.</h2>
+            <a href="/">← Back</a>
+            """
 
-        <a href="/">
-            ← Back to Login
-        </a>
-        """
-
-    # ==========================================
-    # CHECK AVAILABILITY
-    # ==========================================
-
-    db = get_db_connection()
-
-    cursor = db.cursor()
-
-    try:
+        # ==========================================
+        # CREATE GUEST ATTEMPT
+        # ==========================================
 
         cursor.execute(
             """
-            SELECT
-                CASE
-                    WHEN available_from > NOW()
-                        THEN 'upcoming'
-
-                    WHEN available_until IS NOT NULL
-                         AND available_until <= NOW()
-                        THEN 'expired'
-
-                    ELSE 'active'
-                END
-            FROM quizzes
-            WHERE quiz_id=%s
+            INSERT INTO quiz_attempts
+            (
+                quiz_id,
+                student_name,
+                roll_number,
+                attempt_mode,
+                started_at,
+                status
+            )
+            VALUES
+            (
+                %s,
+                %s,
+                %s,
+                'guest',
+                NOW(),
+                'in_progress'
+            )
+            RETURNING attempt_id
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+                student_name,
+                roll_number
+            )
         )
 
-        status = cursor.fetchone()[0]
+        attempt = cursor.fetchone()
+
+        db.commit()
+
+        # ==========================================
+        # STORE QUIZ SESSION
+        # ==========================================
+
+        session["guest_mode"] = True
+
+        session["guest_attempt_id"] = (
+            attempt["attempt_id"]
+        )
+
+        session["guest_student_name"] = (
+            student_name
+        )
+
+        session["guest_roll_number"] = (
+            roll_number
+        )
+
+        session["quiz_id"] = quiz_id
+
+        session["questions"] = questions
+
+        session["current_question"] = 0
+
+        session["answers"] = {}
+
+        session["quiz_duration_minutes"] = (
+            quiz["duration_minutes"] or 30
+        )
+
+        session["question_time_seconds"] = (
+            quiz["question_time_seconds"] or 60
+        )
+
+        # ==========================================
+        # AVAILABILITY
+        # ==========================================
+
+        if quiz["available_until"]:
+
+            session["quiz_available_until"] = (
+                quiz["available_until"].timestamp()
+            )
+
+        else:
+
+            session["quiz_available_until"] = None
+
+        # ==========================================
+        # START TIME
+        # ==========================================
+
+        session["quiz_start_time"] = time.time()
+
+        return redirect("/quiz")
+
+    except Exception as e:
+
+        db.rollback()
+
+        print(
+            "❌ GUEST START ERROR:",
+            e
+        )
+
+        return f"""
+        <h2>Guest Quiz Error</h2>
+        <p>{e}</p>
+        <a href="/">← Back to Login</a>
+        """
 
     finally:
 
         cursor.close()
         db.close()
-
-    # ==========================================
-    # NOT ACTIVE
-    # ==========================================
-
-    if status != "active":
-
-        message = (
-            "This quiz has not started yet."
-            if status == "upcoming"
-            else
-            "This quiz has expired."
-        )
-
-        return f"""
-        <h2>⏰ Quiz Unavailable</h2>
-
-        <p>
-            {message}
-        </p>
-
-        <a href="/">
-            ← Back to Login
-        </a>
-        """
-
-    # ==========================================
-    # SHOW STUDENT DETAILS FORM
-    # ==========================================
-
-    return render_template(
-        "guest_quiz_details.html",
-        quiz=quiz
-    )
 # ==========================================
 # START QUIZ
 # ==========================================
@@ -1184,7 +1247,11 @@ def submit_quiz():
 @student.route("/my_results")
 def my_results():
 
-    if "student_id" not in session:
+    if (
+    "student_id" not in session
+    and not session.get("guest_mode")
+    ):
+        
         return redirect("/")
 
     db = get_db_connection()

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -20,110 +19,224 @@
 
 </head>
 
+
 <body class="login-body">
+
 
 <div class="login-wrapper">
 
-    <!-- ================= LEFT BRAND PANEL ================= -->
+
+    <!-- =====================================================
+         LEFT BRAND PANEL
+    ====================================================== -->
 
     <section class="brand-panel">
 
         <div class="brand-content">
 
+
             <div class="brand-badge">
-                <span class="brand-icon">✦</span>
+
+                <span class="brand-icon">
+                    ✦
+                </span>
+
                 AI Powered
+
             </div>
+
 
             <div class="brand-logo">
                 🧠
             </div>
 
+
             <h1>
+
                 AI Quiz
-                <span>Assessment System</span>
+
+                <span>
+                    Assessment System
+                </span>
+
             </h1>
 
+
             <p class="brand-description">
+
                 Create intelligent assessments, share quizzes instantly
                 and analyze student performance — all from one platform.
+
             </p>
+
 
             <div class="feature-list">
 
-                <div class="feature-item">
-                    <span>✓</span>
-                    <div>
-                        <strong>AI Quiz Generation</strong>
-                        <small>Generate questions automatically</small>
-                    </div>
-                </div>
 
                 <div class="feature-item">
-                    <span>✓</span>
+
+                    <span>
+                        ✓
+                    </span>
+
                     <div>
-                        <strong>QR Code Access</strong>
-                        <small>Students join quizzes instantly</small>
+
+                        <strong>
+                            AI Quiz Generation
+                        </strong>
+
+                        <small>
+                            Generate questions automatically
+                        </small>
+
                     </div>
+
                 </div>
 
-                <div class="feature-item">
-                    <span>✓</span>
-                    <div>
-                        <strong>Performance Analytics</strong>
-                        <small>Track student results easily</small>
-                    </div>
-                </div>
+
 
                 <div class="feature-item">
-                    <span>✓</span>
+
+                    <span>
+                        ✓
+                    </span>
+
                     <div>
-                        <strong>Smart Evaluation</strong>
-                        <small>Fast and organized assessment</small>
+
+                        <strong>
+                            QR Code Access
+                        </strong>
+
+                        <small>
+                            Students join quizzes instantly
+                        </small>
+
                     </div>
+
                 </div>
+
+
+
+                <div class="feature-item">
+
+                    <span>
+                        ✓
+                    </span>
+
+                    <div>
+
+                        <strong>
+                            Performance Analytics
+                        </strong>
+
+                        <small>
+                            Track student results easily
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="feature-item">
+
+                    <span>
+                        ✓
+                    </span>
+
+                    <div>
+
+                        <strong>
+                            Smart Evaluation
+                        </strong>
+
+                        <small>
+                            Fast and organized assessment
+                        </small>
+
+                    </div>
+
+                </div>
+
 
             </div>
+
 
             <div class="brand-footer">
-                <span>AI Quiz Assessment System</span>
-                <span>•</span>
-                <span>Smart Education Platform</span>
+
+                <span>
+                    AI Quiz Assessment System
+                </span>
+
+                <span>
+                    •
+                </span>
+
+                <span>
+                    Smart Education Platform
+                </span>
+
             </div>
+
 
         </div>
 
     </section>
 
 
-    <!-- ================= LOGIN PANEL ================= -->
+
+    <!-- =====================================================
+         LOGIN PANEL
+    ====================================================== -->
 
     <section class="login-section">
 
+
         <div class="login-card">
 
+
+            <!-- =================================================
+                 LOGIN HEADER
+            ================================================== -->
+
             <div class="login-header">
+
 
                 <div class="mobile-logo">
                     🧠
                 </div>
 
+
                 <div class="welcome-icon">
                     👋
                 </div>
+
 
                 <h2>
                     Welcome back
                 </h2>
 
+
                 <p>
                     Sign in to access your assessment dashboard.
                 </p>
 
+
             </div>
 
 
-            <form action="/login" method="POST" class="login-form">
+
+            <!-- =================================================
+                 LOGIN FORM
+            ================================================== -->
+
+            <form
+                action="/login"
+                method="POST"
+                class="login-form"
+            >
+
 
                 <!-- ROLE -->
 
@@ -133,24 +246,29 @@
                         Account Type
                     </label>
 
+
                     <div class="input-wrapper">
 
                         <span class="input-icon">
                             👤
                         </span>
 
+
                         <select
                             id="role"
                             name="role"
-                            required>
+                            required
+                        >
 
                             <option value="">
                                 Select account type
                             </option>
 
+
                             <option value="teacher">
                                 Teacher
                             </option>
+
 
                             <option value="student">
                                 Student
@@ -163,6 +281,7 @@
                 </div>
 
 
+
                 <!-- USERNAME -->
 
                 <div class="form-group">
@@ -171,11 +290,13 @@
                         Username
                     </label>
 
+
                     <div class="input-wrapper">
 
                         <span class="input-icon">
                             ✉
                         </span>
+
 
                         <input
                             id="username"
@@ -183,11 +304,13 @@
                             name="username"
                             placeholder="Email / Roll Number"
                             autocomplete="username"
-                            required>
+                            required
+                        >
 
                     </div>
 
                 </div>
+
 
 
                 <!-- PASSWORD -->
@@ -198,11 +321,13 @@
                         Password
                     </label>
 
+
                     <div class="input-wrapper">
 
                         <span class="input-icon">
                             🔒
                         </span>
+
 
                         <input
                             id="password"
@@ -210,16 +335,21 @@
                             name="password"
                             placeholder="Enter your password"
                             autocomplete="current-password"
-                            required>
+                            required
+                        >
 
                     </div>
 
                 </div>
 
 
+
+                <!-- LOGIN BUTTON -->
+
                 <button
                     type="submit"
-                    class="login-button">
+                    class="login-button"
+                >
 
                     <span>
                         Sign in
@@ -231,171 +361,139 @@
 
                 </button>
 
+
             </form>
 
 
-        <!-- =====================================================
-     GUEST QUIZ
-====================================================== -->
 
-<div class="guest-quiz-card">
+            <!-- =================================================
+                 GUEST QUIZ ACCESS
+                 ONLY ONE SECTION
+            ================================================== -->
 
-    <div class="login-divider">
-        <span>OR</span>
-    </div>
+            <div class="guest-quiz-card">
 
 
-    <div class="guest-quiz-header">
+                <div class="login-divider">
 
-        <div class="guest-quiz-icon">
-            🎯
-        </div>
+                    <span>
+                        OR
+                    </span>
 
-        <div>
-            <h3>
-                Have a Quiz ID?
-            </h3>
-
-            <p>
-                Attempt a quiz without logging in
-            </p>
-        </div>
-
-    </div>
+                </div>
 
 
-    <form
-        action="/guest_quiz"
-        method="POST"
-        class="guest-quiz-form"
-    >
 
-        <div class="guest-quiz-input-wrapper">
-
-            <span>
-                #
-            </span>
-
-            <input
-                type="number"
-                name="quiz_id"
-                placeholder="Enter Quiz ID"
-                min="1"
-                required
-            >
-
-        </div>
+                <div class="guest-quiz-header">
 
 
-        <button
-            type="submit"
-            class="guest-quiz-button">
-
-            Start Quiz
-            <span>→</span>
-
-        </button>
-
-    </form>
+                    <div class="guest-quiz-icon">
+                        🎯
+                    </div>
 
 
-    <p class="guest-quiz-note">
-        No registration or password required.
-    </p>
+                    <div>
 
-</div>
-            <!-- =====================================================
-     DIRECT QUIZ ACCESS
-====================================================== -->
+                        <h3>
+                            Have a Quiz ID?
+                        </h3>
 
-<div class="direct-quiz-access">
+                        <p>
+                            Attempt a quiz without logging in
+                        </p>
 
-    <div class="direct-quiz-divider">
-        <span>OR</span>
-    </div>
-
-    <div class="direct-quiz-header">
-
-        <span class="direct-quiz-icon">
-            🎯
-        </span>
-
-        <div>
-
-            <strong>
-                Have a Quiz ID?
-            </strong>
-
-            <small>
-                Attempt a quiz without logging in
-            </small>
-
-        </div>
-
-    </div>
+                    </div>
 
 
-    <form
-        action="/guest_quiz"
-        method="POST"
-        class="direct-quiz-form"
-    >
-
-    <input
-    type="number"
-    name="quiz_id"
-    placeholder="Enter Quiz ID"
-    min="1"
-    required
->
-
-        <div class="direct-quiz-input">
-
-            <span>
-                #
-            </span>
-
-            <input
-                type="number"
-                name="quiz_id"
-                placeholder="Enter Quiz ID"
-                min="1"
-                required
-            >
-
-        </div>
+                </div>
 
 
-        <button
-            type="submit"
-            class="direct-quiz-button"
-        >
 
-            Start Quiz
-            <span>→</span>
+                <!-- GUEST QUIZ FORM -->
 
-        </button>
-
-    </form>
+                <form
+                    action="/guest_quiz"
+                    method="POST"
+                    class="guest-quiz-form"
+                >
 
 
-    <p class="direct-quiz-note">
+                    <div class="guest-quiz-input-wrapper">
 
-        No registration or password required.
 
-    </p>
+                        <span>
+                            #
+                        </span>
 
-</div>
 
-            <div class="login-divider">
-                <span>AI Powered Education</span>
+                        <input
+                            type="number"
+                            name="quiz_id"
+                            placeholder="Enter Quiz ID"
+                            min="1"
+                            required
+                        >
+
+
+                    </div>
+
+
+
+                    <button
+                        type="submit"
+                        class="guest-quiz-button"
+                    >
+
+                        <span>
+                            Start Quiz
+                        </span>
+
+                        <span>
+                            →
+                        </span>
+
+                    </button>
+
+
+                </form>
+
+
+
+                <p class="guest-quiz-note">
+
+                    No registration or password required.
+
+                </p>
+
+
             </div>
 
-            
+
+
+            <!-- =================================================
+                 SECURITY DIVIDER
+            ================================================== -->
+
+            <div class="login-divider">
+
+                <span>
+                    AI Powered Education
+                </span>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 SECURITY MESSAGE
+            ================================================== -->
 
             <div class="login-security">
 
-                <span>🔐</span>
+                <span>
+                    🔐
+                </span>
+
 
                 <p>
                     Your assessment data is securely managed.
@@ -403,16 +501,22 @@
 
             </div>
 
+
         </div>
 
+
     </section>
+
 
 </div>
 
 
-<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+
+<script
+    src="{{ url_for('static', filename='js/darkmode.js') }}">
+</script>
+
 
 </body>
 
 </html>
-
