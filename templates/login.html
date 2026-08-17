@@ -234,6 +234,76 @@
             </form>
 
 
+        <!-- =====================================================
+     GUEST QUIZ
+====================================================== -->
+
+<div class="guest-quiz-card">
+
+    <div class="login-divider">
+        <span>OR</span>
+    </div>
+
+
+    <div class="guest-quiz-header">
+
+        <div class="guest-quiz-icon">
+            🎯
+        </div>
+
+        <div>
+            <h3>
+                Have a Quiz ID?
+            </h3>
+
+            <p>
+                Attempt a quiz without logging in
+            </p>
+        </div>
+
+    </div>
+
+
+    <form
+        action="/guest_quiz"
+        method="POST"
+        class="guest-quiz-form"
+    >
+
+        <div class="guest-quiz-input-wrapper">
+
+            <span>
+                #
+            </span>
+
+            <input
+                type="number"
+                name="quiz_id"
+                placeholder="Enter Quiz ID"
+                min="1"
+                required
+            >
+
+        </div>
+
+
+        <button
+            type="submit"
+            class="guest-quiz-button">
+
+            Start Quiz
+            <span>→</span>
+
+        </button>
+
+    </form>
+
+
+    <p class="guest-quiz-note">
+        No registration or password required.
+    </p>
+
+</div>
             <!-- =====================================================
      DIRECT QUIZ ACCESS
 ====================================================== -->
