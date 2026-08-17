@@ -653,7 +653,74 @@ def quiz():
             "answers",
             {}
         )
+        # ==========================================
+    # SAVE ANSWER IMMEDIATELY
+    # FOR LIVE TEACHER PROGRESS
+    # ==========================================
 
+    db = get_db_connection()
+
+    cursor = db.cursor()
+
+    try:
+
+        student_id = session.get("student_id")
+
+        attempt_id = session.get(
+            "quiz_attempt_id"
+        )
+
+        # Guest attempt uses guest_attempt_id
+        if not attempt_id:
+
+            attempt_id = session.get(
+                "guest_attempt_id"
+            )
+
+        cursor.execute(
+            """
+            INSERT INTO student_answers
+            (
+                student_id,
+                quiz_id,
+                question_id,
+                selected_option,
+                attempt_id
+            )
+            VALUES
+            (
+                %s,
+                %s,
+                %s,
+                %s,
+                %s
+            )
+            """,
+            (
+                student_id,
+                session["quiz_id"],
+                int(question_id),
+                answer if not question_time_expired else None,
+                attempt_id
+            )
+        )
+
+        db.commit()
+
+    except Exception as e:
+
+        db.rollback()
+
+        print(
+            "❌ LIVE ANSWER SAVE ERROR:",
+            e
+        )
+
+    finally:
+
+        cursor.close()
+        db.close()
+        
         # ====================================================
         # SAVE ANSWER
         # ====================================================

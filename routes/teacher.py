@@ -869,3 +869,292 @@ def test_ai():
         "status": "success",
         "questions": questions
     }
+    
+ # ==========================================
+# LIVE QUIZ PROGRESS
+# ==========================================
+
+@teacher.route("/quiz_progress/<int:quiz_id>")
+def quiz_progress(quiz_id):
+
+    # ==========================================
+    # TEACHER LOGIN CHECK
+    # ==========================================
+
+    if "teacher_id" not in session:
+        return {
+            "error": "Unauthorized"
+        }, 401
+
+    db = get_db_connection()
+
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+    try:
+
+        # ==========================================
+        # VERIFY QUIZ BELONGS TO TEACHER
+        # ==========================================
+
+        cursor.execute(
+            """
+            SELECT
+                quiz_id,
+                total_questions
+            FROM quizzes
+            WHERE quiz_id=%s
+            AND teacher_id=%s
+            """,
+            (
+                quiz_id,
+                session["teacher_id"]
+            )
+        )
+
+        quiz = cursor.fetchone()
+
+        if not quiz:
+
+            return {
+                "error": "Quiz not found"
+            }, 404
+
+        # ==========================================
+        # GET RESPONSE COUNT FOR EACH QUESTION
+        # ==========================================
+
+        cursor.execute(
+            """
+            SELECT
+                q.question_id,
+                COUNT(sa.student_answer_id) AS response_count
+
+            FROM questions q
+
+            LEFT JOIN student_answers sa
+                ON sa.question_id = q.question_id
+                AND sa.quiz_id = q.quiz_id
+
+            WHERE q.quiz_id=%s
+
+            GROUP BY
+                q.question_id
+
+            ORDER BY
+                q.question_id
+            """,
+            (quiz_id,)
+        )
+
+        progress = cursor.fetchall()
+
+        # ==========================================
+        # TOTAL UNIQUE RESPONSES
+        # ==========================================
+
+        cursor.execute(
+            """
+            SELECT
+                COUNT(DISTINCT attempt_id)
+                AS total_students
+
+            FROM student_answers
+
+            WHERE quiz_id=%s
+            """,
+            (quiz_id,)
+        )
+
+        total = cursor.fetchone()
+
+        return {
+            "quiz_id": quiz_id,
+            "total_questions": quiz["total_questions"],
+            "total_students": (
+                total["total_students"] or 0
+            ),
+            "progress": progress
+        }
+
+    finally:
+
+        cursor.close()
+        db.close()
+        
+        # ==========================================
+# LIVE QUIZ PROGRESS API
+# ==========================================
+
+@teacher.route("/api/quiz_progress/<int:quiz_id>")
+def quiz_progress(quiz_id):
+
+    # ==========================================
+    # TEACHER LOGIN CHECK
+    # ==========================================
+
+    if "teacher_id" not in session:
+
+        return {
+            "success": False,
+            "message": "Unauthorized"
+        }, 401
+
+    db = get_db_connection()
+
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+    try:
+
+        # ==========================================
+        # VERIFY QUIZ BELONGS TO THIS TEACHER
+        # ==========================================
+
+        cursor.execute(
+            """
+            SELECT
+                quiz_id,
+                total_questions
+            FROM quizzes
+            WHERE
+                quiz_id=%s
+                AND teacher_id=%s
+            """,
+            (
+                quiz_id,
+                session["teacher_id"]
+            )
+        )
+
+        quiz = cursor.fetchone()
+
+        if not quiz:
+
+            return {
+                "success": False,
+                "message": "Quiz not found"
+            }, 404
+
+        # ==========================================
+        # GET QUESTIONS + ANSWER COUNT
+        # ==========================================
+
+        cursor.execute(
+            """
+            SELECT
+                q.question_id,
+                q.question,
+
+                COUNT(
+                    CASE
+                        WHEN sa.answer_id IS NOT NULL
+                        THEN 1
+                    END
+                ) AS response_count
+
+            FROM questions q
+
+            LEFT JOIN student_answers sa
+                ON sa.question_id = q.question_id
+                AND sa.quiz_id = q.quiz_id
+
+            WHERE
+                q.quiz_id=%s
+
+            GROUP BY
+                q.question_id,
+                q.question
+
+            ORDER BY
+                q.question_id
+            """,
+            (quiz_id,)
+        )
+
+        questions = cursor.fetchall()
+
+        # ==========================================
+        # TOTAL PARTICIPANTS
+        # ==========================================
+
+        cursor.execute(
+            """
+            SELECT
+                COUNT(DISTINCT attempt_id) AS total_attempts
+            FROM student_answers
+            WHERE quiz_id=%s
+            """,
+            (quiz_id,)
+        )
+
+        participant_data = cursor.fetchone()
+
+        total_attempts = (
+            participant_data["total_attempts"]
+            or 0
+        )
+
+        # ==========================================
+        # TOTAL RESPONSES
+        # ==========================================
+
+        total_responses = sum(
+            int(q["response_count"] or 0)
+            for q in questions
+        )
+
+        # ==========================================
+        # RETURN JSON
+        # ==========================================
+
+        return {
+            "success": True,
+
+            "quiz_id": quiz_id,
+
+            "total_questions": (
+                quiz["total_questions"]
+            ),
+
+            "total_participants": (
+                total_attempts
+            ),
+
+            "total_responses": (
+                total_responses
+            ),
+
+            "questions": [
+                {
+                    "question_id": q["question_id"],
+
+                    "question": q["question"],
+
+                    "response_count": int(
+                        q["response_count"] or 0
+                    )
+                }
+
+                for q in questions
+            ]
+        }
+
+    except Exception as e:
+
+        print(
+            "❌ LIVE PROGRESS ERROR:",
+            e
+        )
+
+        return {
+            "success": False,
+            "message": str(e)
+        }, 500
+
+    finally:
+
+        cursor.close()
+        db.close()
