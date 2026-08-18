@@ -4,28 +4,64 @@ import os
 
 def generate_qr(quiz_id):
 
-    # Production URL
+    # ============================================================
+    # PRODUCTION / LOCAL URL
+    # ============================================================
+
     base_url = os.getenv(
         "APP_URL",
         "https://ai-quiz-assessment-gpt-system.onrender.com"
     ).rstrip("/")
 
-    # QR will open this public URL
-    url = f"{base_url}/start_quiz/{quiz_id}"
+    # ============================================================
+    # QR TARGET URL
+    # ============================================================
 
+    # Guest quiz entry page
+    url = f"{base_url}/guest_start_quiz/{quiz_id}"
+
+    print("========================================")
     print("QR URL:", url)
+    print("========================================")
 
-    img = qrcode.make(url)
+    # ============================================================
+    # QR FOLDER
+    # ============================================================
 
-    folder = "static/qr"
-    os.makedirs(folder, exist_ok=True)
+    folder = os.path.join(
+        "static",
+        "qr"
+    )
+
+    os.makedirs(
+        folder,
+        exist_ok=True
+    )
+
+    # ============================================================
+    # FILE NAME
+    # ============================================================
 
     file_name = f"quiz_{quiz_id}.png"
 
-    path = os.path.join(folder, file_name)
+    path = os.path.join(
+        folder,
+        file_name
+    )
+
+    # ============================================================
+    # GENERATE QR
+    # ============================================================
+
+    img = qrcode.make(url)
 
     img.save(path)
 
     print("QR SAVED:", path)
+    print("QR EXISTS:", os.path.exists(path))
 
-    return path
+    # ============================================================
+    # RETURN WEB PATH
+    # ============================================================
+
+    return f"static/qr/{file_name}"
