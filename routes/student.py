@@ -114,7 +114,7 @@ def available_quizzes():
 # ============================================================
 # OLD GUEST START ROUTE
 # ============================================================
-# Kept only for compatibility.
+# Kept for compatibility.
 # Main guest flow is handled by auth.py /guest_start_quiz.
 # ============================================================
 
@@ -306,6 +306,8 @@ def _start_guest_quiz(
 
         session["questions"] = questions
 
+        # IMPORTANT:
+        # Always start from Question 1
         session["current_question"] = 0
 
         session["answers"] = {}
@@ -343,10 +345,6 @@ def _start_guest_quiz(
         session["quiz_start_time"] = time.time()
 
         session["question_start_time"] = time.time()
-
-        # ====================================================
-        # IMPORTANT
-        # ====================================================
 
         session.modified = True
 
@@ -484,6 +482,8 @@ def start_quiz(quiz_id):
 
     session["questions"] = questions
 
+    # IMPORTANT:
+    # Start from Question 1
     session["current_question"] = 0
 
     session["answers"] = {}
@@ -530,7 +530,7 @@ def quiz():
         return redirect("/")
 
     # ========================================================
-    # GET QUESTIONS
+    # GET QUESTIONS FROM SESSION
     # ========================================================
 
     questions = session.get(
@@ -556,8 +556,14 @@ def quiz():
     )
 
     # ========================================================
-    # SAFETY
+    # SAFETY CHECK
     # ========================================================
+
+    if index < 0:
+
+        index = 0
+
+        session["current_question"] = 0
 
     if index >= len(questions):
 
@@ -617,6 +623,7 @@ def quiz():
         "question_start_time"
     )
 
+    # First request / safety fallback
     if not question_start_time:
 
         question_start_time = time.time()
@@ -625,134 +632,193 @@ def quiz():
             question_start_time
         )
 
+        session.modified = True
+
     # ========================================================
     # POST ANSWER
     # ========================================================
-        if request.method == "POST":
+    # IMPORTANT:
+    # This MUST NOT be inside the
+    # "if not question_start_time" block.
+    # ========================================================
 
-            question_elapsed_time = (
-                time.time()
-                - question_start_time
+    if request.method == "POST":
+
+        # ====================================================
+        # CALCULATE QUESTION TIME
+        # ====================================================
+
+        question_elapsed_time = (
+            time.time()
+            - question_start_time
+        )
+
+        question_time_expired = (
+            question_elapsed_time
+            >= question_time_seconds
+        )
+
+        # ====================================================
+        # GET ANSWER
+        # ====================================================
+
+        answer = request.form.get(
+            "answer"
+        )
+
+        # If timer expired, ignore selected answer
+        if question_time_expired:
+
+            answer = None
+
+        # ====================================================
+        # CURRENT QUESTION ID
+        # ====================================================
+
+        question_id = str(
+            questions[index]["question_id"]
+        )
+
+        # ====================================================
+        # GET EXISTING SESSION ANSWERS
+        # ====================================================
+
+        answers = session.get(
+            "answers",
+            {}
+        )
+
+        # Make sure answers is a dictionary
+        if not isinstance(answers, dict):
+
+            answers = {}
+
+        # ====================================================
+        # SAVE ANSWER IN SESSION
+        # ====================================================
+
+        answers[question_id] = answer
+
+        session["answers"] = answers
+
+        session.modified = True
+
+        # ====================================================
+        # SAVE ANSWER IMMEDIATELY
+        # FOR LIVE TEACHER PROGRESS
+        # ====================================================
+
+        db = get_db_connection()
+
+        cursor = db.cursor()
+
+        try:
+
+            student_id = session.get(
+                "student_id"
             )
 
-            question_time_expired = (
-                question_elapsed_time
-                >= question_time_seconds
+            attempt_id = session.get(
+                "quiz_attempt_id"
             )
 
-            answer = request.form.get("answer")
-
-            question_id = str(
-                questions[index]["question_id"]
-            )
-
-            answers = session.get(
-                "answers",
-                {}
-            )
-
-            # ==========================================
-            # SAVE ANSWER IMMEDIATELY
-            # FOR LIVE TEACHER PROGRESS
-            # ==========================================
-
-            db = get_db_connection()
-
-            cursor = db.cursor()
-
-            try:
-
-                student_id = session.get("student_id")
+            if not attempt_id:
 
                 attempt_id = session.get(
-                    "quiz_attempt_id"
+                    "guest_attempt_id"
                 )
 
-                if not attempt_id:
-
-                    attempt_id = session.get(
-                        "guest_attempt_id"
-                    )
-
-                cursor.execute(
-                    """
-                    INSERT INTO student_answers
-                    (
-                        student_id,
-                        quiz_id,
-                        question_id,
-                        selected_option,
-                        attempt_id
-                    )
-                    VALUES
-                    (
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s
-                    )
-                    """,
-                    (
-                        student_id,
-                        session["quiz_id"],
-                        int(question_id),
-                        answer if not question_time_expired else None,
-                        attempt_id
-                    )
+            cursor.execute(
+                """
+                INSERT INTO student_answers
+                (
+                    student_id,
+                    quiz_id,
+                    question_id,
+                    selected_option,
+                    attempt_id
                 )
 
-                db.commit()
-
-            except Exception as e:
-
-                db.rollback()
-
-                print(
-                    "❌ LIVE ANSWER SAVE ERROR:",
-                    e
+                VALUES
+                (
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s
                 )
-
-            finally:
-
-                cursor.close()
-                db.close()
-
-            # ==========================================
-            # SAVE ANSWER IN SESSION
-            # ==========================================
-
-            if question_time_expired:
-
-                answers[question_id] = None
-
-            else:
-
-                answers[question_id] = answer
-
-            session["answers"] = answers
-
-            # ==========================================
-            # NEXT QUESTION
-            # ==========================================
-
-            if index < len(questions) - 1:
-
-                session["current_question"] = (
-                    index + 1
+                """,
+                (
+                    student_id,
+                    session["quiz_id"],
+                    int(question_id),
+                    answer,
+                    attempt_id
                 )
+            )
 
-                session["question_start_time"] = (
-                    time.time()
-                )
+            db.commit()
 
-                return redirect("/quiz")
+            print(
+                f"✅ ANSWER SAVED | "
+                f"Quiz={session.get('quiz_id')} | "
+                f"Question={question_id} | "
+                f"Answer={answer} | "
+                f"Attempt={attempt_id}"
+            )
 
-            # ==========================================
-            # LAST QUESTION
-            # ==========================================
+        except Exception as e:
 
-            return redirect("/submit_quiz")
+            db.rollback()
+
+            print(
+                "❌ LIVE ANSWER SAVE ERROR:",
+                e
+            )
+
+        finally:
+
+            cursor.close()
+            db.close()
+
+        # ====================================================
+        # MOVE TO NEXT QUESTION
+        # ====================================================
+
+        if index < len(questions) - 1:
+
+            # IMPORTANT:
+            # Increment question index
+            next_index = index + 1
+
+            session["current_question"] = (
+                next_index
+            )
+
+            # IMPORTANT:
+            # Reset timer for new question
+            session["question_start_time"] = (
+                time.time()
+            )
+
+            session.modified = True
+
+            print(
+                f"➡️ NEXT QUESTION | "
+                f"{index + 1} -> {next_index + 1}"
+            )
+
+            return redirect("/quiz")
+
+        # ====================================================
+        # LAST QUESTION
+        # ====================================================
+
+        print(
+            "🏁 LAST QUESTION ANSWERED"
+        )
+
+        return redirect("/submit_quiz")
 
     # ========================================================
     # CURRENT QUESTION
@@ -798,7 +864,7 @@ def quiz():
     )
 
     # ========================================================
-    # RENDER ACTUAL QUIZ
+    # RENDER CURRENT QUESTION
     # ========================================================
 
     return render_template(
@@ -929,7 +995,13 @@ def submit_quiz():
     try:
 
         # ====================================================
-        # SAVE ANSWERS
+        # CALCULATE SCORE
+        # ====================================================
+        # Answers have already been saved to
+        # student_answers during every question.
+        #
+        # Therefore we DO NOT INSERT them again here.
+        # This prevents duplicate answer records.
         # ====================================================
 
         for q in questions:
@@ -940,9 +1012,9 @@ def submit_quiz():
                 str(q_id)
             )
 
-            # ================================================
+            # =================================================
             # SCORE
-            # ================================================
+            # =================================================
 
             if (
                 selected is not None
@@ -951,36 +1023,6 @@ def submit_quiz():
             ):
 
                 score += 1
-
-            # ================================================
-            # SAVE STUDENT ANSWER
-            # ================================================
-
-            cursor.execute(
-                """
-                INSERT INTO student_answers
-                (
-                    student_id,
-                    quiz_id,
-                    question_id,
-                    selected_option
-                )
-
-                VALUES
-                (
-                    %s,
-                    %s,
-                    %s,
-                    %s
-                )
-                """,
-                (
-                    student_id,
-                    quiz_id,
-                    q_id,
-                    selected
-                )
-            )
 
         # ====================================================
         # PERCENTAGE
@@ -1029,7 +1071,7 @@ def submit_quiz():
         )
 
         # ====================================================
-        # UPDATE GUEST ATTEMPT
+        # UPDATE GUEST / STUDENT ATTEMPT
         # ====================================================
 
         if attempt_id:
@@ -1054,6 +1096,14 @@ def submit_quiz():
             )
 
         db.commit()
+
+        print(
+            f"🏁 QUIZ SUBMITTED | "
+            f"Quiz={quiz_id} | "
+            f"Score={score}/{total} | "
+            f"Percentage={percentage:.2f}% | "
+            f"Attempt={attempt_id}"
+        )
 
         # ====================================================
         # CLEAR QUIZ SESSION
@@ -1100,6 +1150,8 @@ def submit_quiz():
                 key,
                 None
             )
+
+        session.modified = True
 
         # ====================================================
         # RESULT PAGE
