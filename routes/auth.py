@@ -20,7 +20,9 @@ auth = Blueprint("auth", __name__)
 @auth.route("/")
 def login_page():
 
-    return render_template("login.html")
+    return render_template(
+        "login.html"
+    )
 
 
 # ============================================================
@@ -30,13 +32,20 @@ def login_page():
 @auth.route("/login", methods=["POST"])
 def login():
 
-    role = request.form.get("role", "").strip()
-    username = request.form.get("username", "").strip()
-    password = request.form.get("password", "").strip()
+    role = request.form.get(
+        "role",
+        ""
+    ).strip().lower()
 
-    # ========================================================
-    # BASIC VALIDATION
-    # ========================================================
+    username = request.form.get(
+        "username",
+        ""
+    ).strip()
+
+    password = request.form.get(
+        "password",
+        ""
+    )
 
     if not role or not username or not password:
 
@@ -63,7 +72,9 @@ def login():
                 """
                 SELECT *
                 FROM teachers
-                WHERE email=%s
+
+                WHERE LOWER(email)=LOWER(%s)
+
                 AND password=%s
                 """,
                 (
@@ -77,17 +88,24 @@ def login():
             if user:
 
                 # Clear student session
-                session.pop("student_id", None)
+                session.pop(
+                    "student_id",
+                    None
+                )
 
                 # Teacher session
-                session["teacher_id"] = user["teacher_id"]
-                session["name"] = user["full_name"]
+                session["teacher_id"] = (
+                    user["teacher_id"]
+                )
 
-                session.modified = True
+                session["name"] = (
+                    user["full_name"]
+                )
 
                 return redirect(
                     "/teacher_dashboard"
                 )
+
 
         # ====================================================
         # STUDENT LOGIN
@@ -99,7 +117,9 @@ def login():
                 """
                 SELECT *
                 FROM students
-                WHERE roll_number=%s
+
+                WHERE LOWER(roll_number)=LOWER(%s)
+
                 AND password=%s
                 """,
                 (
@@ -113,16 +133,22 @@ def login():
             if user:
 
                 # Clear teacher session
-                session.pop("teacher_id", None)
+                session.pop(
+                    "teacher_id",
+                    None
+                )
 
                 # Student session
-                session["student_id"] = user["student_id"]
-                session["name"] = user["full_name"]
+                session["student_id"] = (
+                    user["student_id"]
+                )
 
-                session.modified = True
+                session["name"] = (
+                    user["full_name"]
+                )
 
                 # =================================================
-                # QR CODE / PENDING QUIZ CHECK
+                # QR QUIZ CHECK
                 # =================================================
 
                 pending_quiz_id = session.pop(
@@ -136,10 +162,10 @@ def login():
                         f"/start_quiz/{pending_quiz_id}"
                     )
 
-                # Normal student login
                 return redirect(
                     "/student_dashboard"
                 )
+
 
         # ====================================================
         # INVALID LOGIN
@@ -147,8 +173,9 @@ def login():
 
         return render_template(
             "login.html",
-            error="Invalid username/roll number or password."
+            error="Invalid account type, username or password."
         )
+
 
     except Exception as e:
 
@@ -162,6 +189,7 @@ def login():
             error="Something went wrong while logging in."
         )
 
+
     finally:
 
         cursor.close()
@@ -169,10 +197,10 @@ def login():
 
 
 # ============================================================
-# REGISTRATION PAGE
+# REGISTER PAGE
 # ============================================================
 
-@auth.route("/register")
+@auth.route("/register", methods=["GET"])
 def register_page():
 
     return render_template(
@@ -197,25 +225,20 @@ def register():
         ""
     ).strip()
 
-    email = request.form.get(
-        "email",
-        ""
-    ).strip().lower()
-
-    roll_number = request.form.get(
-        "roll_number",
+    username = request.form.get(
+        "username",
         ""
     ).strip()
 
     password = request.form.get(
         "password",
         ""
-    ).strip()
+    )
 
     confirm_password = request.form.get(
         "confirm_password",
         ""
-    ).strip()
+    )
 
     department = request.form.get(
         "department",
@@ -232,77 +255,98 @@ def register():
         ""
     ).strip()
 
+
     # ========================================================
     # BASIC VALIDATION
     # ========================================================
+
+    if not role:
+
+        return render_template(
+            "register.html",
+            error="Please select account type."
+        )
+
 
     if role not in ["teacher", "student"]:
 
         return render_template(
             "register.html",
-            error="Please select a valid account type.",
-            form=request.form
+            error="Invalid account type."
         )
+
 
     if not full_name:
 
         return render_template(
             "register.html",
-            error="Full name is required.",
-            form=request.form
+            error="Full name is required."
         )
+
+
+    if not username:
+
+        return render_template(
+            "register.html",
+            error=(
+                "Email is required."
+                if role == "teacher"
+                else "Roll number is required."
+            )
+        )
+
 
     if not password:
 
         return render_template(
             "register.html",
-            error="Password is required.",
-            form=request.form
+            error="Password is required."
         )
+
 
     if len(password) < 6:
 
         return render_template(
             "register.html",
-            error="Password must contain at least 6 characters.",
-            form=request.form
+            error="Password must contain at least 6 characters."
         )
+
 
     if password != confirm_password:
 
         return render_template(
             "register.html",
-            error="Passwords do not match.",
-            form=request.form
+            error="Passwords do not match."
         )
 
-    # ========================================================
-    # TEACHER VALIDATION
-    # ========================================================
-
-    if role == "teacher":
-
-        if not email:
-
-            return render_template(
-                "register.html",
-                error="Email is required for teacher account.",
-                form=request.form
-            )
 
     # ========================================================
-    # STUDENT VALIDATION
+    # STUDENT EXTRA VALIDATION
     # ========================================================
 
     if role == "student":
 
-        if not roll_number:
+        if not department:
 
             return render_template(
                 "register.html",
-                error="Roll number is required for student account.",
-                form=request.form
+                error="Department is required."
             )
+
+        if not semester:
+
+            return render_template(
+                "register.html",
+                error="Semester is required."
+            )
+
+        if not section:
+
+            return render_template(
+                "register.html",
+                error="Section is required."
+            )
+
 
     # ========================================================
     # DATABASE
@@ -322,15 +366,16 @@ def register():
 
         if role == "teacher":
 
-            # Check existing email
+            # Check duplicate email
             cursor.execute(
                 """
                 SELECT teacher_id
                 FROM teachers
+
                 WHERE LOWER(email)=LOWER(%s)
                 """,
                 (
-                    email,
+                    username,
                 )
             )
 
@@ -340,11 +385,14 @@ def register():
 
                 return render_template(
                     "register.html",
-                    error="An account with this email already exists.",
-                    form=request.form
+                    error=(
+                        "An account already exists "
+                        "with this email."
+                    )
                 )
 
-            # Create teacher
+
+            # Insert teacher
             cursor.execute(
                 """
                 INSERT INTO teachers
@@ -353,38 +401,21 @@ def register():
                     email,
                     password
                 )
+
                 VALUES
                 (
                     %s,
                     %s,
                     %s
                 )
-                RETURNING teacher_id
                 """,
                 (
                     full_name,
-                    email,
+                    username,
                     password
                 )
             )
 
-            teacher_user = cursor.fetchone()
-
-            db.commit()
-
-            print(
-                f"✅ Teacher registered | "
-                f"ID={teacher_user['teacher_id']} | "
-                f"Name={full_name}"
-            )
-
-            return render_template(
-                "register.html",
-                success=(
-                    "Teacher account created successfully! "
-                    "You can now login."
-                )
-            )
 
         # ====================================================
         # STUDENT REGISTRATION
@@ -392,15 +423,16 @@ def register():
 
         elif role == "student":
 
-            # Check existing roll number
+            # Check duplicate roll number
             cursor.execute(
                 """
                 SELECT student_id
                 FROM students
+
                 WHERE LOWER(roll_number)=LOWER(%s)
                 """,
                 (
-                    roll_number,
+                    username,
                 )
             )
 
@@ -410,11 +442,14 @@ def register():
 
                 return render_template(
                     "register.html",
-                    error="An account with this roll number already exists.",
-                    form=request.form
+                    error=(
+                        "An account already exists "
+                        "with this roll number."
+                    )
                 )
 
-            # Create student
+
+            # Insert student
             cursor.execute(
                 """
                 INSERT INTO students
@@ -426,6 +461,7 @@ def register():
                     semester,
                     section
                 )
+
                 VALUES
                 (
                     %s,
@@ -435,11 +471,10 @@ def register():
                     %s,
                     %s
                 )
-                RETURNING student_id
                 """,
                 (
                     full_name,
-                    roll_number,
+                    username,
                     password,
                     department,
                     semester,
@@ -447,24 +482,32 @@ def register():
                 )
             )
 
-            student_user = cursor.fetchone()
 
-            db.commit()
+        # ====================================================
+        # COMMIT
+        # ====================================================
 
-            print(
-                f"✅ Student registered | "
-                f"ID={student_user['student_id']} | "
-                f"Name={full_name} | "
-                f"Roll={roll_number}"
+        db.commit()
+
+        print(
+            f"✅ NEW {role.upper()} REGISTERED | "
+            f"Name={full_name} | "
+            f"Username={username}"
+        )
+
+
+        # ====================================================
+        # SUCCESS
+        # ====================================================
+
+        return render_template(
+            "register.html",
+            success=(
+                "Account created successfully! "
+                "You can now login with your new account."
             )
+        )
 
-            return render_template(
-                "register.html",
-                success=(
-                    "Student account created successfully! "
-                    "You can now login."
-                )
-            )
 
     except Exception as e:
 
@@ -478,11 +521,11 @@ def register():
         return render_template(
             "register.html",
             error=(
-                "Unable to create account. "
-                "Please check your details."
-            ),
-            form=request.form
+                "Registration failed. "
+                "Please check your details and try again."
+            )
         )
+
 
     finally:
 
@@ -496,17 +539,31 @@ def register():
 
 @auth.route(
     "/guest_quiz",
-    methods=["POST"]
+    methods=["GET", "POST"]
 )
 def guest_quiz():
 
-    quiz_id = request.form.get(
-        "quiz_id",
-        ""
-    ).strip()
+    # ========================================================
+    # GET QUIZ ID
+    # ========================================================
+
+    if request.method == "GET":
+
+        quiz_id = request.args.get(
+            "quiz_id",
+            ""
+        ).strip()
+
+    else:
+
+        quiz_id = request.form.get(
+            "quiz_id",
+            ""
+        ).strip()
+
 
     # ========================================================
-    # QUIZ ID VALIDATION
+    # VALIDATE QUIZ ID
     # ========================================================
 
     if not quiz_id.isdigit():
@@ -516,7 +573,15 @@ def guest_quiz():
             error="Please enter a valid Quiz ID."
         )
 
-    quiz_id = int(quiz_id)
+
+    quiz_id = int(
+        quiz_id
+    )
+
+
+    # ========================================================
+    # DATABASE
+    # ========================================================
 
     db = get_db_connection()
 
@@ -525,10 +590,6 @@ def guest_quiz():
     )
 
     try:
-
-        # ====================================================
-        # CHECK QUIZ
-        # ====================================================
 
         cursor.execute(
             """
@@ -565,6 +626,7 @@ def guest_quiz():
         cursor.close()
         db.close()
 
+
     # ========================================================
     # QUIZ NOT FOUND
     # ========================================================
@@ -579,6 +641,7 @@ def guest_quiz():
             )
         )
 
+
     # ========================================================
     # QUIZ FOUND
     # ========================================================
@@ -590,8 +653,100 @@ def guest_quiz():
 
 
 # ============================================================
+# QR CODE → GUEST QUIZ PAGE
+# ============================================================
+#
+# IMPORTANT:
+# qr_generator.py creates:
+#
+# /guest_start_quiz/<quiz_id>
+#
+# QR scanner sends GET request.
+#
+# Therefore this route MUST exist.
+# ============================================================
+
+@auth.route(
+    "/guest_start_quiz/<int:quiz_id>",
+    methods=["GET"]
+)
+def guest_start_quiz_page(quiz_id):
+
+    # ========================================================
+    # CHECK QUIZ
+    # ========================================================
+
+    db = get_db_connection()
+
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+    try:
+
+        cursor.execute(
+            """
+            SELECT
+                quiz_id,
+                title,
+                total_questions,
+                duration_minutes,
+                question_time_seconds,
+                available_from,
+                available_until
+
+            FROM quizzes
+
+            WHERE quiz_id=%s
+
+            AND available_from <= NOW()
+
+            AND
+            (
+                available_until IS NULL
+                OR available_until > NOW()
+            )
+            """,
+            (
+                quiz_id,
+            )
+        )
+
+        quiz = cursor.fetchone()
+
+    finally:
+
+        cursor.close()
+        db.close()
+
+
+    # ========================================================
+    # QUIZ NOT AVAILABLE
+    # ========================================================
+
+    if not quiz:
+
+        return render_template(
+            "guest_quiz.html",
+            error=(
+                "This quiz was not found or "
+                "is no longer available."
+            )
+        )
+
+
+    # ========================================================
+    # SHOW NAME + ROLL NUMBER PAGE
+    # ========================================================
+
+    return render_template(
+        "guest_quiz.html",
+        quiz=quiz
+    )
+
+
+# ============================================================
 # GUEST START QUIZ
-# Name + Roll Number → Actual Quiz
 # ============================================================
 
 @auth.route(
@@ -615,13 +770,15 @@ def guest_start_quiz():
         ""
     ).strip()
 
+
     # ========================================================
-    # BASIC VALIDATION
+    # VALIDATION
     # ========================================================
 
     if not quiz_id.isdigit():
 
         return redirect("/")
+
 
     if not name or not roll_number:
 
@@ -629,10 +786,14 @@ def guest_start_quiz():
             f"/guest_quiz?quiz_id={quiz_id}"
         )
 
-    quiz_id = int(quiz_id)
+
+    quiz_id = int(
+        quiz_id
+    )
+
 
     # ========================================================
-    # DATABASE
+    # GET QUIZ
     # ========================================================
 
     db = get_db_connection()
@@ -642,10 +803,6 @@ def guest_start_quiz():
     )
 
     try:
-
-        # ====================================================
-        # GET QUIZ
-        # ====================================================
 
         cursor.execute(
             """
@@ -677,33 +834,53 @@ def guest_start_quiz():
 
         quiz = cursor.fetchone()
 
-        if not quiz:
+    finally:
 
-            return redirect("/")
+        cursor.close()
+        db.close()
 
-        # ====================================================
-        # GET QUESTIONS
-        # ====================================================
 
-        from utils.quiz_engine import get_quiz_questions
+    if not quiz:
 
-        questions = get_quiz_questions(
-            quiz_id
+        return render_template(
+            "guest_quiz.html",
+            error="Quiz is no longer available."
         )
 
-        if not questions:
 
-            return """
-            <h2>❌ Quiz has no questions.</h2>
+    # ========================================================
+    # GET QUESTIONS
+    # ========================================================
 
-            <a href="/">
-                ← Back to Login
-            </a>
-            """
+    from utils.quiz_engine import get_quiz_questions
 
-        # ====================================================
-        # CREATE GUEST ATTEMPT
-        # ====================================================
+    questions = get_quiz_questions(
+        quiz_id
+    )
+
+
+    if not questions:
+
+        return """
+        <h2>❌ Quiz has no questions.</h2>
+
+        <a href="/">
+            ← Back to Login
+        </a>
+        """
+
+
+    # ========================================================
+    # CREATE GUEST ATTEMPT
+    # ========================================================
+
+    db = get_db_connection()
+
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+    try:
 
         cursor.execute(
             """
@@ -742,33 +919,37 @@ def guest_start_quiz():
 
         db.commit()
 
+
     except Exception as e:
 
         db.rollback()
 
         print(
-            "❌ GUEST START ERROR:",
+            "❌ GUEST ATTEMPT ERROR:",
             e
         )
 
-        return f"""
+        return """
         <h2>❌ Unable to start quiz.</h2>
-        <p>{e}</p>
-        <a href="/">← Back</a>
+
+        <a href="/">
+            ← Back
+        </a>
         """
+
 
     finally:
 
         cursor.close()
         db.close()
 
+
     # ========================================================
-    # STORE GUEST SESSION
+    # STORE SESSION
     # ========================================================
 
     session["guest_attempt"] = True
 
-    # Compatibility
     session["guest_mode"] = True
 
     session["guest_attempt_id"] = (
@@ -783,7 +964,9 @@ def guest_start_quiz():
 
     session["guest_student_name"] = name
 
-    session["guest_roll_number"] = roll_number
+    session["guest_roll_number"] = (
+        roll_number
+    )
 
     session["quiz_id"] = quiz_id
 
@@ -792,6 +975,7 @@ def guest_start_quiz():
     session["current_question"] = 0
 
     session["answers"] = {}
+
 
     # ========================================================
     # TIMER
@@ -804,6 +988,7 @@ def guest_start_quiz():
     session["question_time_seconds"] = (
         quiz["question_time_seconds"] or 60
     )
+
 
     # ========================================================
     # AVAILABILITY
@@ -819,26 +1004,27 @@ def guest_start_quiz():
 
         session["quiz_available_until"] = None
 
+
     # ========================================================
     # START TIME
     # ========================================================
 
     import time
 
-    session["quiz_start_time"] = time.time()
+    session["quiz_start_time"] = (
+        time.time()
+    )
 
-    session["question_start_time"] = time.time()
+    session["question_start_time"] = (
+        time.time()
+    )
 
     session.modified = True
 
-    print(
-        f"🎯 GUEST QUIZ STARTED | "
-        f"Quiz={quiz_id} | "
-        f"Attempt={attempt['attempt_id']} | "
-        f"Name={name}"
-    )
 
-    return redirect("/quiz")
+    return redirect(
+        "/quiz"
+    )
 
 
 # ============================================================

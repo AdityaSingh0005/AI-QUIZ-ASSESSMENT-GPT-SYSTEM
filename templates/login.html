@@ -34,7 +34,6 @@
 
         <div class="brand-content">
 
-
             <div class="brand-badge">
 
                 <span class="brand-icon">
@@ -94,7 +93,6 @@
                 </div>
 
 
-
                 <div class="feature-item">
 
                     <span>
@@ -116,7 +114,6 @@
                 </div>
 
 
-
                 <div class="feature-item">
 
                     <span>
@@ -136,7 +133,6 @@
                     </div>
 
                 </div>
-
 
 
                 <div class="feature-item">
@@ -228,6 +224,28 @@
 
 
             <!-- =================================================
+                 ERROR MESSAGE
+            ================================================== -->
+
+            {% if error %}
+
+            <div class="login-error">
+
+                <span>
+                    ⚠️
+                </span>
+
+                <span>
+                    {{ error }}
+                </span>
+
+            </div>
+
+            {% endif %}
+
+
+
+            <!-- =================================================
                  LOGIN FORM
             ================================================== -->
 
@@ -266,7 +284,7 @@
 
 
                             <option value="teacher">
-                                Teacher
+                                Teacher / Professor
                             </option>
 
 
@@ -367,8 +385,28 @@
 
 
             <!-- =================================================
-                 GUEST QUIZ ACCESS
-                 ONLY ONE SECTION
+                 CREATE ACCOUNT
+            ================================================== -->
+
+            <div class="create-account-section">
+
+                <span class="create-account-text">
+                    Don't have an account?
+                </span>
+
+                <a
+                    href="/register"
+                    class="create-account-link"
+                >
+                    Create Account
+                </a>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 GUEST QUIZ
             ================================================== -->
 
             <div class="guest-quiz-card">
@@ -503,17 +541,6 @@
 
 
         </div>
-
-        <div class="register-login-link">
-
-    <p>
-        Don't have an account?
-        <a href="/register">
-            Create Account
-        </a>
-    </p>
-
-</div>
 
 
     </section>

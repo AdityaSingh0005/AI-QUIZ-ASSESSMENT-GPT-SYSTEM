@@ -13481,3 +13481,146 @@ VERY SMALL PHONES
 .register-login-link a:hover {
     text-decoration: underline;
 }
+
+/* ============================================================
+   CREATE ACCOUNT SECTION
+============================================================ */
+
+.create-account-section {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 18px 0 6px;
+    padding: 12px 10px;
+    text-align: center;
+}
+
+.create-account-text {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.create-account-link {
+    font-size: 13px;
+    font-weight: 700;
+    color: #6366f1;
+    text-decoration: none;
+    transition: 0.2s ease;
+}
+
+.create-account-link:hover {
+    color: #4f46e5;
+    text-decoration: underline;
+}
+
+
+/* ============================================================
+   LOGIN ERROR
+============================================================ */
+
+.login-error {
+    width: 100%;
+    box-sizing: border-box;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 12px 14px;
+    margin-bottom: 16px;
+
+    border-radius: 12px;
+
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+
+    color: #b91c1c;
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+
+/* ============================================================
+   REGISTRATION SUCCESS
+============================================================ */
+
+.login-success {
+    width: 100%;
+    box-sizing: border-box;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 12px 14px;
+    margin-bottom: 16px;
+
+    border-radius: 12px;
+
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+
+    color: #047857;
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+
+/* ============================================================
+   REGISTER CARD
+============================================================ */
+
+.register-card {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+
+/* ============================================================
+   STUDENT REGISTRATION FIELDS
+============================================================ */
+
+#student-fields {
+    display: none;
+}
+
+
+/* ============================================================
+   REGISTER PAGE SCROLLBAR
+============================================================ */
+
+.register-card::-webkit-scrollbar {
+    width: 5px;
+}
+
+.register-card::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.register-card::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media (max-width: 768px) {
+
+    .create-account-section {
+        margin-top: 14px;
+        margin-bottom: 4px;
+    }
+
+    .register-card {
+        max-height: none;
+        overflow-y: visible;
+    }
+
+}
