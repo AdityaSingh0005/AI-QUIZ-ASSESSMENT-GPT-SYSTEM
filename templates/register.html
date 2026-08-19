@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <link
+        rel="icon"
+        href="{{ url_for('static', filename='images/logo.jpg') }}"
+    >
+
+    <title>Create Account | AI Quiz Assessment System</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <style>
+
+        .register-body {
+            min-height: 100vh;
+            margin: 0;
+            font-family: "Inter", sans-serif;
+            background:
+                radial-gradient(
+                    circle at top left,
+                    rgba(99, 102, 241, 0.22),
+                    transparent 35%
+                ),
+                linear-gradient(
+                    135deg,
+                    #0f172a,
+                    #111827,
+                    #1e1b4b
+                );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 16px;
+            box-sizing: border-box;
+        }
+
+        .register-container {
+            width: 100%;
+            max-width: 520px;
+        }
+
+        .register-card {
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 28px;
+            padding: 38px;
+            box-shadow:
+                0 30px 80px rgba(0, 0, 0, 0.35);
+        }
+
+        .register-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .register-logo {
+            width: 68px;
+            height: 68px;
+            margin: 0 auto 16px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 20px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #6366f1,
+                    #8b5cf6
+                );
+
+            font-size: 32px;
+
+            box-shadow:
+                0 12px 30px rgba(99, 102, 241, 0.35);
+        }
+
+        .register-header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 800;
+            color: #111827;
+        }
+
+        .register-header p {
+            margin-top: 8px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .register-alert {
+            padding: 13px 15px;
+            border-radius: 12px;
+            margin-bottom: 18px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .register-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .register-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .register-form {
+            display: flex;
+            flex-direction: column;
+            gap: 17px;
+        }
+
+        .register-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .register-group label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #374151;
+        }
+
+        .register-input {
+            width: 100%;
+            box-sizing: border-box;
+
+            padding: 13px 14px;
+
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+
+            outline: none;
+
+            font-family: inherit;
+            font-size: 14px;
+
+            background: #f9fafb;
+
+            transition: 0.2s;
+        }
+
+        .register-input:focus {
+            border-color: #6366f1;
+
+            background: white;
+
+            box-shadow:
+                0 0 0 4px rgba(
+                    99,
+                    102,
+                    241,
+                    0.12
+                );
+        }
+
+        .register-role {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .role-option {
+            position: relative;
+        }
+
+        .role-option input {
+            display: none;
+        }
+
+        .role-label {
+            display: block;
+            padding: 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 14px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #374151;
+            background: #f9fafb;
+            transition: 0.2s;
+        }
+
+        .role-label:hover {
+            border-color: #6366f1;
+            transform: translateY(-1px);
+        }
+
+        .role-option input:checked + .role-label {
+            color: #4338ca;
+            border-color: #6366f1;
+            background: #eef2ff;
+            box-shadow:
+                0 0 0 3px rgba(
+                    99,
+                    102,
+                    241,
+                    0.10
+                );
+        }
+
+        .student-fields {
+            display: none;
+        }
+
+        .teacher-fields {
+            display: none;
+        }
+
+        .register-button {
+            border: none;
+            border-radius: 13px;
+
+            padding: 14px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #6366f1,
+                    #8b5cf6
+                );
+
+            color: white;
+
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 800;
+
+            cursor: pointer;
+
+            transition: 0.2s;
+
+            box-shadow:
+                0 12px 25px rgba(
+                    99,
+                    102,
+                    241,
+                    0.25
+                );
+        }
+
+        .register-button:hover {
+            transform: translateY(-2px);
+
+            box-shadow:
+                0 16px 30px rgba(
+                    99,
+                    102,
+                    241,
+                    0.32
+                );
+        }
+
+        .register-footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .register-footer a {
+            color: #4f46e5;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .register-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .password-note {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: -2px;
+        }
+
+        @media (max-width: 600px) {
+
+            .register-card {
+                padding: 25px 20px;
+                border-radius: 22px;
+            }
+
+            .register-header h1 {
+                font-size: 24px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body class="register-body">
+
+
+<div class="register-container">
+
+    <div class="register-card">
+
+
+        <!-- =================================================
+             HEADER
+        ================================================== -->
+
+        <div class="register-header">
+
+            <div class="register-logo">
+                🧠
+            </div>
+
+            <h1>
+                Create Account
+            </h1>
+
+            <p>
+                Join the AI Quiz Assessment System
+            </p>
+
+        </div>
+
+
+        <!-- =================================================
+             ERROR
+        ================================================== -->
+
+        {% if error %}
+
+        <div class="register-alert register-error">
+
+            ❌ {{ error }}
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             SUCCESS
+        ================================================== -->
+
+        {% if success %}
+
+        <div class="register-alert register-success">
+
+            ✅ {{ success }}
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             REGISTRATION FORM
+        ================================================== -->
+
+        <form
+            action="/register"
+            method="POST"
+            class="register-form"
+        >
+
+
+            <!-- =================================================
+                 ACCOUNT TYPE
+            ================================================== -->
+
+            <div class="register-group">
+
+                <label>
+                    Account Type
+                </label>
+
+                <div class="register-role">
+
+
+                    <div class="role-option">
+
+                        <input
+                            type="radio"
+                            id="teacher"
+                            name="role"
+                            value="teacher"
+                            required
+                        >
+
+                        <label
+                            for="teacher"
+                            class="role-label"
+                        >
+
+                            👨‍🏫 Teacher / Professor
+
+                        </label>
+
+                    </div>
+
+
+                    <div class="role-option">
+
+                        <input
+                            type="radio"
+                            id="student"
+                            name="role"
+                            value="student"
+                        >
+
+                        <label
+                            for="student"
+                            class="role-label"
+                        >
+
+                            🎓 Student
+
+                        </label>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 FULL NAME
+            ================================================== -->
+
+            <div class="register-group">
+
+                <label for="full_name">
+                    Full Name
+                </label>
+
+                <input
+                    class="register-input"
+                    type="text"
+                    id="full_name"
+                    name="full_name"
+                    placeholder="Enter your full name"
+                    value="{{ form.get('full_name', '') if form else '' }}"
+                    required
+                >
+
+            </div>
+
+
+            <!-- =================================================
+                 TEACHER FIELDS
+            ================================================== -->
+
+            <div
+                class="register-group teacher-fields"
+                id="teacherFields"
+            >
+
+                <label for="email">
+                    Email Address
+                </label>
+
+                <input
+                    class="register-input"
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="professor@example.com"
+                    value="{{ form.get('email', '') if form else '' }}"
+                >
+
+            </div>
+
+
+            <!-- =================================================
+                 STUDENT FIELDS
+            ================================================== -->
+
+            <div
+                class="register-group student-fields"
+                id="studentFields"
+            >
+
+                <label for="roll_number">
+                    Roll Number
+                </label>
+
+                <input
+                    class="register-input"
+                    type="text"
+                    id="roll_number"
+                    name="roll_number"
+                    placeholder="Enter your roll number"
+                    value="{{ form.get('roll_number', '') if form else '' }}"
+                >
+
+            </div>
+
+
+            <!-- =================================================
+                 STUDENT EXTRA INFORMATION
+            ================================================== -->
+
+            <div
+                class="student-fields"
+                id="studentExtraFields"
+            >
+
+                <div
+                    style="
+                        display:grid;
+                        grid-template-columns:1fr 1fr;
+                        gap:12px;
+                    "
+                >
+
+                    <div class="register-group">
+
+                        <label for="department">
+                            Department
+                        </label>
+
+                        <input
+                            class="register-input"
+                            type="text"
+                            id="department"
+                            name="department"
+                            placeholder="MCA"
+                            value="{{ form.get('department', '') if form else '' }}"
+                        >
+
+                    </div>
+
+
+                    <div class="register-group">
+
+                        <label for="semester">
+                            Semester
+                        </label>
+
+                        <input
+                            class="register-input"
+                            type="text"
+                            id="semester"
+                            name="semester"
+                            placeholder="3rd"
+                            value="{{ form.get('semester', '') if form else '' }}"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    class="register-group"
+                    style="margin-top:15px;"
+                >
+
+                    <label for="section">
+                        Section
+                    </label>
+
+                    <input
+                        class="register-input"
+                        type="text"
+                        id="section"
+                        name="section"
+                        placeholder="A"
+                        value="{{ form.get('section', '') if form else '' }}"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 PASSWORD
+            ================================================== -->
+
+            <div class="register-group">
+
+                <label for="password">
+                    Password
+                </label>
+
+                <input
+                    class="register-input"
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Create a password"
+                    minlength="6"
+                    required
+                >
+
+                <span class="password-note">
+                    Password must contain at least 6 characters.
+                </span>
+
+            </div>
+
+
+            <!-- =================================================
+                 CONFIRM PASSWORD
+            ================================================== -->
+
+            <div class="register-group">
+
+                <label for="confirm_password">
+                    Confirm Password
+                </label>
+
+                <input
+                    class="register-input"
+                    type="password"
+                    id="confirm_password"
+                    name="confirm_password"
+                    placeholder="Re-enter your password"
+                    minlength="6"
+                    required
+                >
+
+            </div>
+
+
+            <!-- =================================================
+                 SUBMIT
+            ================================================== -->
+
+            <button
+                type="submit"
+                class="register-button"
+            >
+
+                Create Account →
+
+            </button>
+
+
+        </form>
+
+
+        <!-- =================================================
+             LOGIN
+        ================================================== -->
+
+        <div class="register-footer">
+
+            Already have an account?
+
+            <a href="/">
+                Sign in
+            </a>
+
+        </div>
+
+
+    </div>
+
+</div>
+
+
+<script>
+
+    const teacherRadio =
+        document.getElementById("teacher");
+
+    const studentRadio =
+        document.getElementById("student");
+
+    const teacherFields =
+        document.getElementById("teacherFields");
+
+    const studentFields =
+        document.getElementById("studentFields");
+
+    const studentExtraFields =
+        document.getElementById("studentExtraFields");
+
+    const email =
+        document.getElementById("email");
+
+    const rollNumber =
+        document.getElementById("roll_number");
+
+
+    function updateRegistrationFields() {
+
+        if (teacherRadio.checked) {
+
+            teacherFields.style.display = "flex";
+
+            studentFields.style.display = "none";
+
+            studentExtraFields.style.display = "none";
+
+            email.required = true;
+
+            rollNumber.required = false;
+
+        }
+
+        else if (studentRadio.checked) {
+
+            teacherFields.style.display = "none";
+
+            studentFields.style.display = "flex";
+
+            studentExtraFields.style.display = "block";
+
+            email.required = false;
+
+            rollNumber.required = true;
+
+        }
+
+        else {
+
+            teacherFields.style.display = "none";
+
+            studentFields.style.display = "none";
+
+            studentExtraFields.style.display = "none";
+
+            email.required = false;
+
+            rollNumber.required = false;
+
+        }
+
+    }
+
+
+    teacherRadio.addEventListener(
+        "change",
+        updateRegistrationFields
+    );
+
+
+    studentRadio.addEventListener(
+        "change",
+        updateRegistrationFields
+    );
+
+
+    updateRegistrationFields();
+
+</script>
+
+
+</body>
+
+</html>

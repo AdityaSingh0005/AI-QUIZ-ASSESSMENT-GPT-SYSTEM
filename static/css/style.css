@@ -13464,3 +13464,20 @@ VERY SMALL PHONES
     }
 
 }
+
+.register-login-link {
+    text-align: center;
+    margin-top: 22px;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.register-login-link a {
+    color: #4f46e5;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.register-login-link a:hover {
+    text-decoration: underline;
+}
