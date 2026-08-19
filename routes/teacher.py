@@ -3,7 +3,8 @@ from flask import (
     render_template,
     request,
     redirect,
-    session
+    session,
+    jsonify
 )
 
 from database import get_db_connection
@@ -20,14 +21,89 @@ teacher = Blueprint("teacher", __name__)
 
 
 # ============================================================
-# HELPER
+# HELPER: TEACHER LOGIN CHECK
 # ============================================================
 
 def teacher_logged_in():
-    """
-    Check whether teacher is logged in.
-    """
+
     return "teacher_id" in session
+
+
+# ============================================================
+# HELPER: ERROR PAGE
+# ============================================================
+
+def error_page(message, back_url="/create_quiz"):
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Quiz Error</title>
+
+        <style>
+            body {{
+                margin: 0;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #f5f7fb;
+                font-family: Inter, Arial, sans-serif;
+            }}
+
+            .error-card {{
+                width: min(600px, 90%);
+                background: white;
+                border-radius: 20px;
+                padding: 35px;
+                box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+                border: 1px solid #e8ebf2;
+            }}
+
+            h2 {{
+                margin-top: 0;
+                color: #dc2626;
+            }}
+
+            p {{
+                color: #596274;
+                line-height: 1.6;
+                word-break: break-word;
+            }}
+
+            a {{
+                display: inline-block;
+                margin-top: 15px;
+                padding: 12px 18px;
+                background: #4f46e5;
+                color: white;
+                text-decoration: none;
+                border-radius: 10px;
+                font-weight: 700;
+            }}
+        </style>
+    </head>
+
+    <body>
+
+        <div class="error-card">
+
+            <h2>❌ Quiz Generation Failed</h2>
+
+            <p>
+                {message}
+            </p>
+
+            <a href="{back_url}">
+                ← Go Back
+            </a>
+
+        </div>
+
+    </body>
+    </html>
+    """
 
 
 # ============================================================
@@ -53,12 +129,16 @@ def teacher_dashboard():
 @teacher.route("/create_quiz", methods=["GET", "POST"])
 def create_quiz():
 
+    # --------------------------------------------------------
+    # LOGIN CHECK
+    # --------------------------------------------------------
+
     if not teacher_logged_in():
         return redirect("/")
 
-    # ========================================================
-    # OPEN CREATE QUIZ PAGE
-    # ========================================================
+    # --------------------------------------------------------
+    # GET REQUEST
+    # --------------------------------------------------------
 
     if request.method == "GET":
 
@@ -66,8 +146,13 @@ def create_quiz():
             "create_quiz.html"
         )
 
+    print("\n")
+    print("=" * 70)
+    print("🚀 CREATE QUIZ REQUEST RECEIVED")
+    print("=" * 70)
+
     # ========================================================
-    # BASIC QUIZ DETAILS
+    # BASIC DETAILS
     # ========================================================
 
     title = request.form.get(
@@ -79,6 +164,10 @@ def create_quiz():
         "prompt",
         ""
     ).strip()
+
+    # ========================================================
+    # GET QUESTION COUNTS
+    # ========================================================
 
     try:
 
@@ -117,15 +206,34 @@ def create_quiz():
             )
         )
 
-    except (ValueError, TypeError):
+    except (ValueError, TypeError) as e:
 
-        return """
-        <h2>❌ Invalid quiz values.</h2>
+        print(
+            "❌ INVALID FORM VALUES:",
+            e
+        )
 
-        <a href="/create_quiz">
-            ← Back to Create Quiz
-        </a>
-        """
+        return error_page(
+            "Invalid quiz values. Please enter valid numbers."
+        )
+
+    # ========================================================
+    # PRINT RECEIVED DATA
+    # ========================================================
+
+    print("\n📋 QUIZ FORM DATA")
+    print("-" * 70)
+    print("Title:", title)
+    print("Prompt:", prompt)
+    print("Easy:", easy)
+    print("Medium:", medium)
+    print("Hard:", hard)
+    print("Duration:", duration_minutes)
+    print(
+        "Time / Question:",
+        question_time_seconds
+    )
+    print("-" * 70)
 
     # ========================================================
     # VALIDATE TITLE
@@ -133,13 +241,11 @@ def create_quiz():
 
     if not title:
 
-        return """
-        <h2>❌ Quiz title is required.</h2>
+        print("❌ Quiz title missing")
 
-        <a href="/create_quiz">
-            ← Back to Create Quiz
-        </a>
-        """
+        return error_page(
+            "Quiz title is required."
+        )
 
     # ========================================================
     # VALIDATE PROMPT
@@ -147,27 +253,21 @@ def create_quiz():
 
     if not prompt:
 
-        return """
-        <h2>❌ Quiz topic/prompt is required.</h2>
+        print("❌ Quiz prompt missing")
 
-        <a href="/create_quiz">
-            ← Back to Create Quiz
-        </a>
-        """
+        return error_page(
+            "Quiz topic/prompt is required."
+        )
 
     # ========================================================
-    # VALIDATE QUESTION COUNTS
+    # VALIDATE COUNTS
     # ========================================================
 
     if easy < 0 or medium < 0 or hard < 0:
 
-        return """
-        <h2>❌ Question counts cannot be negative.</h2>
-
-        <a href="/create_quiz">
-            ← Back to Create Quiz
-        </a>
-        """
+        return error_page(
+            "Question counts cannot be negative."
+        )
 
     # ========================================================
     # TOTAL QUESTIONS
@@ -179,29 +279,26 @@ def create_quiz():
         hard
     )
 
+    print(
+        "📝 Total requested questions:",
+        total_questions
+    )
+
     if total_questions <= 0:
 
-        return """
-        <h2>❌ Please select at least one question.</h2>
-
-        <a href="/create_quiz">
-            ← Back to Create Quiz
-        </a>
-        """
+        return error_page(
+            "Please select at least one question."
+        )
 
     # ========================================================
-    # VALIDATE QUIZ DURATION
+    # VALIDATE DURATION
     # ========================================================
 
     if duration_minutes <= 0:
 
-        return """
-        <h2>❌ Quiz duration must be greater than 0.</h2>
-
-        <a href="/create_quiz">
-            ← Back to Create Quiz
-        </a>
-        """
+        return error_page(
+            "Quiz duration must be greater than 0."
+        )
 
     # ========================================================
     # VALIDATE QUESTION TIME
@@ -209,13 +306,9 @@ def create_quiz():
 
     if question_time_seconds <= 0:
 
-        return """
-        <h2>❌ Question time must be greater than 0.</h2>
-
-        <a href="/create_quiz">
-            ← Back to Create Quiz
-        </a>
-        """
+        return error_page(
+            "Question time must be greater than 0."
+        )
 
     # ========================================================
     # QUIZ AVAILABILITY
@@ -276,19 +369,309 @@ def create_quiz():
             timedelta(days=1)
         )
 
+    print("\n📅 AVAILABILITY")
+    print("-" * 70)
+    print("Available From:", available_from)
+    print("Available Until:", available_until)
+    print("-" * 70)
+
+    # ========================================================
+    # AI GENERATION
+    # ========================================================
+    #
+    # IMPORTANT:
+    # AI GENERATION IS DONE BEFORE INSERTING QUIZ.
+    #
+    # This prevents empty/broken quizzes if AI fails.
+    #
+    # ========================================================
+
+    print("\n")
+    print("=" * 70)
+    print("🤖 STARTING AI QUESTION GENERATION")
+    print("=" * 70)
+
+    print("📌 Prompt:", prompt)
+    print("📌 Easy:", easy)
+    print("📌 Medium:", medium)
+    print("📌 Hard:", hard)
+
+    try:
+
+        ai_start = datetime.now()
+
+        questions = generate_questions(
+            prompt,
+            easy,
+            medium,
+            hard
+        )
+
+        ai_end = datetime.now()
+
+        ai_seconds = (
+            ai_end - ai_start
+        ).total_seconds()
+
+        print("\n")
+        print("=" * 70)
+        print("🤖 AI GENERATION FINISHED")
+        print("=" * 70)
+
+        print(
+            "⏱️ AI generation time:",
+            ai_seconds,
+            "seconds"
+        )
+
+        print(
+            "📦 Returned object type:",
+            type(questions)
+        )
+
+        print(
+            "📦 Returned questions:",
+            len(questions)
+            if questions
+            else 0
+        )
+
+        # ----------------------------------------------------
+        # CHECK EMPTY
+        # ----------------------------------------------------
+
+        if not questions:
+
+            print(
+                "❌ AI returned EMPTY questions"
+            )
+
+            return error_page(
+                "AI could not generate any questions. "
+                "Please check your AI/Ollama configuration "
+                "and try again."
+            )
+
+    except Exception as e:
+
+        print("\n")
+        print("=" * 70)
+        print("❌ AI GENERATION ERROR")
+        print("=" * 70)
+        print(
+            "ERROR TYPE:",
+            type(e).__name__
+        )
+        print(
+            "ERROR:",
+            str(e)
+        )
+        print("=" * 70)
+
+        return error_page(
+            f"AI question generation failed: {str(e)}"
+        )
+
+    # ========================================================
+    # VALIDATE AI QUESTION COUNT
+    # ========================================================
+
+    if len(questions) != total_questions:
+
+        print("\n")
+        print("⚠️ QUESTION COUNT MISMATCH")
+        print(
+            "Requested:",
+            total_questions
+        )
+        print(
+            "Generated:",
+            len(questions)
+        )
+
+        return error_page(
+            f"AI generated {len(questions)} questions, "
+            f"but {total_questions} were requested."
+        )
+
+    # ========================================================
+    # VALIDATE QUESTION STRUCTURE
+    # ========================================================
+
+    required_fields = [
+        "question",
+        "option_a",
+        "option_b",
+        "option_c",
+        "option_d",
+        "correct_option",
+        "difficulty"
+    ]
+
+    print("\n")
+    print("🔍 VALIDATING GENERATED QUESTIONS")
+    print("-" * 70)
+
+    for index, q in enumerate(questions, start=1):
+
+        print(
+            f"Question {index}:",
+            q
+        )
+
+        if not isinstance(q, dict):
+
+            return error_page(
+                f"AI returned invalid data for question {index}."
+            )
+
+        for field in required_fields:
+
+            if field not in q:
+
+                print(
+                    f"❌ Missing field '{field}' "
+                    f"in question {index}"
+                )
+
+                return error_page(
+                    f"AI generated an invalid question. "
+                    f"Missing field: {field}"
+                )
+
+            if q[field] is None:
+
+                return error_page(
+                    f"AI generated an empty field "
+                    f"'{field}' in question {index}."
+                )
+
+            if str(q[field]).strip() == "":
+
+                return error_page(
+                    f"AI generated an empty field "
+                    f"'{field}' in question {index}."
+                )
+
+    print("-" * 70)
+    print("✅ ALL AI QUESTIONS VALID")
+
+    # ========================================================
+    # NORMALIZE DIFFICULTY
+    # ========================================================
+
+    for q in questions:
+
+        difficulty = str(
+            q.get(
+                "difficulty",
+                "Medium"
+            )
+        ).strip().lower()
+
+        if difficulty == "easy":
+
+            q["difficulty"] = "Easy"
+
+        elif difficulty == "medium":
+
+            q["difficulty"] = "Medium"
+
+        elif difficulty == "hard":
+
+            q["difficulty"] = "Hard"
+
+        else:
+
+            return error_page(
+                "AI returned an invalid difficulty value."
+            )
+
+    # ========================================================
+    # VERIFY DIFFICULTY DISTRIBUTION
+    # ========================================================
+
+    generated_easy = sum(
+        1
+        for q in questions
+        if q["difficulty"] == "Easy"
+    )
+
+    generated_medium = sum(
+        1
+        for q in questions
+        if q["difficulty"] == "Medium"
+    )
+
+    generated_hard = sum(
+        1
+        for q in questions
+        if q["difficulty"] == "Hard"
+    )
+
+    print("\n")
+    print("📊 DIFFICULTY CHECK")
+    print("-" * 70)
+    print(
+        "Requested:",
+        f"Easy={easy}, Medium={medium}, Hard={hard}"
+    )
+    print(
+        "Generated:",
+        f"Easy={generated_easy}, "
+        f"Medium={generated_medium}, "
+        f"Hard={generated_hard}"
+    )
+    print("-" * 70)
+
+    if generated_easy != easy:
+
+        return error_page(
+            f"AI generated {generated_easy} Easy questions "
+            f"but {easy} were requested."
+        )
+
+    if generated_medium != medium:
+
+        return error_page(
+            f"AI generated {generated_medium} Medium questions "
+            f"but {medium} were requested."
+        )
+
+    if generated_hard != hard:
+
+        return error_page(
+            f"AI generated {generated_hard} Hard questions "
+            f"but {hard} were requested."
+        )
+
+    print("✅ DIFFICULTY DISTRIBUTION VALID")
+
     # ========================================================
     # DATABASE
     # ========================================================
 
-    db = get_db_connection()
-
-    cursor = db.cursor()
+    db = None
+    cursor = None
 
     try:
+
+        print("\n")
+        print("=" * 70)
+        print("🗄️ CONNECTING TO DATABASE")
+        print("=" * 70)
+
+        db = get_db_connection()
+
+        cursor = db.cursor()
+
+        print("✅ Database connected")
 
         # ====================================================
         # CREATE QUIZ
         # ====================================================
+
+        print("\n📝 INSERTING QUIZ INTO DATABASE...")
 
         cursor.execute(
             """
@@ -330,60 +713,31 @@ def create_quiz():
             )
         )
 
-        quiz_id = cursor.fetchone()[0]
+        result = cursor.fetchone()
 
-        print(
-            f"📝 Quiz created with ID: {quiz_id}"
-        )
-
-        # ====================================================
-        # AI QUESTIONS
-        # ====================================================
-
-        questions = generate_questions(
-            prompt,
-            easy,
-            medium,
-            hard
-        )
-
-        if not questions:
+        if not result:
 
             raise Exception(
-                "AI could not generate questions."
+                "Database did not return quiz_id."
             )
+
+        quiz_id = result[0]
+
+        print(
+            "✅ Quiz created with ID:",
+            quiz_id
+        )
 
         # ====================================================
         # SAVE QUESTIONS
         # ====================================================
 
-        saved_questions = 0
+        print("\n📝 SAVING AI QUESTIONS...")
 
-        for q in questions:
-
-            # -----------------------------------------------
-            # Basic validation of AI response
-            # -----------------------------------------------
-
-            required_fields = [
-                "question",
-                "option_a",
-                "option_b",
-                "option_c",
-                "option_d",
-                "correct_option",
-                "difficulty"
-            ]
-
-            if not all(
-                field in q
-                for field in required_fields
-            ):
-                print(
-                    "⚠️ Skipping invalid AI question:",
-                    q
-                )
-                continue
+        for index, q in enumerate(
+            questions,
+            start=1
+        ):
 
             cursor.execute(
                 """
@@ -413,57 +767,40 @@ def create_quiz():
                 """,
                 (
                     quiz_id,
-                    q["question"],
-                    q["option_a"],
-                    q["option_b"],
-                    q["option_c"],
-                    q["option_d"],
-                    q["correct_option"],
+                    str(q["question"]).strip(),
+                    str(q["option_a"]).strip(),
+                    str(q["option_b"]).strip(),
+                    str(q["option_c"]).strip(),
+                    str(q["option_d"]).strip(),
+                    str(q["correct_option"]).strip(),
                     q["difficulty"]
                 )
             )
 
-            saved_questions += 1
-
-        # ====================================================
-        # VALIDATE SAVED QUESTIONS
-        # ====================================================
-
-        if saved_questions == 0:
-
-            raise Exception(
-                "No valid questions were generated by AI."
+            print(
+                f"   ✅ Question {index} saved"
             )
-
-        # ====================================================
-        # SYNC TOTAL QUESTION COUNT
-        # ====================================================
-
-        cursor.execute(
-            """
-            UPDATE quizzes
-
-            SET total_questions=%s
-
-            WHERE quiz_id=%s
-            """,
-            (
-                saved_questions,
-                quiz_id
-            )
-        )
 
         # ====================================================
         # GENERATE QR
         # ====================================================
+
+        print("\n📱 GENERATING QR CODE...")
 
         qr_path = generate_qr(
             quiz_id
         )
 
         print(
-            f"📱 QR PATH: {qr_path}"
+            "✅ QR generated:",
+            qr_path
         )
+
+        if not qr_path:
+
+            raise Exception(
+                "QR code generation failed."
+            )
 
         # ====================================================
         # SAVE QR PATH
@@ -483,26 +820,32 @@ def create_quiz():
             )
         )
 
+        print(
+            "✅ QR path saved"
+        )
+
         # ====================================================
-        # COMMIT
+        # COMMIT EVERYTHING
         # ====================================================
+
+        print("\n💾 COMMITTING DATABASE...")
 
         db.commit()
 
         print(
-            f"✅ Quiz {quiz_id} created successfully"
+            "✅ DATABASE COMMIT SUCCESSFUL"
         )
 
+        print("\n")
+        print("=" * 70)
         print(
-            f"📅 Available From: {available_from}"
+            f"🎉 QUIZ {quiz_id} CREATED SUCCESSFULLY"
         )
-
-        print(
-            f"📅 Available Until: {available_until}"
-        )
+        print("=" * 70)
+        print("\n")
 
         # ====================================================
-        # OPEN GENERATED QUIZ
+        # REDIRECT
         # ====================================================
 
         return redirect(
@@ -511,29 +854,55 @@ def create_quiz():
 
     except Exception as e:
 
-        db.rollback()
-
+        print("\n")
+        print("=" * 70)
+        print("❌ DATABASE / QUIZ CREATION ERROR")
+        print("=" * 70)
         print(
-            "❌ ERROR WHILE CREATING QUIZ:",
-            e
+            "ERROR TYPE:",
+            type(e).__name__
         )
+        print(
+            "ERROR:",
+            str(e)
+        )
+        print("=" * 70)
 
-        return f"""
-        <h2>❌ Error while creating quiz</h2>
+        if db:
 
-        <p>{e}</p>
+            try:
+                db.rollback()
 
-        <br>
+                print(
+                    "↩️ Database rollback successful"
+                )
 
-        <a href="/create_quiz">
-            ← Back to Create Quiz
-        </a>
-        """
+            except Exception as rollback_error:
+
+                print(
+                    "❌ Rollback error:",
+                    rollback_error
+                )
+
+        return error_page(
+            f"Quiz creation failed: {str(e)}"
+        )
 
     finally:
 
-        cursor.close()
-        db.close()
+        if cursor:
+
+            try:
+                cursor.close()
+            except Exception:
+                pass
+
+        if db:
+
+            try:
+                db.close()
+            except Exception:
+                pass
 
 
 # ============================================================
@@ -619,19 +988,7 @@ def quiz_generated(quiz_id):
         questions = cursor.fetchall()
 
         # ====================================================
-        # INITIAL LIVE PROGRESS
-        # ====================================================
-        #
-        # IMPORTANT:
-        #
-        # guest participant:
-        #     attempt_id -> guest:<id>
-        #
-        # logged-in participant:
-        #     student_id -> student:<id>
-        #
-        # Prefix prevents ID collision.
-        #
+        # LIVE STUDENT COUNT
         # ====================================================
 
         cursor.execute(
@@ -639,22 +996,22 @@ def quiz_generated(quiz_id):
             SELECT
                 COUNT(
                     DISTINCT
-                    CASE
-
-                        WHEN attempt_id IS NOT NULL
-                        THEN 'attempt:' ||
-                             attempt_id::text
-
-                        WHEN student_id IS NOT NULL
-                        THEN 'student:' ||
-                             student_id::text
-
-                    END
+                    COALESCE(
+                        attempt_id::text,
+                        student_id::text
+                    )
                 ) AS total_students
 
             FROM student_answers
 
             WHERE quiz_id=%s
+
+            AND
+            (
+                attempt_id IS NOT NULL
+                OR
+                student_id IS NOT NULL
+            )
             """,
             (
                 quiz_id,
@@ -662,15 +1019,6 @@ def quiz_generated(quiz_id):
         )
 
         live_stats = cursor.fetchone()
-
-    except Exception as e:
-
-        print(
-            "❌ QUIZ GENERATED ERROR:",
-            e
-        )
-
-        return "Unable to load quiz.", 500
 
     finally:
 
@@ -718,8 +1066,7 @@ def add_questions(quiz_id):
         cursor.execute(
             """
             SELECT
-                quiz_id,
-                title
+                quiz_id
 
             FROM quizzes
 
@@ -744,7 +1091,7 @@ def add_questions(quiz_id):
         return "Quiz not found.", 404
 
     # ========================================================
-    # ADD QUESTION
+    # POST
     # ========================================================
 
     if request.method == "POST":
@@ -777,7 +1124,7 @@ def add_questions(quiz_id):
         correct_option = request.form.get(
             "correct_option",
             ""
-        ).strip().upper()
+        ).strip()
 
         difficulty = request.form.get(
             "difficulty",
@@ -788,22 +1135,20 @@ def add_questions(quiz_id):
         # VALIDATION
         # ====================================================
 
-        if not all([
-            question,
-            option_a,
-            option_b,
-            option_c,
-            option_d,
-            correct_option
-        ]):
+        if not question:
 
-            return """
-            <h2>❌ All question fields are required.</h2>
+            return error_page(
+                "Question is required.",
+                f"/add_questions/{quiz_id}"
+            )
 
-            <a href="javascript:history.back()">
-                ← Back
-            </a>
-            """
+        if not option_a or not option_b \
+                or not option_c or not option_d:
+
+            return error_page(
+                "All four options are required.",
+                f"/add_questions/{quiz_id}"
+            )
 
         if correct_option not in [
             "A",
@@ -812,31 +1157,20 @@ def add_questions(quiz_id):
             "D"
         ]:
 
-            return """
-            <h2>❌ Correct option must be A, B, C or D.</h2>
+            return error_page(
+                "Correct option must be A, B, C or D.",
+                f"/add_questions/{quiz_id}"
+            )
 
-            <a href="javascript:history.back()">
-                ← Back
-            </a>
-            """
-
-        if difficulty.lower() not in [
-            "easy",
-            "medium",
-            "hard"
-        ]:
-
-            difficulty = "Medium"
+        # ====================================================
+        # DATABASE
+        # ====================================================
 
         db = get_db_connection()
 
         cursor = db.cursor()
 
         try:
-
-            # =================================================
-            # INSERT QUESTION
-            # =================================================
 
             cursor.execute(
                 """
@@ -877,7 +1211,7 @@ def add_questions(quiz_id):
             )
 
             # =================================================
-            # UPDATE TOTAL QUESTION COUNT
+            # UPDATE TOTAL QUESTIONS
             # =================================================
 
             cursor.execute(
@@ -886,7 +1220,9 @@ def add_questions(quiz_id):
 
                 SET total_questions = (
                     SELECT COUNT(*)
+
                     FROM questions
+
                     WHERE quiz_id=%s
                 )
 
@@ -900,10 +1236,6 @@ def add_questions(quiz_id):
 
             db.commit()
 
-            print(
-                f"✅ Question added to quiz {quiz_id}"
-            )
-
         except Exception as e:
 
             db.rollback()
@@ -913,15 +1245,10 @@ def add_questions(quiz_id):
                 e
             )
 
-            return f"""
-            <h2>❌ Error adding question</h2>
-
-            <p>{e}</p>
-
-            <a href="/quiz_generated/{quiz_id}">
-                ← Back
-            </a>
-            """
+            return error_page(
+                f"Error adding question: {e}",
+                f"/quiz_generated/{quiz_id}"
+            )
 
         finally:
 
@@ -1216,7 +1543,7 @@ def delete_quiz(quiz_id):
         )
 
         # ====================================================
-        # DELETE QUIZ ATTEMPTS
+        # DELETE ATTEMPTS
         # ====================================================
 
         cursor.execute(
@@ -1309,52 +1636,72 @@ def delete_quiz(quiz_id):
 @teacher.route("/test_ai")
 def test_ai():
 
-    questions = generate_questions(
-        "Database Management System",
-        1,
-        1,
-        1
-    )
+    print("\n")
+    print("=" * 70)
+    print("🧪 TEST AI ROUTE")
+    print("=" * 70)
 
-    return {
-        "status": "success",
-        "questions": questions
-    }
+    try:
+
+        start = datetime.now()
+
+        questions = generate_questions(
+            "Database Management System",
+            1,
+            1,
+            1
+        )
+
+        end = datetime.now()
+
+        print(
+            "⏱️ AI time:",
+            (end - start).total_seconds(),
+            "seconds"
+        )
+
+        print(
+            "Questions:",
+            questions
+        )
+
+        return {
+            "status": "success",
+            "count": len(questions),
+            "questions": questions
+        }
+
+    except Exception as e:
+
+        print(
+            "❌ TEST AI ERROR:",
+            e
+        )
+
+        return {
+            "status": "error",
+            "error_type": type(e).__name__,
+            "error": str(e)
+        }, 500
 
 
 # ============================================================
 # LIVE QUIZ PROGRESS
-# ============================================================
-#
-# This API is called by quiz_generated.html every 2 seconds.
-#
-# Example:
-#
-# /quiz_progress/34
-#
-# It returns:
-#
-# - total participants
-# - total questions
-# - answered questions
-# - overall progress
-# - question-wise response count
-#
 # ============================================================
 
 @teacher.route("/quiz_progress/<int:quiz_id>")
 def quiz_progress(quiz_id):
 
     # ========================================================
-    # TEACHER LOGIN CHECK
+    # LOGIN
     # ========================================================
 
     if not teacher_logged_in():
 
-        return {
+        return jsonify({
             "success": False,
             "error": "Unauthorized"
-        }, 401
+        }), 401
 
     db = get_db_connection()
 
@@ -1365,7 +1712,7 @@ def quiz_progress(quiz_id):
     try:
 
         # ====================================================
-        # VERIFY QUIZ BELONGS TO TEACHER
+        # VERIFY QUIZ
         # ====================================================
 
         cursor.execute(
@@ -1390,13 +1737,13 @@ def quiz_progress(quiz_id):
 
         if not quiz:
 
-            return {
+            return jsonify({
                 "success": False,
                 "error": "Quiz not found"
-            }, 404
+            }), 404
 
         # ====================================================
-        # TOTAL QUESTIONS
+        # ACTUAL QUESTION COUNT
         # ====================================================
 
         cursor.execute(
@@ -1422,47 +1769,28 @@ def quiz_progress(quiz_id):
         # ====================================================
         # TOTAL UNIQUE PARTICIPANTS
         # ====================================================
-        #
-        # IMPORTANT:
-        #
-        # Guest:
-        #     attempt_id
-        #
-        # Logged-in:
-        #     student_id
-        #
-        # Prefixes avoid collision.
-        #
-        # Example:
-        #
-        # attempt:1
-        # student:1
-        #
-        # These are treated as two different users.
-        #
-        # ====================================================
 
         cursor.execute(
             """
             SELECT
                 COUNT(
                     DISTINCT
-                    CASE
-
-                        WHEN attempt_id IS NOT NULL
-                        THEN 'attempt:' ||
-                             attempt_id::text
-
-                        WHEN student_id IS NOT NULL
-                        THEN 'student:' ||
-                             student_id::text
-
-                    END
+                    COALESCE(
+                        attempt_id::text,
+                        student_id::text
+                    )
                 ) AS total_students
 
             FROM student_answers
 
             WHERE quiz_id=%s
+
+            AND
+            (
+                attempt_id IS NOT NULL
+                OR
+                student_id IS NOT NULL
+            )
             """,
             (
                 quiz_id,
@@ -1476,7 +1804,7 @@ def quiz_progress(quiz_id):
         )
 
         # ====================================================
-        # QUESTION-WISE PROGRESS
+        # QUESTION PROGRESS
         # ====================================================
 
         cursor.execute(
@@ -1489,17 +1817,10 @@ def quiz_progress(quiz_id):
 
                 COUNT(
                     DISTINCT
-                    CASE
-
-                        WHEN sa.attempt_id IS NOT NULL
-                        THEN 'attempt:' ||
-                             sa.attempt_id::text
-
-                        WHEN sa.student_id IS NOT NULL
-                        THEN 'student:' ||
-                             sa.student_id::text
-
-                    END
+                    COALESCE(
+                        sa.attempt_id::text,
+                        sa.student_id::text
+                    )
                 ) AS response_count
 
             FROM questions q
@@ -1536,7 +1857,7 @@ def quiz_progress(quiz_id):
         progress = cursor.fetchall()
 
         # ====================================================
-        # BUILD RESPONSE
+        # FORMAT DATA
         # ====================================================
 
         question_progress = []
@@ -1552,10 +1873,6 @@ def quiz_progress(quiz_id):
             total_answer_events += (
                 response_count
             )
-
-            # -----------------------------------------------
-            # QUESTION PERCENTAGE
-            # -----------------------------------------------
 
             if total_students > 0:
 
@@ -1573,9 +1890,9 @@ def quiz_progress(quiz_id):
 
             question_progress.append(
                 {
-                    "question_id": int(
-                        item["question_id"]
-                    ),
+                    "question_id": item[
+                        "question_id"
+                    ],
 
                     "question": item[
                         "question"
@@ -1592,7 +1909,7 @@ def quiz_progress(quiz_id):
             )
 
         # ====================================================
-        # QUESTIONS WITH AT LEAST ONE RESPONSE
+        # ANSWERED QUESTIONS
         # ====================================================
 
         answered_questions = sum(
@@ -1620,19 +1937,16 @@ def quiz_progress(quiz_id):
             overall_progress = 0
 
         # ====================================================
-        # RETURN JSON
+        # RESPONSE
         # ====================================================
 
-        return {
+        return jsonify({
+
             "success": True,
 
-            "quiz_id": int(
-                quiz_id
-            ),
+            "quiz_id": quiz_id,
 
-            "title": quiz[
-                "title"
-            ],
+            "title": quiz["title"],
 
             "total_questions": (
                 total_questions
@@ -1657,7 +1971,7 @@ def quiz_progress(quiz_id):
             "progress": (
                 question_progress
             )
-        }
+        })
 
     except Exception as e:
 
@@ -1666,10 +1980,10 @@ def quiz_progress(quiz_id):
             e
         )
 
-        return {
+        return jsonify({
             "success": False,
             "error": str(e)
-        }, 500
+        }), 500
 
     finally:
 
