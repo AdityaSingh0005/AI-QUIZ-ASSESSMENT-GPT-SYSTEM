@@ -1,43 +1,64 @@
-from flask import Blueprint, render_template, request, redirect, session
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    redirect,
+    session
+)
+
 from database import get_db_connection
+
 from utils.qr_generator import generate_qr
 from utils.ai_generator import generate_questions
+
 from psycopg2.extras import RealDictCursor
+
 from datetime import datetime, timedelta, timezone
 
 
 teacher = Blueprint("teacher", __name__)
 
 
-# ==========================================
+# ============================================================
+# HELPER
+# ============================================================
+
+def teacher_logged_in():
+    """
+    Check whether teacher is logged in.
+    """
+    return "teacher_id" in session
+
+
+# ============================================================
 # TEACHER DASHBOARD
-# ==========================================
+# ============================================================
 
 @teacher.route("/teacher_dashboard")
 def teacher_dashboard():
 
-    if "teacher_id" not in session:
+    if not teacher_logged_in():
         return redirect("/")
 
     return render_template(
         "teacher_dashboard.html",
-        name=session["name"]
+        name=session.get("name", "Teacher")
     )
 
 
-# ==========================================
+# ============================================================
 # CREATE QUIZ
-# ==========================================
+# ============================================================
 
 @teacher.route("/create_quiz", methods=["GET", "POST"])
 def create_quiz():
 
-    if "teacher_id" not in session:
+    if not teacher_logged_in():
         return redirect("/")
 
-    # ==========================================
+    # ========================================================
     # OPEN CREATE QUIZ PAGE
-    # ==========================================
+    # ========================================================
 
     if request.method == "GET":
 
@@ -45,59 +66,112 @@ def create_quiz():
             "create_quiz.html"
         )
 
-    # ==========================================
+    # ========================================================
     # BASIC QUIZ DETAILS
-    # ==========================================
+    # ========================================================
 
-    title = request.form.get("title")
-    prompt = request.form.get("prompt")
+    title = request.form.get(
+        "title",
+        ""
+    ).strip()
 
-    easy = int(
-        request.form.get("easy", 0)
-    )
+    prompt = request.form.get(
+        "prompt",
+        ""
+    ).strip()
 
-    medium = int(
-        request.form.get("medium", 0)
-    )
+    try:
 
-    hard = int(
-        request.form.get("hard", 0)
-    )
-
-    # ==========================================
-    # QUIZ DURATION
-    # ==========================================
-
-    duration_minutes = int(
-        request.form.get(
-            "duration_minutes",
-            30
+        easy = int(
+            request.form.get(
+                "easy",
+                0
+            )
         )
-    )
 
-    # ==========================================
-    # TIME PER QUESTION
-    # ==========================================
-
-    question_time_seconds = int(
-        request.form.get(
-            "question_time_seconds",
-            60
+        medium = int(
+            request.form.get(
+                "medium",
+                0
+            )
         )
-    )
 
-    # ==========================================
-    # QUIZ AVAILABILITY
-    # ==========================================
+        hard = int(
+            request.form.get(
+                "hard",
+                0
+            )
+        )
 
-    availability = request.form.get(
-        "availability",
-        "1_day"
-    )
+        duration_minutes = int(
+            request.form.get(
+                "duration_minutes",
+                30
+            )
+        )
 
-    # ==========================================
+        question_time_seconds = int(
+            request.form.get(
+                "question_time_seconds",
+                60
+            )
+        )
+
+    except (ValueError, TypeError):
+
+        return """
+        <h2>❌ Invalid quiz values.</h2>
+
+        <a href="/create_quiz">
+            ← Back to Create Quiz
+        </a>
+        """
+
+    # ========================================================
+    # VALIDATE TITLE
+    # ========================================================
+
+    if not title:
+
+        return """
+        <h2>❌ Quiz title is required.</h2>
+
+        <a href="/create_quiz">
+            ← Back to Create Quiz
+        </a>
+        """
+
+    # ========================================================
+    # VALIDATE PROMPT
+    # ========================================================
+
+    if not prompt:
+
+        return """
+        <h2>❌ Quiz topic/prompt is required.</h2>
+
+        <a href="/create_quiz">
+            ← Back to Create Quiz
+        </a>
+        """
+
+    # ========================================================
+    # VALIDATE QUESTION COUNTS
+    # ========================================================
+
+    if easy < 0 or medium < 0 or hard < 0:
+
+        return """
+        <h2>❌ Question counts cannot be negative.</h2>
+
+        <a href="/create_quiz">
+            ← Back to Create Quiz
+        </a>
+        """
+
+    # ========================================================
     # TOTAL QUESTIONS
-    # ==========================================
+    # ========================================================
 
     total_questions = (
         easy +
@@ -115,9 +189,9 @@ def create_quiz():
         </a>
         """
 
-    # ==========================================
+    # ========================================================
     # VALIDATE QUIZ DURATION
-    # ==========================================
+    # ========================================================
 
     if duration_minutes <= 0:
 
@@ -129,9 +203,9 @@ def create_quiz():
         </a>
         """
 
-    # ==========================================
+    # ========================================================
     # VALIDATE QUESTION TIME
-    # ==========================================
+    # ========================================================
 
     if question_time_seconds <= 0:
 
@@ -143,15 +217,18 @@ def create_quiz():
         </a>
         """
 
-    # ==========================================
-    # CALCULATE QUIZ AVAILABILITY
-    # ==========================================
+    # ========================================================
+    # QUIZ AVAILABILITY
+    # ========================================================
 
-    # IMPORTANT:
-    # Database columns are TIMESTAMPTZ.
-    # Therefore we use timezone-aware UTC datetime.
+    availability = request.form.get(
+        "availability",
+        "1_day"
+    )
 
-    available_from = datetime.now(timezone.utc)
+    available_from = datetime.now(
+        timezone.utc
+    )
 
     if availability == "1_hour":
 
@@ -199,18 +276,19 @@ def create_quiz():
             timedelta(days=1)
         )
 
-    # ==========================================
-    # DATABASE CONNECTION
-    # ==========================================
+    # ========================================================
+    # DATABASE
+    # ========================================================
 
     db = get_db_connection()
+
     cursor = db.cursor()
 
     try:
 
-        # ==========================================
-        # INSERT QUIZ
-        # ==========================================
+        # ====================================================
+        # CREATE QUIZ
+        # ====================================================
 
         cursor.execute(
             """
@@ -225,6 +303,7 @@ def create_quiz():
                 available_from,
                 available_until
             )
+
             VALUES
             (
                 %s,
@@ -236,6 +315,7 @@ def create_quiz():
                 %s,
                 %s
             )
+
             RETURNING quiz_id
             """,
             (
@@ -250,15 +330,15 @@ def create_quiz():
             )
         )
 
-        # ==========================================
-        # GET GENERATED QUIZ ID
-        # ==========================================
-
         quiz_id = cursor.fetchone()[0]
 
-        # ==========================================
-        # GENERATE AI QUESTIONS
-        # ==========================================
+        print(
+            f"📝 Quiz created with ID: {quiz_id}"
+        )
+
+        # ====================================================
+        # AI QUESTIONS
+        # ====================================================
 
         questions = generate_questions(
             prompt,
@@ -267,21 +347,43 @@ def create_quiz():
             hard
         )
 
-        # ==========================================
-        # CHECK AI QUESTIONS
-        # ==========================================
-
         if not questions:
 
             raise Exception(
                 "AI could not generate questions."
             )
 
-        # ==========================================
+        # ====================================================
         # SAVE QUESTIONS
-        # ==========================================
+        # ====================================================
+
+        saved_questions = 0
 
         for q in questions:
+
+            # -----------------------------------------------
+            # Basic validation of AI response
+            # -----------------------------------------------
+
+            required_fields = [
+                "question",
+                "option_a",
+                "option_b",
+                "option_c",
+                "option_d",
+                "correct_option",
+                "difficulty"
+            ]
+
+            if not all(
+                field in q
+                for field in required_fields
+            ):
+                print(
+                    "⚠️ Skipping invalid AI question:",
+                    q
+                )
+                continue
 
             cursor.execute(
                 """
@@ -296,6 +398,7 @@ def create_quiz():
                     correct_option,
                     difficulty
                 )
+
                 VALUES
                 (
                     %s,
@@ -320,23 +423,59 @@ def create_quiz():
                 )
             )
 
-        # ==========================================
-        # GENERATE QR CODE
-        # ==========================================
+            saved_questions += 1
+
+        # ====================================================
+        # VALIDATE SAVED QUESTIONS
+        # ====================================================
+
+        if saved_questions == 0:
+
+            raise Exception(
+                "No valid questions were generated by AI."
+            )
+
+        # ====================================================
+        # SYNC TOTAL QUESTION COUNT
+        # ====================================================
+
+        cursor.execute(
+            """
+            UPDATE quizzes
+
+            SET total_questions=%s
+
+            WHERE quiz_id=%s
+            """,
+            (
+                saved_questions,
+                quiz_id
+            )
+        )
+
+        # ====================================================
+        # GENERATE QR
+        # ====================================================
 
         qr_path = generate_qr(
             quiz_id
         )
 
-        # ==========================================
+        print(
+            f"📱 QR PATH: {qr_path}"
+        )
+
+        # ====================================================
         # SAVE QR PATH
-        # ==========================================
+        # ====================================================
 
         cursor.execute(
             """
             UPDATE quizzes
-            SET qr_code_path = %s
-            WHERE quiz_id = %s
+
+            SET qr_code_path=%s
+
+            WHERE quiz_id=%s
             """,
             (
                 qr_path,
@@ -344,9 +483,9 @@ def create_quiz():
             )
         )
 
-        # ==========================================
-        # COMMIT EVERYTHING
-        # ==========================================
+        # ====================================================
+        # COMMIT
+        # ====================================================
 
         db.commit()
 
@@ -362,9 +501,9 @@ def create_quiz():
             f"📅 Available Until: {available_until}"
         )
 
-        # ==========================================
+        # ====================================================
         # OPEN GENERATED QUIZ
-        # ==========================================
+        # ====================================================
 
         return redirect(
             f"/quiz_generated/{quiz_id}"
@@ -397,14 +536,14 @@ def create_quiz():
         db.close()
 
 
-# ==========================================
+# ============================================================
 # GENERATED QUIZ
-# ==========================================
+# ============================================================
 
 @teacher.route("/quiz_generated/<int:quiz_id>")
 def quiz_generated(quiz_id):
 
-    if "teacher_id" not in session:
+    if not teacher_logged_in():
         return redirect("/")
 
     db = get_db_connection()
@@ -413,79 +552,147 @@ def quiz_generated(quiz_id):
         cursor_factory=RealDictCursor
     )
 
-    # ==========================================
-    # QUIZ INFORMATION
-    # ==========================================
+    try:
 
-    cursor.execute(
-        """
-        SELECT
-            quiz_id,
-            title,
-            prompt,
-            total_questions,
-            duration_minutes,
-            question_time_seconds,
-            available_from,
-            available_until,
-            qr_code_path,
-            created_at
-        FROM quizzes
-        WHERE quiz_id=%s
-        AND teacher_id=%s
-        """,
-        (
-            quiz_id,
-            session["teacher_id"]
+        # ====================================================
+        # QUIZ INFORMATION
+        # ====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                quiz_id,
+                title,
+                prompt,
+                total_questions,
+                duration_minutes,
+                question_time_seconds,
+                available_from,
+                available_until,
+                qr_code_path,
+                created_at
+
+            FROM quizzes
+
+            WHERE quiz_id=%s
+            AND teacher_id=%s
+            """,
+            (
+                quiz_id,
+                session["teacher_id"]
+            )
         )
-    )
 
-    quiz = cursor.fetchone()
+        quiz = cursor.fetchone()
 
-    if not quiz:
+        if not quiz:
+
+            return "Quiz not found.", 404
+
+        # ====================================================
+        # QUESTIONS
+        # ====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                question_id,
+                question,
+                option_a,
+                option_b,
+                option_c,
+                option_d,
+                correct_option,
+                difficulty
+
+            FROM questions
+
+            WHERE quiz_id=%s
+
+            ORDER BY question_id
+            """,
+            (
+                quiz_id,
+            )
+        )
+
+        questions = cursor.fetchall()
+
+        # ====================================================
+        # INITIAL LIVE PROGRESS
+        # ====================================================
+        #
+        # IMPORTANT:
+        #
+        # guest participant:
+        #     attempt_id -> guest:<id>
+        #
+        # logged-in participant:
+        #     student_id -> student:<id>
+        #
+        # Prefix prevents ID collision.
+        #
+        # ====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                COUNT(
+                    DISTINCT
+                    CASE
+
+                        WHEN attempt_id IS NOT NULL
+                        THEN 'attempt:' ||
+                             attempt_id::text
+
+                        WHEN student_id IS NOT NULL
+                        THEN 'student:' ||
+                             student_id::text
+
+                    END
+                ) AS total_students
+
+            FROM student_answers
+
+            WHERE quiz_id=%s
+            """,
+            (
+                quiz_id,
+            )
+        )
+
+        live_stats = cursor.fetchone()
+
+    except Exception as e:
+
+        print(
+            "❌ QUIZ GENERATED ERROR:",
+            e
+        )
+
+        return "Unable to load quiz.", 500
+
+    finally:
 
         cursor.close()
         db.close()
 
-        return "Quiz not found."
-
-    # ==========================================
-    # QUESTIONS
-    # ==========================================
-
-    cursor.execute(
-        """
-        SELECT
-            question_id,
-            question,
-            option_a,
-            option_b,
-            option_c,
-            option_d,
-            correct_option,
-            difficulty
-        FROM questions
-        WHERE quiz_id=%s
-        ORDER BY question_id
-        """,
-        (quiz_id,)
-    )
-
-    questions = cursor.fetchall()
-
-    cursor.close()
-    db.close()
-
     return render_template(
         "quiz_generated.html",
+
         quiz=quiz,
-        questions=questions
+
+        questions=questions,
+
+        live_total_students=(
+            live_stats["total_students"] or 0
+        )
     )
 
 
-# ==========================================
+# ============================================================
 # ADD QUESTION MANUALLY
-# ==========================================
+# ============================================================
 
 @teacher.route(
     "/add_questions/<int:quiz_id>",
@@ -493,27 +700,143 @@ def quiz_generated(quiz_id):
 )
 def add_questions(quiz_id):
 
-    if "teacher_id" not in session:
+    if not teacher_logged_in():
         return redirect("/")
+
+    # ========================================================
+    # VERIFY QUIZ
+    # ========================================================
+
+    db = get_db_connection()
+
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+    try:
+
+        cursor.execute(
+            """
+            SELECT
+                quiz_id,
+                title
+
+            FROM quizzes
+
+            WHERE quiz_id=%s
+            AND teacher_id=%s
+            """,
+            (
+                quiz_id,
+                session["teacher_id"]
+            )
+        )
+
+        quiz = cursor.fetchone()
+
+    finally:
+
+        cursor.close()
+        db.close()
+
+    if not quiz:
+
+        return "Quiz not found.", 404
+
+    # ========================================================
+    # ADD QUESTION
+    # ========================================================
 
     if request.method == "POST":
 
-        question = request.form["question"]
-        option_a = request.form["option_a"]
-        option_b = request.form["option_b"]
-        option_c = request.form["option_c"]
-        option_d = request.form["option_d"]
-        correct_option = request.form["correct_option"]
+        question = request.form.get(
+            "question",
+            ""
+        ).strip()
+
+        option_a = request.form.get(
+            "option_a",
+            ""
+        ).strip()
+
+        option_b = request.form.get(
+            "option_b",
+            ""
+        ).strip()
+
+        option_c = request.form.get(
+            "option_c",
+            ""
+        ).strip()
+
+        option_d = request.form.get(
+            "option_d",
+            ""
+        ).strip()
+
+        correct_option = request.form.get(
+            "correct_option",
+            ""
+        ).strip().upper()
 
         difficulty = request.form.get(
             "difficulty",
             "Medium"
-        )
+        ).strip()
+
+        # ====================================================
+        # VALIDATION
+        # ====================================================
+
+        if not all([
+            question,
+            option_a,
+            option_b,
+            option_c,
+            option_d,
+            correct_option
+        ]):
+
+            return """
+            <h2>❌ All question fields are required.</h2>
+
+            <a href="javascript:history.back()">
+                ← Back
+            </a>
+            """
+
+        if correct_option not in [
+            "A",
+            "B",
+            "C",
+            "D"
+        ]:
+
+            return """
+            <h2>❌ Correct option must be A, B, C or D.</h2>
+
+            <a href="javascript:history.back()">
+                ← Back
+            </a>
+            """
+
+        if difficulty.lower() not in [
+            "easy",
+            "medium",
+            "hard"
+        ]:
+
+            difficulty = "Medium"
 
         db = get_db_connection()
+
         cursor = db.cursor()
 
         try:
+
+            # =================================================
+            # INSERT QUESTION
+            # =================================================
 
             cursor.execute(
                 """
@@ -528,6 +851,7 @@ def add_questions(quiz_id):
                     correct_option,
                     difficulty
                 )
+
                 VALUES
                 (
                     %s,
@@ -552,12 +876,52 @@ def add_questions(quiz_id):
                 )
             )
 
+            # =================================================
+            # UPDATE TOTAL QUESTION COUNT
+            # =================================================
+
+            cursor.execute(
+                """
+                UPDATE quizzes
+
+                SET total_questions = (
+                    SELECT COUNT(*)
+                    FROM questions
+                    WHERE quiz_id=%s
+                )
+
+                WHERE quiz_id=%s
+                """,
+                (
+                    quiz_id,
+                    quiz_id
+                )
+            )
+
             db.commit()
 
-        except Exception:
+            print(
+                f"✅ Question added to quiz {quiz_id}"
+            )
+
+        except Exception as e:
 
             db.rollback()
-            raise
+
+            print(
+                "❌ ADD QUESTION ERROR:",
+                e
+            )
+
+            return f"""
+            <h2>❌ Error adding question</h2>
+
+            <p>{e}</p>
+
+            <a href="/quiz_generated/{quiz_id}">
+                ← Back
+            </a>
+            """
 
         finally:
 
@@ -574,14 +938,14 @@ def add_questions(quiz_id):
     )
 
 
-# ==========================================
+# ============================================================
 # VIEW RESULTS
-# ==========================================
+# ============================================================
 
 @teacher.route("/view_results")
 def view_results():
 
-    if "teacher_id" not in session:
+    if not teacher_logged_in():
         return redirect("/")
 
     db = get_db_connection()
@@ -590,38 +954,43 @@ def view_results():
         cursor_factory=RealDictCursor
     )
 
-    cursor.execute(
-        """
-        SELECT
-            students.full_name,
-            students.roll_number,
-            quizzes.title,
-            results.score,
-            results.percentage,
-            results.submitted_at
-        FROM results
+    try:
 
-        INNER JOIN students
-            ON results.student_id =
-               students.student_id
+        cursor.execute(
+            """
+            SELECT
+                students.full_name,
+                students.roll_number,
+                quizzes.title,
+                results.score,
+                results.percentage,
+                results.submitted_at
 
-        INNER JOIN quizzes
-            ON results.quiz_id =
-               quizzes.quiz_id
+            FROM results
 
-        WHERE quizzes.teacher_id=%s
+            INNER JOIN students
+                ON results.student_id =
+                   students.student_id
 
-        ORDER BY results.submitted_at DESC
-        """,
-        (
-            session["teacher_id"],
+            INNER JOIN quizzes
+                ON results.quiz_id =
+                   quizzes.quiz_id
+
+            WHERE quizzes.teacher_id=%s
+
+            ORDER BY results.submitted_at DESC
+            """,
+            (
+                session["teacher_id"],
+            )
         )
-    )
 
-    results = cursor.fetchall()
+        results = cursor.fetchall()
 
-    cursor.close()
-    db.close()
+    finally:
+
+        cursor.close()
+        db.close()
 
     return render_template(
         "view_results.html",
@@ -629,14 +998,14 @@ def view_results():
     )
 
 
-# ==========================================
+# ============================================================
 # SHOW QR
-# ==========================================
+# ============================================================
 
 @teacher.route("/show_qr/<int:quiz_id>")
 def show_qr(quiz_id):
 
-    if "teacher_id" not in session:
+    if not teacher_logged_in():
         return redirect("/")
 
     db = get_db_connection()
@@ -645,25 +1014,36 @@ def show_qr(quiz_id):
         cursor_factory=RealDictCursor
     )
 
-    cursor.execute(
-        """
-        SELECT
-            title,
-            qr_code_path
-        FROM quizzes
-        WHERE quiz_id=%s
-        AND teacher_id=%s
-        """,
-        (
-            quiz_id,
-            session["teacher_id"]
+    try:
+
+        cursor.execute(
+            """
+            SELECT
+                quiz_id,
+                title,
+                qr_code_path
+
+            FROM quizzes
+
+            WHERE quiz_id=%s
+            AND teacher_id=%s
+            """,
+            (
+                quiz_id,
+                session["teacher_id"]
+            )
         )
-    )
 
-    quiz = cursor.fetchone()
+        quiz = cursor.fetchone()
 
-    cursor.close()
-    db.close()
+    finally:
+
+        cursor.close()
+        db.close()
+
+    if not quiz:
+
+        return "Quiz not found.", 404
 
     return render_template(
         "show_qr.html",
@@ -671,14 +1051,14 @@ def show_qr(quiz_id):
     )
 
 
-# ==========================================
+# ============================================================
 # QR PAGE
-# ==========================================
+# ============================================================
 
 @teacher.route("/generate_qr_page")
 def generate_qr_page():
 
-    if "teacher_id" not in session:
+    if not teacher_logged_in():
         return redirect("/")
 
     db = get_db_connection()
@@ -687,27 +1067,34 @@ def generate_qr_page():
         cursor_factory=RealDictCursor
     )
 
-    cursor.execute(
-        """
-        SELECT
-            quiz_id,
-            title,
-            qr_code_path,
-            available_from,
-            available_until
-        FROM quizzes
-        WHERE teacher_id=%s
-        ORDER BY quiz_id DESC
-        """,
-        (
-            session["teacher_id"],
+    try:
+
+        cursor.execute(
+            """
+            SELECT
+                quiz_id,
+                title,
+                qr_code_path,
+                available_from,
+                available_until
+
+            FROM quizzes
+
+            WHERE teacher_id=%s
+
+            ORDER BY quiz_id DESC
+            """,
+            (
+                session["teacher_id"],
+            )
         )
-    )
 
-    quizzes = cursor.fetchall()
+        quizzes = cursor.fetchall()
 
-    cursor.close()
-    db.close()
+    finally:
+
+        cursor.close()
+        db.close()
 
     return render_template(
         "generate_qr_page.html",
@@ -715,14 +1102,14 @@ def generate_qr_page():
     )
 
 
-# ==========================================
+# ============================================================
 # MANAGE QUIZZES
-# ==========================================
+# ============================================================
 
 @teacher.route("/manage_quizzes")
 def manage_quizzes():
 
-    if "teacher_id" not in session:
+    if not teacher_logged_in():
         return redirect("/")
 
     db = get_db_connection()
@@ -731,30 +1118,37 @@ def manage_quizzes():
         cursor_factory=RealDictCursor
     )
 
-    cursor.execute(
-        """
-        SELECT
-            quiz_id,
-            title,
-            total_questions,
-            duration_minutes,
-            question_time_seconds,
-            available_from,
-            available_until,
-            created_at
-        FROM quizzes
-        WHERE teacher_id=%s
-        ORDER BY quiz_id DESC
-        """,
-        (
-            session["teacher_id"],
+    try:
+
+        cursor.execute(
+            """
+            SELECT
+                quiz_id,
+                title,
+                total_questions,
+                duration_minutes,
+                question_time_seconds,
+                available_from,
+                available_until,
+                created_at
+
+            FROM quizzes
+
+            WHERE teacher_id=%s
+
+            ORDER BY quiz_id DESC
+            """,
+            (
+                session["teacher_id"],
+            )
         )
-    )
 
-    quizzes = cursor.fetchall()
+        quizzes = cursor.fetchall()
 
-    cursor.close()
-    db.close()
+    finally:
+
+        cursor.close()
+        db.close()
 
     return render_template(
         "manage_quizzes.html",
@@ -762,14 +1156,14 @@ def manage_quizzes():
     )
 
 
-# ==========================================
+# ============================================================
 # DELETE QUIZ
-# ==========================================
+# ============================================================
 
 @teacher.route("/delete_quiz/<int:quiz_id>")
 def delete_quiz(quiz_id):
 
-    if "teacher_id" not in session:
+    if not teacher_logged_in():
         return redirect("/")
 
     db = get_db_connection()
@@ -778,49 +1172,102 @@ def delete_quiz(quiz_id):
 
     try:
 
-        # ==========================================
-        # STUDENT ANSWERS
-        # ==========================================
+        # ====================================================
+        # VERIFY OWNERSHIP
+        # ====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                quiz_id
+
+            FROM quizzes
+
+            WHERE quiz_id=%s
+            AND teacher_id=%s
+            """,
+            (
+                quiz_id,
+                session["teacher_id"]
+            )
+        )
+
+        quiz = cursor.fetchone()
+
+        if not quiz:
+
+            return redirect(
+                "/manage_quizzes"
+            )
+
+        # ====================================================
+        # DELETE STUDENT ANSWERS
+        # ====================================================
 
         cursor.execute(
             """
             DELETE FROM student_answers
+
             WHERE quiz_id=%s
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
-        # ==========================================
-        # RESULTS
-        # ==========================================
+        # ====================================================
+        # DELETE QUIZ ATTEMPTS
+        # ====================================================
+
+        cursor.execute(
+            """
+            DELETE FROM quiz_attempts
+
+            WHERE quiz_id=%s
+            """,
+            (
+                quiz_id,
+            )
+        )
+
+        # ====================================================
+        # DELETE RESULTS
+        # ====================================================
 
         cursor.execute(
             """
             DELETE FROM results
+
             WHERE quiz_id=%s
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
-        # ==========================================
-        # QUESTIONS
-        # ==========================================
+        # ====================================================
+        # DELETE QUESTIONS
+        # ====================================================
 
         cursor.execute(
             """
             DELETE FROM questions
+
             WHERE quiz_id=%s
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
-        # ==========================================
-        # QUIZ
-        # ==========================================
+        # ====================================================
+        # DELETE QUIZ
+        # ====================================================
 
         cursor.execute(
             """
             DELETE FROM quizzes
+
             WHERE quiz_id=%s
             AND teacher_id=%s
             """,
@@ -832,12 +1279,16 @@ def delete_quiz(quiz_id):
 
         db.commit()
 
+        print(
+            f"🗑️ Quiz {quiz_id} deleted."
+        )
+
     except Exception as e:
 
         db.rollback()
 
         print(
-            "DELETE QUIZ ERROR:",
+            "❌ DELETE QUIZ ERROR:",
             e
         )
 
@@ -851,9 +1302,9 @@ def delete_quiz(quiz_id):
     )
 
 
-# ==========================================
+# ============================================================
 # TEST AI
-# ==========================================
+# ============================================================
 
 @teacher.route("/test_ai")
 def test_ai():
@@ -869,20 +1320,39 @@ def test_ai():
         "status": "success",
         "questions": questions
     }
-    
- # ==========================================
+
+
+# ============================================================
 # LIVE QUIZ PROGRESS
-# ==========================================
+# ============================================================
+#
+# This API is called by quiz_generated.html every 2 seconds.
+#
+# Example:
+#
+# /quiz_progress/34
+#
+# It returns:
+#
+# - total participants
+# - total questions
+# - answered questions
+# - overall progress
+# - question-wise response count
+#
+# ============================================================
 
 @teacher.route("/quiz_progress/<int:quiz_id>")
 def quiz_progress(quiz_id):
 
-    # ==========================================
+    # ========================================================
     # TEACHER LOGIN CHECK
-    # ==========================================
+    # ========================================================
 
-    if "teacher_id" not in session:
+    if not teacher_logged_in():
+
         return {
+            "success": False,
             "error": "Unauthorized"
         }, 401
 
@@ -894,16 +1364,19 @@ def quiz_progress(quiz_id):
 
     try:
 
-        # ==========================================
+        # ====================================================
         # VERIFY QUIZ BELONGS TO TEACHER
-        # ==========================================
+        # ====================================================
 
         cursor.execute(
             """
             SELECT
                 quiz_id,
+                title,
                 total_questions
+
             FROM quizzes
+
             WHERE quiz_id=%s
             AND teacher_id=%s
             """,
@@ -918,69 +1391,287 @@ def quiz_progress(quiz_id):
         if not quiz:
 
             return {
+                "success": False,
                 "error": "Quiz not found"
             }, 404
 
-        # ==========================================
-        # GET RESPONSE COUNT FOR EACH QUESTION
-        # ==========================================
+        # ====================================================
+        # TOTAL QUESTIONS
+        # ====================================================
 
         cursor.execute(
             """
             SELECT
-                q.question_id,
-                COUNT(sa.student_answer_id) AS response_count
+                COUNT(*) AS total_questions
 
-            FROM questions q
+            FROM questions
 
-            LEFT JOIN student_answers sa
-                ON sa.question_id = q.question_id
-                AND sa.quiz_id = q.quiz_id
-
-            WHERE q.quiz_id=%s
-
-            GROUP BY
-                q.question_id
-
-            ORDER BY
-                q.question_id
+            WHERE quiz_id=%s
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
-        progress = cursor.fetchall()
+        question_count = cursor.fetchone()
 
-        # ==========================================
-        # TOTAL UNIQUE RESPONSES
-        # ==========================================
+        total_questions = int(
+            question_count["total_questions"] or 0
+        )
+
+        # ====================================================
+        # TOTAL UNIQUE PARTICIPANTS
+        # ====================================================
+        #
+        # IMPORTANT:
+        #
+        # Guest:
+        #     attempt_id
+        #
+        # Logged-in:
+        #     student_id
+        #
+        # Prefixes avoid collision.
+        #
+        # Example:
+        #
+        # attempt:1
+        # student:1
+        #
+        # These are treated as two different users.
+        #
+        # ====================================================
 
         cursor.execute(
             """
             SELECT
-                COUNT(DISTINCT attempt_id)
-                AS total_students
+                COUNT(
+                    DISTINCT
+                    CASE
+
+                        WHEN attempt_id IS NOT NULL
+                        THEN 'attempt:' ||
+                             attempt_id::text
+
+                        WHEN student_id IS NOT NULL
+                        THEN 'student:' ||
+                             student_id::text
+
+                    END
+                ) AS total_students
 
             FROM student_answers
 
             WHERE quiz_id=%s
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
         total = cursor.fetchone()
 
+        total_students = int(
+            total["total_students"] or 0
+        )
+
+        # ====================================================
+        # QUESTION-WISE PROGRESS
+        # ====================================================
+
+        cursor.execute(
+            """
+            SELECT
+
+                q.question_id,
+
+                q.question,
+
+                COUNT(
+                    DISTINCT
+                    CASE
+
+                        WHEN sa.attempt_id IS NOT NULL
+                        THEN 'attempt:' ||
+                             sa.attempt_id::text
+
+                        WHEN sa.student_id IS NOT NULL
+                        THEN 'student:' ||
+                             sa.student_id::text
+
+                    END
+                ) AS response_count
+
+            FROM questions q
+
+            LEFT JOIN student_answers sa
+
+                ON sa.question_id =
+                   q.question_id
+
+                AND sa.quiz_id =
+                    q.quiz_id
+
+                AND
+                (
+                    sa.attempt_id IS NOT NULL
+                    OR
+                    sa.student_id IS NOT NULL
+                )
+
+            WHERE q.quiz_id=%s
+
+            GROUP BY
+                q.question_id,
+                q.question
+
+            ORDER BY
+                q.question_id
+            """,
+            (
+                quiz_id,
+            )
+        )
+
+        progress = cursor.fetchall()
+
+        # ====================================================
+        # BUILD RESPONSE
+        # ====================================================
+
+        question_progress = []
+
+        total_answer_events = 0
+
+        for item in progress:
+
+            response_count = int(
+                item["response_count"] or 0
+            )
+
+            total_answer_events += (
+                response_count
+            )
+
+            # -----------------------------------------------
+            # QUESTION PERCENTAGE
+            # -----------------------------------------------
+
+            if total_students > 0:
+
+                percentage = round(
+                    (
+                        response_count /
+                        total_students
+                    ) * 100,
+                    1
+                )
+
+            else:
+
+                percentage = 0
+
+            question_progress.append(
+                {
+                    "question_id": int(
+                        item["question_id"]
+                    ),
+
+                    "question": item[
+                        "question"
+                    ],
+
+                    "response_count": (
+                        response_count
+                    ),
+
+                    "percentage": (
+                        percentage
+                    )
+                }
+            )
+
+        # ====================================================
+        # QUESTIONS WITH AT LEAST ONE RESPONSE
+        # ====================================================
+
+        answered_questions = sum(
+            1
+            for item in question_progress
+            if item["response_count"] > 0
+        )
+
+        # ====================================================
+        # OVERALL PROGRESS
+        # ====================================================
+
+        if total_questions > 0:
+
+            overall_progress = round(
+                (
+                    answered_questions /
+                    total_questions
+                ) * 100,
+                1
+            )
+
+        else:
+
+            overall_progress = 0
+
+        # ====================================================
+        # RETURN JSON
+        # ====================================================
+
         return {
-            "quiz_id": quiz_id,
-            "total_questions": quiz["total_questions"],
-            "total_students": (
-                total["total_students"] or 0
+            "success": True,
+
+            "quiz_id": int(
+                quiz_id
             ),
-            "progress": progress
+
+            "title": quiz[
+                "title"
+            ],
+
+            "total_questions": (
+                total_questions
+            ),
+
+            "total_students": (
+                total_students
+            ),
+
+            "answered_questions": (
+                answered_questions
+            ),
+
+            "overall_progress": (
+                overall_progress
+            ),
+
+            "total_answer_events": (
+                total_answer_events
+            ),
+
+            "progress": (
+                question_progress
+            )
         }
+
+    except Exception as e:
+
+        print(
+            "❌ LIVE PROGRESS ERROR:",
+            e
+        )
+
+        return {
+            "success": False,
+            "error": str(e)
+        }, 500
 
     finally:
 
         cursor.close()
         db.close()
-        
- 
