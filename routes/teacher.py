@@ -116,9 +116,88 @@ def teacher_dashboard():
     if not teacher_logged_in():
         return redirect("/")
 
+    db = get_db_connection()
+
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+    try:
+
+        # ====================================================
+        # GET TEACHER'S QUIZZES
+        # ====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                q.quiz_id,
+                q.title,
+                q.total_questions,
+                q.duration_minutes,
+                q.question_time_seconds,
+                q.available_from,
+                q.available_until,
+                q.created_at,
+
+                COALESCE(
+                    COUNT(
+                        DISTINCT
+                        COALESCE(
+                            sa.attempt_id::text,
+                            sa.student_id::text
+                        )
+                    ),
+                    0
+                ) AS total_students
+
+            FROM quizzes q
+
+            LEFT JOIN student_answers sa
+                ON sa.quiz_id = q.quiz_id
+
+            WHERE q.teacher_id=%s
+
+            GROUP BY
+                q.quiz_id,
+                q.title,
+                q.total_questions,
+                q.duration_minutes,
+                q.question_time_seconds,
+                q.available_from,
+                q.available_until,
+                q.created_at
+
+            ORDER BY q.quiz_id DESC
+            """,
+            (
+                session["teacher_id"],
+            )
+        )
+
+        quizzes = cursor.fetchall()
+
+    except Exception as e:
+
+        print(
+            "❌ TEACHER DASHBOARD ERROR:",
+            e
+        )
+
+        quizzes = []
+
+    finally:
+
+        cursor.close()
+        db.close()
+
     return render_template(
         "teacher_dashboard.html",
-        name=session.get("name", "Teacher")
+        name=session.get(
+            "name",
+            "Teacher"
+        ),
+        quizzes=quizzes
     )
 
 

@@ -3,639 +3,1527 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
-<title>Teacher Dashboard | AI Quiz System</title>
+    <title>Teacher Dashboard | AI Quiz System</title>
 
-<link rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect"
+          href="https://fonts.googleapis.com">
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet">
+    <link rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
+
 
 <style>
-    * {
-        box-sizing: border-box;
-    }
 
-    body {
-        margin: 0;
-        font-family: "Inter", sans-serif;
-        background: #f5f7fb;
-        color: #172033;
-    }
+* {
+    box-sizing: border-box;
+}
 
-    a {
-        text-decoration: none;
-    }
 
-    /* =========================
-       PAGE
-    ========================= */
+body {
 
-    .dashboard-page {
-        min-height: 100vh;
-    }
+    margin: 0;
 
-    /* =========================
-       NAVBAR
-    ========================= */
+    font-family: "Inter", sans-serif;
 
-    .top-navbar {
-        height: 72px;
-        background: rgba(255, 255, 255, 0.92);
-        backdrop-filter: blur(16px);
-        border-bottom: 1px solid #e8ebf2;
+    background: #f5f7fb;
 
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+    color: #172033;
 
-        padding: 0 5%;
+}
 
-        position: sticky;
-        top: 0;
-        z-index: 100;
-    }
 
-    .brand {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
+a {
+    text-decoration: none;
+}
 
-    .brand-icon {
-        width: 42px;
-        height: 42px;
 
-        border-radius: 12px;
+/* =========================================================
+   PAGE
+========================================================= */
 
-        display: flex;
-        align-items: center;
-        justify-content: center;
+.dashboard-page {
 
-        font-size: 21px;
+    min-height: 100vh;
 
-        background: linear-gradient(
+}
+
+
+/* =========================================================
+   NAVBAR
+========================================================= */
+
+.top-navbar {
+
+    height: 72px;
+
+    background: rgba(255,255,255,0.92);
+
+    backdrop-filter: blur(16px);
+
+    border-bottom: 1px solid #e8ebf2;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 0 5%;
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 100;
+
+}
+
+
+.brand {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+}
+
+
+.brand-icon {
+
+    width: 42px;
+
+    height: 42px;
+
+    border-radius: 12px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 21px;
+
+    background:
+        linear-gradient(
             135deg,
             #5b5bf7,
             #7c3aed
         );
 
-        box-shadow: 0 8px 22px rgba(91, 91, 247, 0.25);
-    }
+    box-shadow:
+        0 8px 22px rgba(91,91,247,0.25);
 
-    .brand-text h2 {
-        margin: 0;
-        font-size: 17px;
-        font-weight: 800;
-        color: #151b2d;
-    }
+}
 
-    .brand-text span {
-        display: block;
-        margin-top: 2px;
 
-        font-size: 11px;
-        color: #8991a5;
-        font-weight: 500;
-    }
+.brand-text h2 {
 
-    .navbar-actions {
-        display: flex;
-        align-items: center;
-        gap: 18px;
-    }
+    margin: 0;
 
-    .teacher-pill {
-        display: flex;
-        align-items: center;
-        gap: 9px;
+    font-size: 17px;
 
-        padding: 8px 13px;
+    font-weight: 800;
 
-        background: #f5f6fa;
-        border: 1px solid #e7e9ef;
-        border-radius: 30px;
+    color: #151b2d;
 
-        font-size: 13px;
-        font-weight: 600;
-        color: #4b5568;
-    }
+}
 
-    .teacher-avatar {
-        width: 30px;
-        height: 30px;
 
-        display: flex;
-        align-items: center;
-        justify-content: center;
+.brand-text span {
 
-        border-radius: 50%;
+    display: block;
 
-        background: linear-gradient(
+    margin-top: 2px;
+
+    font-size: 11px;
+
+    color: #8991a5;
+
+    font-weight: 500;
+
+}
+
+
+.navbar-actions {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 18px;
+
+}
+
+
+.teacher-pill {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    padding: 8px 13px;
+
+    background: #f5f6fa;
+
+    border: 1px solid #e7e9ef;
+
+    border-radius: 30px;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    color: #4b5568;
+
+}
+
+
+.teacher-avatar {
+
+    width: 30px;
+
+    height: 30px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        linear-gradient(
             135deg,
             #6366f1,
             #8b5cf6
         );
 
-        color: white;
-        font-size: 13px;
-        font-weight: 700;
+    color: white;
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+}
+
+
+.logout-btn {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    padding: 9px 14px;
+
+    border-radius: 10px;
+
+    color: #dc3545;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    transition: 0.2s ease;
+
+}
+
+
+.logout-btn:hover {
+
+    background: #fff1f2;
+
+}
+
+
+/* =========================================================
+   MAIN
+========================================================= */
+
+.dashboard-container {
+
+    width: min(1180px, 92%);
+
+    margin: 0 auto;
+
+    padding: 42px 0 70px;
+
+}
+
+
+/* =========================================================
+   HERO
+========================================================= */
+
+.welcome-box {
+
+    position: relative;
+
+    overflow: hidden;
+
+    padding: 38px 40px;
+
+    border-radius: 24px;
+
+    background:
+        radial-gradient(
+            circle at 90% 20%,
+            rgba(255,255,255,0.18),
+            transparent 25%
+        ),
+        linear-gradient(
+            135deg,
+            #4f46e5,
+            #6d5dfc 55%,
+            #7c3aed
+        );
+
+    color: white;
+
+    box-shadow:
+        0 20px 45px rgba(79,70,229,0.22);
+
+}
+
+
+.welcome-box::after {
+
+    content: "";
+
+    position: absolute;
+
+    width: 230px;
+
+    height: 230px;
+
+    right: -80px;
+
+    bottom: -110px;
+
+    border-radius: 50%;
+
+    border: 35px solid rgba(255,255,255,0.08);
+
+}
+
+
+.hero-label {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    padding: 6px 11px;
+
+    border-radius: 20px;
+
+    background: rgba(255,255,255,0.14);
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    margin-bottom: 15px;
+
+}
+
+
+.welcome-box h1 {
+
+    position: relative;
+
+    z-index: 2;
+
+    margin: 0 0 10px;
+
+    font-size: clamp(25px,4vw,34px);
+
+    font-weight: 800;
+
+    letter-spacing: -0.8px;
+
+}
+
+
+.welcome-box p {
+
+    position: relative;
+
+    z-index: 2;
+
+    max-width: 650px;
+
+    margin: 0;
+
+    color: rgba(255,255,255,0.84);
+
+    font-size: 14px;
+
+    line-height: 1.7;
+
+}
+
+
+/* =========================================================
+   STATS
+========================================================= */
+
+.stats {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3,1fr);
+
+    gap: 18px;
+
+    margin-top: 24px;
+
+}
+
+
+.stat-card {
+
+    background: white;
+
+    border: 1px solid #e9ecf3;
+
+    border-radius: 18px;
+
+    padding: 23px;
+
+    transition: 0.25s ease;
+
+}
+
+
+.stat-card:hover {
+
+    transform: translateY(-4px);
+
+    box-shadow:
+        0 14px 35px rgba(31,41,55,0.08);
+
+}
+
+
+.stat-icon {
+
+    width: 46px;
+
+    height: 46px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 13px;
+
+    background: #f1f3ff;
+
+    font-size: 21px;
+
+    margin-bottom: 15px;
+
+}
+
+
+.stat-card h3 {
+
+    margin: 0 0 6px;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+}
+
+
+.stat-card p {
+
+    margin: 0;
+
+    color: #8a91a3;
+
+    font-size: 12px;
+
+    line-height: 1.5;
+
+}
+
+
+/* =========================================================
+   SECTION HEADER
+========================================================= */
+
+.section-header {
+
+    display: flex;
+
+    align-items: flex-end;
+
+    justify-content: space-between;
+
+    margin: 42px 0 18px;
+
+}
+
+
+.section-title {
+
+    margin: 0;
+
+    font-size: 20px;
+
+    font-weight: 800;
+
+    color: #161d2f;
+
+}
+
+
+.section-subtitle {
+
+    margin: 5px 0 0;
+
+    color: #9299aa;
+
+    font-size: 12px;
+
+}
+
+
+/* =========================================================
+   ACTION GRID
+========================================================= */
+
+.action-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4,1fr);
+
+    gap: 16px;
+
+}
+
+
+.action-card {
+
+    position: relative;
+
+    background: white;
+
+    border: 1px solid #e8ebf2;
+
+    border-radius: 18px;
+
+    padding: 23px;
+
+    color: #172033;
+
+    transition: 0.25s ease;
+
+}
+
+
+.action-card:hover {
+
+    transform: translateY(-5px);
+
+    border-color: #cfd3ff;
+
+    box-shadow:
+        0 16px 35px rgba(31,41,55,0.09);
+
+}
+
+
+.action-icon {
+
+    width: 48px;
+
+    height: 48px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background: #f1f3ff;
+
+    font-size: 22px;
+
+    margin-bottom: 18px;
+
+}
+
+
+.action-card h3 {
+
+    margin: 0 0 7px;
+
+    font-size: 14px;
+
+    font-weight: 750;
+
+}
+
+
+.action-card p {
+
+    margin: 0;
+
+    color: #8b93a5;
+
+    font-size: 11px;
+
+    line-height: 1.55;
+
+}
+
+
+.arrow {
+
+    position: absolute;
+
+    right: 18px;
+
+    top: 20px;
+
+    color: #a2a8b7;
+
+    font-size: 17px;
+
+    transition: 0.2s ease;
+
+}
+
+
+.action-card:hover .arrow {
+
+    color: #5b5bf7;
+
+    transform: translateX(3px);
+
+}
+
+
+/* =========================================================
+   LIVE PROGRESS SECTION
+========================================================= */
+
+.live-progress-section {
+
+    margin-top: 42px;
+
+    background: white;
+
+    border: 1px solid #e7eaf2;
+
+    border-radius: 24px;
+
+    padding: 28px;
+
+    box-shadow:
+        0 10px 30px rgba(31,41,55,0.05);
+
+}
+
+
+/* HEADER */
+
+.live-header {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 20px;
+
+    margin-bottom: 24px;
+
+}
+
+
+.live-title-area {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+
+}
+
+
+.live-icon {
+
+    width: 50px;
+
+    height: 50px;
+
+    border-radius: 15px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background: #eef2ff;
+
+    font-size: 23px;
+
+}
+
+
+.live-title-area h2 {
+
+    margin: 0 0 5px;
+
+    font-size: 18px;
+
+    font-weight: 800;
+
+}
+
+
+.live-title-area p {
+
+    margin: 0;
+
+    color: #8b93a5;
+
+    font-size: 12px;
+
+}
+
+
+/* LIVE BADGE */
+
+.live-badge {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    padding: 7px 12px;
+
+    border-radius: 20px;
+
+    background: #ecfdf5;
+
+    color: #15803d;
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+}
+
+
+.live-dot {
+
+    width: 8px;
+
+    height: 8px;
+
+    border-radius: 50%;
+
+    background: #22c55e;
+
+    box-shadow:
+        0 0 0 4px rgba(34,197,94,0.12);
+
+    animation: livePulse 1.5s infinite;
+
+}
+
+
+@keyframes livePulse {
+
+    0% {
+        opacity: 1;
+        transform: scale(1);
     }
 
-    .logout-btn {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-
-        padding: 9px 14px;
-
-        border-radius: 10px;
-
-        color: #dc3545;
-        font-size: 13px;
-        font-weight: 600;
-
-        transition: 0.2s ease;
+    50% {
+        opacity: 0.5;
+        transform: scale(0.75);
     }
 
-    .logout-btn:hover {
-        background: #fff1f2;
+    100% {
+        opacity: 1;
+        transform: scale(1);
     }
 
-    /* =========================
-       MAIN CONTAINER
-    ========================= */
+}
+
+
+/* SELECTOR */
+
+.quiz-selector {
+
+    display: grid;
+
+    grid-template-columns:
+        1fr auto;
+
+    gap: 12px;
+
+    margin-bottom: 25px;
+
+}
+
+
+.quiz-selector select {
+
+    width: 100%;
+
+    height: 48px;
+
+    padding: 0 15px;
+
+    border-radius: 12px;
+
+    border: 1px solid #dfe3eb;
+
+    background: #fafbfe;
+
+    color: #273044;
+
+    font-family: inherit;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    outline: none;
+
+}
+
+
+.quiz-selector select:focus {
+
+    border-color: #6366f1;
+
+    box-shadow:
+        0 0 0 3px rgba(99,102,241,0.10);
+
+}
+
+
+.load-progress-btn {
+
+    height: 48px;
+
+    padding: 0 20px;
+
+    border: 0;
+
+    border-radius: 12px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #4f46e5,
+            #7c3aed
+        );
+
+    color: white;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+
+}
+
+
+.load-progress-btn:hover {
+
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 8px 20px rgba(79,70,229,0.22);
+
+}
+
+
+/* EMPTY STATE */
+
+.live-empty {
+
+    text-align: center;
+
+    padding: 35px 20px;
+
+    border-radius: 16px;
+
+    background: #f8f9fc;
+
+    border: 1px dashed #dfe3eb;
+
+}
+
+
+.live-empty-icon {
+
+    font-size: 35px;
+
+    margin-bottom: 10px;
+
+}
+
+
+.live-empty h3 {
+
+    margin: 0 0 6px;
+
+    font-size: 15px;
+
+}
+
+
+.live-empty p {
+
+    margin: 0;
+
+    color: #9299aa;
+
+    font-size: 12px;
+
+}
+
+
+/* DASHBOARD */
+
+.live-dashboard {
+
+    display: none;
+
+}
+
+
+/* QUIZ INFO */
+
+.live-quiz-info {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    margin-bottom: 20px;
+
+}
+
+
+.live-quiz-name {
+
+    margin: 0;
+
+    font-size: 15px;
+
+    font-weight: 800;
+
+}
+
+
+.last-updated {
+
+    font-size: 10px;
+
+    color: #9aa1b1;
+
+}
+
+
+/* METRICS */
+
+.live-metrics {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3,1fr);
+
+    gap: 14px;
+
+    margin-bottom: 25px;
+
+}
+
+
+.live-metric {
+
+    padding: 18px;
+
+    border-radius: 16px;
+
+    background: #f8f9fc;
+
+    border: 1px solid #edf0f5;
+
+}
+
+
+.metric-label {
+
+    display: block;
+
+    color: #8b93a5;
+
+    font-size: 10px;
+
+    font-weight: 600;
+
+    margin-bottom: 7px;
+
+}
+
+
+.metric-value {
+
+    font-size: 25px;
+
+    font-weight: 800;
+
+    color: #1d2538;
+
+}
+
+
+.metric-value small {
+
+    font-size: 12px;
+
+    color: #9299aa;
+
+    font-weight: 600;
+
+}
+
+
+/* OVERALL PROGRESS */
+
+.overall-progress-card {
+
+    padding: 20px;
+
+    background: #fafbff;
+
+    border: 1px solid #e9ecf4;
+
+    border-radius: 17px;
+
+    margin-bottom: 25px;
+
+}
+
+
+.overall-progress-top {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 11px;
+
+}
+
+
+.overall-progress-top strong {
+
+    font-size: 13px;
+
+}
+
+
+.overall-percentage {
+
+    font-size: 15px;
+
+    font-weight: 800;
+
+    color: #5b5bf7;
+
+}
+
+
+.progress-track {
+
+    width: 100%;
+
+    height: 12px;
+
+    background: #e7eaf2;
+
+    border-radius: 20px;
+
+    overflow: hidden;
+
+}
+
+
+.progress-fill {
+
+    height: 100%;
+
+    width: 0%;
+
+    border-radius: 20px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #4f46e5,
+            #8b5cf6
+        );
+
+    transition:
+        width 0.5s ease;
+
+}
+
+
+/* QUESTION PROGRESS */
+
+.question-progress-title {
+
+    margin: 0 0 14px;
+
+    font-size: 14px;
+
+    font-weight: 800;
+
+}
+
+
+.question-list {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 11px;
+
+}
+
+
+.question-progress-item {
+
+    padding: 15px;
+
+    border: 1px solid #edf0f5;
+
+    border-radius: 14px;
+
+    background: white;
+
+}
+
+
+.question-top {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    gap: 15px;
+
+    margin-bottom: 9px;
+
+}
+
+
+.question-number {
+
+    font-size: 11px;
+
+    font-weight: 800;
+
+    color: #5b5bf7;
+
+}
+
+
+.question-text {
+
+    flex: 1;
+
+    font-size: 11px;
+
+    color: #555e70;
+
+    line-height: 1.5;
+
+}
+
+
+.question-percent {
+
+    font-size: 11px;
+
+    font-weight: 800;
+
+    color: #20283b;
+
+}
+
+
+.question-track {
+
+    width: 100%;
+
+    height: 7px;
+
+    background: #eef0f5;
+
+    border-radius: 20px;
+
+    overflow: hidden;
+
+}
+
+
+.question-fill {
+
+    height: 100%;
+
+    width: 0%;
+
+    background:
+        linear-gradient(
+            90deg,
+            #6366f1,
+            #8b5cf6
+        );
+
+    border-radius: 20px;
+
+    transition:
+        width 0.5s ease;
+
+}
+
+
+/* =========================================================
+   AI STATUS
+========================================================= */
+
+.info-box {
+
+    margin-top: 30px;
+
+    padding: 22px 24px;
+
+    background: white;
+
+    border: 1px solid #e8ebf2;
+
+    border-radius: 18px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 18px;
+
+    box-shadow:
+        0 8px 25px rgba(31,41,55,0.035);
+
+}
+
+
+.ai-status-icon {
+
+    flex-shrink: 0;
+
+    width: 48px;
+
+    height: 48px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background: #ecfdf5;
+
+    font-size: 22px;
+
+}
+
+
+.ai-status-content {
+
+    flex: 1;
+
+}
+
+
+.ai-status-content h2 {
+
+    margin: 0 0 5px;
+
+    font-size: 14px;
+
+    font-weight: 750;
+
+}
+
+
+.ai-status-content p {
+
+    margin: 0;
+
+    color: #8991a3;
+
+    font-size: 12px;
+
+    line-height: 1.6;
+
+}
+
+
+.status-badge {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    padding: 6px 10px;
+
+    background: #ecfdf5;
+
+    color: #15803d;
+
+    border-radius: 20px;
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+}
+
+
+.status-dot {
+
+    width: 7px;
+
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: #22c55e;
+
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 900px) {
+
+    .action-grid {
+
+        grid-template-columns:
+            repeat(2,1fr);
+
+    }
+
+}
+
+
+@media (max-width: 700px) {
+
+    .top-navbar {
+
+        padding: 0 4%;
+
+    }
+
+    .brand-text span,
+    .teacher-pill {
+
+        display: none;
+
+    }
 
     .dashboard-container {
-        width: min(1180px, 92%);
-        margin: 0 auto;
-        padding: 42px 0 70px;
-    }
 
-    /* =========================
-       HERO
-    ========================= */
+        width: 92%;
+
+        padding-top: 25px;
+
+    }
 
     .welcome-box {
-        position: relative;
-        overflow: hidden;
 
-        padding: 38px 40px;
-
-        border-radius: 24px;
-
-        background:
-            radial-gradient(
-                circle at 90% 20%,
-                rgba(255,255,255,0.18),
-                transparent 25%
-            ),
-            linear-gradient(
-                135deg,
-                #4f46e5,
-                #6d5dfc 55%,
-                #7c3aed
-            );
-
-        color: white;
-
-        box-shadow:
-            0 20px 45px rgba(79, 70, 229, 0.22);
-    }
-
-    .welcome-box::after {
-        content: "";
-        position: absolute;
-
-        width: 230px;
-        height: 230px;
-
-        right: -80px;
-        bottom: -110px;
-
-        border-radius: 50%;
-
-        border: 35px solid rgba(255,255,255,0.08);
-    }
-
-    .hero-label {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-
-        padding: 6px 11px;
+        padding: 28px 24px;
 
         border-radius: 20px;
 
-        background: rgba(255,255,255,0.14);
-
-        font-size: 11px;
-        font-weight: 600;
-
-        margin-bottom: 15px;
     }
-
-    .welcome-box h1 {
-        position: relative;
-        z-index: 2;
-
-        margin: 0 0 10px;
-
-        font-size: clamp(25px, 4vw, 34px);
-        font-weight: 800;
-
-        letter-spacing: -0.8px;
-    }
-
-    .welcome-box p {
-        position: relative;
-        z-index: 2;
-
-        max-width: 650px;
-
-        margin: 0;
-
-        color: rgba(255,255,255,0.84);
-
-        font-size: 14px;
-        line-height: 1.7;
-    }
-
-    /* =========================
-       STATS
-    ========================= */
 
     .stats {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
 
-        gap: 18px;
+        grid-template-columns: 1fr;
 
-        margin-top: 24px;
     }
-
-    .stat-card {
-        background: white;
-
-        border: 1px solid #e9ecf3;
-        border-radius: 18px;
-
-        padding: 23px;
-
-        transition:
-            transform 0.25s ease,
-            box-shadow 0.25s ease;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-4px);
-
-        box-shadow:
-            0 14px 35px rgba(31, 41, 55, 0.08);
-    }
-
-    .stat-icon {
-        width: 46px;
-        height: 46px;
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        border-radius: 13px;
-
-        background: #f1f3ff;
-
-        font-size: 21px;
-
-        margin-bottom: 15px;
-    }
-
-    .stat-card h3 {
-        margin: 0 0 6px;
-
-        font-size: 15px;
-        font-weight: 700;
-    }
-
-    .stat-card p {
-        margin: 0;
-
-        color: #8a91a3;
-
-        font-size: 12px;
-        line-height: 1.5;
-    }
-
-    /* =========================
-       SECTION TITLE
-    ========================= */
-
-    .section-header {
-        display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-
-        margin: 42px 0 18px;
-    }
-
-    .section-title {
-        margin: 0;
-
-        font-size: 20px;
-        font-weight: 800;
-
-        color: #161d2f;
-    }
-
-    .section-subtitle {
-        margin: 5px 0 0;
-
-        color: #9299aa;
-        font-size: 12px;
-    }
-
-    /* =========================
-       ACTION GRID
-    ========================= */
 
     .action-grid {
-        display: grid;
 
         grid-template-columns:
-            repeat(4, 1fr);
+            1fr 1fr;
 
-        gap: 16px;
+        gap: 12px;
+
     }
 
-    .action-card {
-        position: relative;
+    .live-progress-section {
 
-        background: white;
+        padding: 20px;
 
-        border: 1px solid #e8ebf2;
-
-        border-radius: 18px;
-
-        padding: 23px;
-
-        color: #172033;
-
-        transition:
-            transform 0.25s ease,
-            border-color 0.25s ease,
-            box-shadow 0.25s ease;
     }
 
-    .action-card:hover {
-        transform: translateY(-5px);
+    .live-header {
 
-        border-color: #cfd3ff;
+        align-items: flex-start;
 
-        box-shadow:
-            0 16px 35px rgba(31, 41, 55, 0.09);
+        flex-direction: column;
+
     }
 
-    .action-icon {
-        width: 48px;
-        height: 48px;
+    .quiz-selector {
 
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        grid-template-columns: 1fr;
 
-        border-radius: 14px;
-
-        background: #f1f3ff;
-
-        font-size: 22px;
-
-        margin-bottom: 18px;
     }
 
-    .action-card h3 {
-        margin: 0 0 7px;
+    .live-metrics {
 
-        font-size: 14px;
-        font-weight: 750;
+        grid-template-columns: 1fr;
+
     }
-
-    .action-card p {
-        margin: 0;
-
-        color: #8b93a5;
-
-        font-size: 11px;
-        line-height: 1.55;
-    }
-
-    .arrow {
-        position: absolute;
-
-        right: 18px;
-        top: 20px;
-
-        color: #a2a8b7;
-
-        font-size: 17px;
-
-        transition: 0.2s ease;
-    }
-
-    .action-card:hover .arrow {
-        color: #5b5bf7;
-        transform: translateX(3px);
-    }
-
-    /* =========================
-       AI STATUS
-    ========================= */
 
     .info-box {
-        margin-top: 30px;
 
-        padding: 22px 24px;
+        align-items: flex-start;
 
-        background: white;
-
-        border: 1px solid #e8ebf2;
-
-        border-radius: 18px;
-
-        display: flex;
-        align-items: center;
-        gap: 18px;
-
-        box-shadow:
-            0 8px 25px rgba(31,41,55,0.035);
-    }
-
-    .ai-status-icon {
-        flex-shrink: 0;
-
-        width: 48px;
-        height: 48px;
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        border-radius: 14px;
-
-        background: #ecfdf5;
-
-        font-size: 22px;
-    }
-
-    .ai-status-content {
-        flex: 1;
-    }
-
-    .ai-status-content h2 {
-        margin: 0 0 5px;
-
-        font-size: 14px;
-        font-weight: 750;
-    }
-
-    .ai-status-content p {
-        margin: 0;
-
-        color: #8991a3;
-
-        font-size: 12px;
-        line-height: 1.6;
     }
 
     .status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
 
-        padding: 6px 10px;
-
-        background: #ecfdf5;
-
-        color: #15803d;
-
-        border-radius: 20px;
-
-        font-size: 11px;
-        font-weight: 700;
-    }
-
-    .status-dot {
-        width: 7px;
-        height: 7px;
-
-        border-radius: 50%;
-
-        background: #22c55e;
-
-        box-shadow:
-            0 0 0 4px rgba(34,197,94,0.12);
-    }
-
-    /* =========================
-       MOBILE
-    ========================= */
-
-    @media (max-width: 900px) {
-
-        .action-grid {
-            grid-template-columns:
-                repeat(2, 1fr);
-        }
+        display: none;
 
     }
 
-    @media (max-width: 700px) {
+}
 
-        .top-navbar {
-            padding: 0 4%;
-        }
 
-        .brand-text span,
-        .teacher-pill {
-            display: none;
-        }
+@media (max-width: 430px) {
 
-        .dashboard-container {
-            width: 92%;
-            padding-top: 25px;
-        }
+    .brand-text h2 {
 
-        .welcome-box {
-            padding: 28px 24px;
-            border-radius: 20px;
-        }
+        font-size: 14px;
 
-        .stats {
-            grid-template-columns: 1fr;
-        }
-
-        .action-grid {
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .action-card {
-            padding: 18px;
-        }
-
-        .action-icon {
-            width: 42px;
-            height: 42px;
-            font-size: 19px;
-        }
-
-        .info-box {
-            align-items: flex-start;
-        }
-
-        .status-badge {
-            display: none;
-        }
     }
 
-    @media (max-width: 430px) {
+    .action-grid {
 
-        .brand-text h2 {
-            font-size: 14px;
-        }
+        grid-template-columns: 1fr;
 
-        .action-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .welcome-box h1 {
-            font-size: 25px;
-        }
-
-        .welcome-box p {
-            font-size: 13px;
-        }
     }
+
+    .welcome-box h1 {
+
+        font-size: 25px;
+
+    }
+
+    .welcome-box p {
+
+        font-size: 13px;
+
+    }
+
+    .live-progress-section {
+
+        padding: 16px;
+
+    }
+
+    .live-title-area h2 {
+
+        font-size: 16px;
+
+    }
+
+}
+
 </style>
-
 
 </head>
 
+
 <body>
+
 
 <div class="dashboard-page">
 
 
-<!-- =========================
+<!-- =====================================================
      NAVBAR
-========================= -->
+===================================================== -->
 
 <nav class="top-navbar">
 
@@ -647,9 +1535,13 @@
 
         <div class="brand-text">
 
-            <h2>AI Quiz System</h2>
+            <h2>
+                AI Quiz System
+            </h2>
 
-            <span>Intelligent Assessment Platform</span>
+            <span>
+                Intelligent Assessment Platform
+            </span>
 
         </div>
 
@@ -669,8 +1561,11 @@
         </div>
 
 
-        <a href="/logout" class="logout-btn">
+        <a href="/logout"
+           class="logout-btn">
+
             🚪 Logout
+
         </a>
 
     </div>
@@ -678,239 +1573,498 @@
 </nav>
 
 
-<!-- =========================
+
+<!-- =====================================================
      MAIN
-========================= -->
+===================================================== -->
 
 <main class="dashboard-container">
 
 
-    <!-- HERO -->
+<!-- =====================================================
+     HERO
+===================================================== -->
 
-    <section class="welcome-box">
+<section class="welcome-box">
 
-        <div class="hero-label">
-            ✨ Teacher Workspace
+    <div class="hero-label">
+        ✨ Teacher Workspace
+    </div>
+
+    <h1>
+        Welcome back, {{ name }} 👋
+    </h1>
+
+    <p>
+        Create intelligent assessments, share quizzes instantly
+        and monitor student performance from one powerful dashboard.
+    </p>
+
+</section>
+
+
+
+<!-- =====================================================
+     PLATFORM HIGHLIGHTS
+===================================================== -->
+
+<section class="stats">
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+            📚
         </div>
 
-        <h1>
-            Welcome back, {{ name }} 👋
-        </h1>
+        <h3>
+            Smart Quiz Management
+        </h3>
 
         <p>
-            Create intelligent assessments, share quizzes instantly
-            and monitor student performance from one powerful dashboard.
+            Create, organize and manage AI-powered assessments.
         </p>
-
-    </section>
-
-
-    <!-- =========================
-         PLATFORM HIGHLIGHTS
-    ========================= -->
-
-    <section class="stats">
-
-        <div class="stat-card">
-
-            <div class="stat-icon">
-                📚
-            </div>
-
-            <h3>
-                Smart Quiz Management
-            </h3>
-
-            <p>
-                Create, organize and manage AI-powered assessments.
-            </p>
-
-        </div>
-
-
-        <div class="stat-card">
-
-            <div class="stat-icon">
-                📱
-            </div>
-
-            <h3>
-                Instant QR Sharing
-            </h3>
-
-            <p>
-                Let students access quizzes instantly using QR codes.
-            </p>
-
-        </div>
-
-
-        <div class="stat-card">
-
-            <div class="stat-icon">
-                📊
-            </div>
-
-            <h3>
-                Student Analytics
-            </h3>
-
-            <p>
-                Review scores and monitor student performance easily.
-            </p>
-
-        </div>
-
-    </section>
-
-
-    <!-- =========================
-         QUICK ACTIONS
-    ========================= -->
-
-    <div class="section-header">
-
-        <div>
-
-            <h2 class="section-title">
-                Quick Actions
-            </h2>
-
-            <p class="section-subtitle">
-                Everything you need to manage your assessments.
-            </p>
-
-        </div>
 
     </div>
 
 
-    <section class="action-grid">
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+            📱
+        </div>
+
+        <h3>
+            Instant QR Sharing
+        </h3>
+
+        <p>
+            Let students access quizzes instantly using QR codes.
+        </p>
+
+    </div>
 
 
-        <a href="/create_quiz"
-           class="action-card">
 
-            <span class="arrow">
-                →
-            </span>
+    <div class="stat-card">
 
-            <div class="action-icon">
-                🤖
-            </div>
+        <div class="stat-icon">
+            📊
+        </div>
 
-            <h3>
-                Create Quiz
-            </h3>
+        <h3>
+            Student Analytics
+        </h3>
 
-            <p>
-                Generate an AI-powered assessment.
-            </p>
+        <p>
+            Review scores and monitor student performance easily.
+        </p>
 
-        </a>
+    </div>
 
 
-        <a href="/manage_quizzes"
-           class="action-card">
-
-            <span class="arrow">
-                →
-            </span>
-
-            <div class="action-icon">
-                📚
-            </div>
-
-            <h3>
-                Manage Quizzes
-            </h3>
-
-            <p>
-                View and manage your assessments.
-            </p>
-
-        </a>
+</section>
 
 
-        <a href="/generate_qr_page"
-           class="action-card">
 
-            <span class="arrow">
-                →
-            </span>
+<!-- =====================================================
+     QUICK ACTIONS
+===================================================== -->
 
-            <div class="action-icon">
-                📱
-            </div>
+<div class="section-header">
 
-            <h3>
-                Generate QR
-            </h3>
+    <div>
 
-            <p>
-                Share quizzes with students instantly.
-            </p>
+        <h2 class="section-title">
+            Quick Actions
+        </h2>
 
-        </a>
+        <p class="section-subtitle">
+            Everything you need to manage your assessments.
+        </p>
 
+    </div>
 
-        <a href="/view_results"
-           class="action-card">
-
-            <span class="arrow">
-                →
-            </span>
-
-            <div class="action-icon">
-                📊
-            </div>
-
-            <h3>
-                View Results
-            </h3>
-
-            <p>
-                Analyze student performance and scores.
-            </p>
-
-        </a>
+</div>
 
 
-    </section>
+
+<section class="action-grid">
 
 
-    <!-- =========================
-         AI STATUS
-    ========================= -->
+    <a href="/create_quiz"
+       class="action-card">
 
-    <section class="info-box">
+        <span class="arrow">
+            →
+        </span>
 
-        <div class="ai-status-icon">
+        <div class="action-icon">
             🤖
         </div>
 
-        <div class="ai-status-content">
+        <h3>
+            Create Quiz
+        </h3>
 
-            <h2>
-                AI Assessment Engine
-            </h2>
+        <p>
+            Generate an AI-powered assessment.
+        </p>
 
-            <p>
-                Your AI quiz generation engine is connected and ready
-                to generate intelligent assessments.
-            </p>
+    </a>
+
+
+
+    <a href="/manage_quizzes"
+       class="action-card">
+
+        <span class="arrow">
+            →
+        </span>
+
+        <div class="action-icon">
+            📚
+        </div>
+
+        <h3>
+            Manage Quizzes
+        </h3>
+
+        <p>
+            View and manage your assessments.
+        </p>
+
+    </a>
+
+
+
+    <a href="/generate_qr_page"
+       class="action-card">
+
+        <span class="arrow">
+            →
+        </span>
+
+        <div class="action-icon">
+            📱
+        </div>
+
+        <h3>
+            Generate QR
+        </h3>
+
+        <p>
+            Share quizzes with students instantly.
+        </p>
+
+    </a>
+
+
+
+    <a href="/view_results"
+       class="action-card">
+
+        <span class="arrow">
+            →
+        </span>
+
+        <div class="action-icon">
+            📊
+        </div>
+
+        <h3>
+            View Results
+        </h3>
+
+        <p>
+            Analyze student performance and scores.
+        </p>
+
+    </a>
+
+
+</section>
+
+
+
+<!-- =====================================================
+     LIVE PROGRESS
+===================================================== -->
+
+<section class="live-progress-section">
+
+
+    <!-- HEADER -->
+
+    <div class="live-header">
+
+
+        <div class="live-title-area">
+
+            <div class="live-icon">
+                📡
+            </div>
+
+            <div>
+
+                <h2>
+                    Live Quiz Progress
+                </h2>
+
+                <p>
+                    Monitor student responses in real time.
+                </p>
+
+            </div>
 
         </div>
 
-        <div class="status-badge">
 
-            <span class="status-dot"></span>
+        <div class="live-badge">
 
-            AI Online
+            <span class="live-dot"></span>
+
+            LIVE
 
         </div>
 
-    </section>
+
+    </div>
+
+
+
+    <!-- QUIZ SELECTOR -->
+
+    <div class="quiz-selector">
+
+
+        <select id="quizSelector">
+
+            <option value="">
+                Select a quiz to monitor...
+            </option>
+
+        </select>
+
+
+        <button
+            type="button"
+            class="load-progress-btn"
+            onclick="loadSelectedQuiz()"
+        >
+
+            📡 View Live Progress
+
+        </button>
+
+
+    </div>
+
+
+
+    <!-- EMPTY STATE -->
+
+    <div
+        class="live-empty"
+        id="liveEmpty"
+    >
+
+        <div class="live-empty-icon">
+            📊
+        </div>
+
+        <h3>
+            Select a quiz
+        </h3>
+
+        <p>
+            Choose any of your quizzes above to view its live progress.
+        </p>
+
+    </div>
+
+
+
+    <!-- LIVE DASHBOARD -->
+
+    <div
+        class="live-dashboard"
+        id="liveDashboard"
+    >
+
+
+        <!-- QUIZ NAME -->
+
+        <div class="live-quiz-info">
+
+            <h3
+                class="live-quiz-name"
+                id="liveQuizName"
+            >
+                —
+            </h3>
+
+            <span
+                class="last-updated"
+                id="lastUpdated"
+            >
+                Updating...
+            </span>
+
+        </div>
+
+
+
+        <!-- METRICS -->
+
+        <div class="live-metrics">
+
+
+            <div class="live-metric">
+
+                <span class="metric-label">
+                    PARTICIPANTS
+                </span>
+
+                <div
+                    class="metric-value"
+                    id="totalStudents"
+                >
+                    0
+                </div>
+
+            </div>
+
+
+
+            <div class="live-metric">
+
+                <span class="metric-label">
+                    QUESTIONS ANSWERED
+                </span>
+
+                <div
+                    class="metric-value"
+                    id="answeredQuestions"
+                >
+                    0
+                </div>
+
+            </div>
+
+
+
+            <div class="live-metric">
+
+                <span class="metric-label">
+                    RESPONSES
+                </span>
+
+                <div
+                    class="metric-value"
+                    id="totalResponses"
+                >
+                    0
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- OVERALL PROGRESS -->
+
+        <div class="overall-progress-card">
+
+
+            <div class="overall-progress-top">
+
+                <strong>
+                    Overall Quiz Progress
+                </strong>
+
+                <span
+                    class="overall-percentage"
+                    id="overallPercentage"
+                >
+                    0%
+                </span>
+
+            </div>
+
+
+            <div class="progress-track">
+
+                <div
+                    class="progress-fill"
+                    id="overallProgress"
+                >
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- QUESTION PROGRESS -->
+
+        <h3 class="question-progress-title">
+            Question-wise Progress
+        </h3>
+
+
+        <div
+            class="question-list"
+            id="questionList"
+        >
+
+        </div>
+
+
+    </div>
+
+
+</section>
+
+
+
+<!-- =====================================================
+     AI STATUS
+===================================================== -->
+
+<section class="info-box">
+
+    <div class="ai-status-icon">
+        🤖
+    </div>
+
+    <div class="ai-status-content">
+
+        <h2>
+            AI Assessment Engine
+        </h2>
+
+        <p>
+            Your AI quiz generation engine is connected and ready
+            to generate intelligent assessments.
+        </p>
+
+    </div>
+
+    <div class="status-badge">
+
+        <span class="status-dot"></span>
+
+        AI Online
+
+    </div>
+
+</section>
 
 
 </main>
@@ -918,7 +2072,433 @@
 
 </div>
 
+
 {% include 'footer.html' %}
+
+
+
+<script>
+
+/* =========================================================
+   LIVE QUIZ PROGRESS
+========================================================= */
+
+let selectedQuizId = null;
+
+let progressTimer = null;
+
+
+/* =========================================================
+   LOAD TEACHER QUIZZES
+========================================================= */
+
+async function loadQuizList() {
+
+    const selector =
+        document.getElementById("quizSelector");
+
+    try {
+
+        const response =
+            await fetch("/teacher_quizzes");
+
+        const data =
+            await response.json();
+
+        if (!data.success) {
+
+            throw new Error(
+                data.error || "Unable to load quizzes"
+            );
+
+        }
+
+
+        selector.innerHTML = `
+            <option value="">
+                Select a quiz to monitor...
+            </option>
+        `;
+
+
+        if (!data.quizzes.length) {
+
+            selector.innerHTML = `
+                <option value="">
+                    No quizzes available
+                </option>
+            `;
+
+            return;
+
+        }
+
+
+        data.quizzes.forEach(
+            quiz => {
+
+                const option =
+                    document.createElement("option");
+
+                option.value =
+                    quiz.quiz_id;
+
+                option.textContent =
+                    `#${quiz.quiz_id} — ${quiz.title}`;
+
+                selector.appendChild(option);
+
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "QUIZ LIST ERROR:",
+            error
+        );
+
+        selector.innerHTML = `
+            <option value="">
+                Unable to load quizzes
+            </option>
+        `;
+
+    }
+
+}
+
+
+/* =========================================================
+   SELECT QUIZ
+========================================================= */
+
+function loadSelectedQuiz() {
+
+    const selector =
+        document.getElementById("quizSelector");
+
+    const quizId =
+        selector.value;
+
+
+    if (!quizId) {
+
+        alert(
+            "Please select a quiz first."
+        );
+
+        return;
+
+    }
+
+
+    selectedQuizId =
+        quizId;
+
+
+    document.getElementById(
+        "liveEmpty"
+    ).style.display = "none";
+
+
+    document.getElementById(
+        "liveDashboard"
+    ).style.display = "block";
+
+
+    fetchLiveProgress();
+
+
+    if (progressTimer) {
+
+        clearInterval(progressTimer);
+
+    }
+
+
+    /*
+       Refresh every 5 seconds.
+    */
+
+    progressTimer =
+        setInterval(
+            fetchLiveProgress,
+            5000
+        );
+
+}
+
+
+/* =========================================================
+   FETCH LIVE DATA
+========================================================= */
+
+async function fetchLiveProgress() {
+
+    if (!selectedQuizId) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `/quiz_progress/${selectedQuizId}`,
+                {
+                    cache: "no-store"
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!data.success) {
+
+            console.error(
+                data.error
+            );
+
+            return;
+
+        }
+
+
+        updateLiveDashboard(
+            data
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "LIVE PROGRESS ERROR:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   UPDATE DASHBOARD
+========================================================= */
+
+function updateLiveDashboard(data) {
+
+
+    /* QUIZ NAME */
+
+    document.getElementById(
+        "liveQuizName"
+    ).textContent =
+        `#${data.quiz_id} — ${data.title}`;
+
+
+    /* PARTICIPANTS */
+
+    document.getElementById(
+        "totalStudents"
+    ).textContent =
+        data.total_students;
+
+
+    /* ANSWERED QUESTIONS */
+
+    document.getElementById(
+        "answeredQuestions"
+    ).textContent =
+        `${data.answered_questions}/${data.total_questions}`;
+
+
+    /* RESPONSES */
+
+    document.getElementById(
+        "totalResponses"
+    ).textContent =
+        data.total_answer_events;
+
+
+    /* OVERALL */
+
+    const percentage =
+        Number(
+            data.overall_progress || 0
+        );
+
+
+    document.getElementById(
+        "overallPercentage"
+    ).textContent =
+        `${percentage}%`;
+
+
+    document.getElementById(
+        "overallProgress"
+    ).style.width =
+        `${percentage}%`;
+
+
+    /* LAST UPDATED */
+
+    const now =
+        new Date();
+
+
+    document.getElementById(
+        "lastUpdated"
+    ).textContent =
+        `Updated ${now.toLocaleTimeString()}`;
+
+
+    /* QUESTIONS */
+
+    const questionList =
+        document.getElementById(
+            "questionList"
+        );
+
+
+    questionList.innerHTML = "";
+
+
+    if (
+        !data.progress ||
+        data.progress.length === 0
+    ) {
+
+        questionList.innerHTML = `
+            <div class="live-empty">
+                <div class="live-empty-icon">
+                    📝
+                </div>
+
+                <h3>
+                    No questions found
+                </h3>
+
+                <p>
+                    This quiz does not contain any questions yet.
+                </p>
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    data.progress.forEach(
+        (item, index) => {
+
+
+            const percentage =
+                Number(
+                    item.percentage || 0
+                );
+
+
+            const question =
+                document.createElement(
+                    "div"
+                );
+
+
+            question.className =
+                "question-progress-item";
+
+
+            question.innerHTML = `
+
+                <div class="question-top">
+
+                    <span class="question-number">
+                        Q${index + 1}
+                    </span>
+
+                    <span class="question-text">
+                        ${escapeHtml(item.question)}
+                    </span>
+
+                    <span class="question-percent">
+                        ${item.response_count}
+                        responses
+                        •
+                        ${percentage}%
+                    </span>
+
+                </div>
+
+
+                <div class="question-track">
+
+                    <div
+                        class="question-fill"
+                        style="width:${percentage}%"
+                    >
+                    </div>
+
+                </div>
+
+            `;
+
+
+            questionList.appendChild(
+                question
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
+
+function escapeHtml(value) {
+
+    if (value === null ||
+        value === undefined) {
+
+        return "";
+
+    }
+
+
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+}
+
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        loadQuizList();
+
+    }
+);
+
+</script>
+
 
 </body>
 
