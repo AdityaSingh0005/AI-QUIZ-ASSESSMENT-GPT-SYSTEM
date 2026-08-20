@@ -33,11 +33,13 @@ def teacher_logged_in():
 # HELPER: ERROR PAGE
 # ============================================================
 
-def error_page(message, back_url="/create_quiz"):
+def error_page(
+    message,
+    back_url="/create_quiz"
+):
 
     return f"""
     <!DOCTYPE html>
-
     <html>
 
     <head>
@@ -63,7 +65,6 @@ def error_page(message, back_url="/create_quiz"):
             }}
 
             .error-card {{
-
                 width: min(600px, 90%);
 
                 background: white;
@@ -81,30 +82,26 @@ def error_page(message, back_url="/create_quiz"):
             }}
 
             h2 {{
-
                 margin-top: 0;
-
                 color: #dc2626;
             }}
 
             p {{
-
                 color: #596274;
-
                 line-height: 1.6;
-
                 word-break: break-word;
             }}
 
             a {{
-
                 display: inline-block;
 
                 margin-top: 15px;
 
-                padding: 12px 18px;
+                padding:
+                    12px 18px;
 
-                background: #4f46e5;
+                background:
+                    #4f46e5;
 
                 color: white;
 
@@ -124,7 +121,7 @@ def error_page(message, back_url="/create_quiz"):
         <div class="error-card">
 
             <h2>
-                ❌ Quiz Generation Failed
+                ❌ Quiz Error
             </h2>
 
             <p>
@@ -180,7 +177,9 @@ def teacher_dashboard():
 
             WHERE teacher_id=%s
             """,
-            (teacher_id,)
+            (
+                teacher_id,
+            )
         )
 
         row = cursor.fetchone()
@@ -201,11 +200,13 @@ def teacher_dashboard():
             FROM quiz_attempts qa
 
             INNER JOIN quizzes q
-                ON qa.quiz_id = q.quiz_id
+                ON qa.quiz_id=q.quiz_id
 
             WHERE q.teacher_id=%s
             """,
-            (teacher_id,)
+            (
+                teacher_id,
+            )
         )
 
         row = cursor.fetchone()
@@ -216,21 +217,50 @@ def teacher_dashboard():
 
         # ====================================================
         # AVERAGE SCORE
+        #
+        # Registered + guest attempts
         # ====================================================
 
         cursor.execute(
             """
             SELECT
-                AVG(r.percentage) AS average_score
+                AVG(x.percentage) AS average_score
 
-            FROM results r
+            FROM
+            (
+                SELECT
+                    r.percentage
 
-            INNER JOIN quizzes q
-                ON r.quiz_id = q.quiz_id
+                FROM results r
 
-            WHERE q.teacher_id=%s
+                INNER JOIN quizzes q
+                    ON r.quiz_id=q.quiz_id
+
+                WHERE q.teacher_id=%s
+
+                UNION ALL
+
+                SELECT
+                    qa.percentage
+
+                FROM quiz_attempts qa
+
+                INNER JOIN quizzes q
+                    ON qa.quiz_id=q.quiz_id
+
+                WHERE q.teacher_id=%s
+
+                AND qa.student_id IS NULL
+
+                AND qa.status='submitted'
+
+                AND qa.percentage IS NOT NULL
+            ) x
             """,
-            (teacher_id,)
+            (
+                teacher_id,
+                teacher_id
+            )
         )
 
         row = cursor.fetchone()
@@ -266,7 +296,7 @@ def teacher_dashboard():
             FROM quizzes q
 
             LEFT JOIN quiz_attempts qa
-                ON qa.quiz_id = q.quiz_id
+                ON qa.quiz_id=q.quiz_id
 
             WHERE q.teacher_id=%s
 
@@ -285,13 +315,15 @@ def teacher_dashboard():
 
             LIMIT 6
             """,
-            (teacher_id,)
+            (
+                teacher_id,
+            )
         )
 
         quizzes = cursor.fetchall()
 
         # ====================================================
-        # ACTIVE / LIVE QUIZZES
+        # ACTIVE QUIZZES
         # ====================================================
 
         cursor.execute(
@@ -311,17 +343,42 @@ def teacher_dashboard():
 
             AND q.available_from <= NOW()
 
-            AND (
+            AND
+            (
                 q.available_until IS NULL
-                OR q.available_until > NOW()
+
+                OR
+
+                q.available_until > NOW()
             )
 
             ORDER BY q.created_at DESC
             """,
-            (teacher_id,)
+            (
+                teacher_id,
+            )
         )
 
         live_quizzes = cursor.fetchall()
+
+        return render_template(
+            "teacher_dashboard.html",
+
+            name=session.get(
+                "name",
+                "Teacher"
+            ),
+
+            total_quizzes=total_quizzes,
+
+            total_participants=total_participants,
+
+            average_score=average_score,
+
+            quizzes=quizzes,
+
+            live_quizzes=live_quizzes
+        )
 
     except Exception as e:
 
@@ -332,37 +389,24 @@ def teacher_dashboard():
 
         return f"""
         <h2>Dashboard Error</h2>
-        <p>{e}</p>
+        <p>{str(e)}</p>
         """
 
     finally:
 
         if cursor:
 
-            cursor.close()
+            try:
+                cursor.close()
+            except Exception:
+                pass
 
         if db:
 
-            db.close()
-
-    return render_template(
-        "teacher_dashboard.html",
-
-        name=session.get(
-            "name",
-            "Teacher"
-        ),
-
-        total_quizzes=total_quizzes,
-
-        total_participants=total_participants,
-
-        average_score=average_score,
-
-        quizzes=quizzes,
-
-        live_quizzes=live_quizzes
-    )
+            try:
+                db.close()
+            except Exception:
+                pass
 
 
 # ============================================================
@@ -391,11 +435,11 @@ def create_quiz():
 
     print("\n")
     print("=" * 70)
-    print("🚀 CREATE QUIZ REQUEST RECEIVED")
+    print("🚀 CREATE QUIZ REQUEST")
     print("=" * 70)
 
     # ========================================================
-    # BASIC DETAILS
+    # BASIC DATA
     # ========================================================
 
     title = request.form.get(
@@ -409,7 +453,7 @@ def create_quiz():
     ).strip()
 
     # ========================================================
-    # QUESTION COUNTS
+    # COUNTS
     # ========================================================
 
     try:
@@ -449,36 +493,19 @@ def create_quiz():
             )
         )
 
-    except (ValueError, TypeError) as e:
+    except (
+        ValueError,
+        TypeError
+    ) as e:
 
         print(
-            "❌ INVALID FORM VALUES:",
+            "❌ FORM VALUE ERROR:",
             e
         )
 
         return error_page(
-            "Invalid quiz values. Please enter valid numbers."
+            "Invalid quiz values."
         )
-
-    # ========================================================
-    # LOG
-    # ========================================================
-
-    print("\n📋 QUIZ FORM DATA")
-    print("-" * 70)
-
-    print("Title:", title)
-    print("Prompt:", prompt)
-    print("Easy:", easy)
-    print("Medium:", medium)
-    print("Hard:", hard)
-    print("Duration:", duration_minutes)
-    print(
-        "Time / Question:",
-        question_time_seconds
-    )
-
-    print("-" * 70)
 
     # ========================================================
     # VALIDATION
@@ -506,11 +533,6 @@ def create_quiz():
         easy +
         medium +
         hard
-    )
-
-    print(
-        "📝 Total requested questions:",
-        total_questions
     )
 
     if total_questions <= 0:
@@ -590,33 +612,17 @@ def create_quiz():
             timedelta(days=1)
         )
 
-    print("\n📅 AVAILABILITY")
-    print("-" * 70)
-
-    print(
-        "Available From:",
-        available_from
-    )
-
-    print(
-        "Available Until:",
-        available_until
-    )
-
-    print("-" * 70)
-
     # ========================================================
     # AI GENERATION
     # ========================================================
 
-    print("\n")
-    print("=" * 70)
-    print("🤖 STARTING AI QUESTION GENERATION")
-    print("=" * 70)
+    print(
+        "🤖 Generating questions..."
+    )
 
     try:
 
-        ai_start = datetime.now()
+        start_time = datetime.now()
 
         questions = generate_questions(
             prompt,
@@ -625,44 +631,29 @@ def create_quiz():
             hard
         )
 
-        ai_end = datetime.now()
-
-        ai_seconds = (
-            ai_end - ai_start
-        ).total_seconds()
+        end_time = datetime.now()
 
         print(
-            "⏱️ AI generation time:",
-            ai_seconds,
+            "⏱️ AI time:",
+            (
+                end_time -
+                start_time
+            ).total_seconds(),
             "seconds"
         )
 
         print(
-            "📦 Returned object type:",
-            type(questions)
-        )
-
-        print(
-            "📦 Returned questions:",
+            "📦 Questions generated:",
             len(questions)
             if questions
             else 0
         )
 
-        if not questions:
-
-            return error_page(
-                "AI could not generate any questions. "
-                "Please check your AI/Ollama configuration "
-                "and try again."
-            )
-
     except Exception as e:
 
         print(
             "❌ AI GENERATION ERROR:",
-            type(e).__name__,
-            str(e)
+            e
         )
 
         return error_page(
@@ -670,22 +661,31 @@ def create_quiz():
         )
 
     # ========================================================
-    # QUESTION COUNT VALIDATION
+    # EMPTY CHECK
+    # ========================================================
+
+    if not questions:
+
+        return error_page(
+            "AI could not generate questions."
+        )
+
+    # ========================================================
+    # COUNT CHECK
     # ========================================================
 
     if len(questions) != total_questions:
 
         return error_page(
-            f"AI generated {len(questions)} questions, "
+            f"AI generated {len(questions)} questions "
             f"but {total_questions} were requested."
         )
 
     # ========================================================
-    # QUESTION STRUCTURE
+    # VALIDATE QUESTIONS
     # ========================================================
 
     required_fields = [
-
         "question",
         "option_a",
         "option_b",
@@ -693,7 +693,6 @@ def create_quiz():
         "option_d",
         "correct_option",
         "difficulty"
-
     ]
 
     for index, q in enumerate(
@@ -701,16 +700,10 @@ def create_quiz():
         start=1
     ):
 
-        print(
-            f"Question {index}:",
-            q
-        )
-
         if not isinstance(q, dict):
 
             return error_page(
-                f"AI returned invalid data "
-                f"for question {index}."
+                f"Invalid question {index}."
             )
 
         for field in required_fields:
@@ -718,35 +711,34 @@ def create_quiz():
             if field not in q:
 
                 return error_page(
-                    f"AI generated an invalid question. "
-                    f"Missing field: {field}"
+                    f"Question {index} is missing "
+                    f"field: {field}"
                 )
 
             if q[field] is None:
 
                 return error_page(
-                    f"AI generated an empty field "
-                    f"'{field}' in question {index}."
+                    f"Question {index} has empty "
+                    f"field: {field}"
                 )
 
-            if str(q[field]).strip() == "":
+            if str(
+                q[field]
+            ).strip() == "":
 
                 return error_page(
-                    f"AI generated an empty field "
-                    f"'{field}' in question {index}."
+                    f"Question {index} has empty "
+                    f"field: {field}"
                 )
 
     # ========================================================
-    # NORMALIZE DIFFICULTY
+    # NORMALIZE
     # ========================================================
 
     for q in questions:
 
         difficulty = str(
-            q.get(
-                "difficulty",
-                "Medium"
-            )
+            q["difficulty"]
         ).strip().lower()
 
         if difficulty == "easy":
@@ -764,11 +756,26 @@ def create_quiz():
         else:
 
             return error_page(
-                "AI returned an invalid difficulty value."
+                "AI returned invalid difficulty."
+            )
+
+        q["correct_option"] = str(
+            q["correct_option"]
+        ).strip().upper()
+
+        if q["correct_option"] not in [
+            "A",
+            "B",
+            "C",
+            "D"
+        ]:
+
+            return error_page(
+                "AI returned invalid correct option."
             )
 
     # ========================================================
-    # VERIFY DIFFICULTY
+    # DIFFICULTY CHECK
     # ========================================================
 
     generated_easy = sum(
@@ -789,46 +796,26 @@ def create_quiz():
         if q["difficulty"] == "Hard"
     )
 
-    print("\n📊 DIFFICULTY CHECK")
-
-    print(
-        "Requested:",
-        f"Easy={easy}, "
-        f"Medium={medium}, "
-        f"Hard={hard}"
-    )
-
-    print(
-        "Generated:",
-        f"Easy={generated_easy}, "
-        f"Medium={generated_medium}, "
-        f"Hard={generated_hard}"
-    )
-
     if generated_easy != easy:
 
         return error_page(
-            f"AI generated {generated_easy} Easy questions "
-            f"but {easy} were requested."
+            f"AI generated {generated_easy} Easy "
+            f"questions instead of {easy}."
         )
 
     if generated_medium != medium:
 
         return error_page(
-            f"AI generated {generated_medium} Medium questions "
-            f"but {medium} were requested."
+            f"AI generated {generated_medium} Medium "
+            f"questions instead of {medium}."
         )
 
     if generated_hard != hard:
 
         return error_page(
-            f"AI generated {generated_hard} Hard questions "
-            f"but {hard} were requested."
+            f"AI generated {generated_hard} Hard "
+            f"questions instead of {hard}."
         )
-
-    print(
-        "✅ DIFFICULTY DISTRIBUTION VALID"
-    )
 
     # ========================================================
     # DATABASE
@@ -892,24 +879,21 @@ def create_quiz():
         if not result:
 
             raise Exception(
-                "Database did not return quiz_id."
+                "Quiz ID was not generated."
             )
 
         quiz_id = result[0]
 
         print(
-            "✅ Quiz created:",
+            "✅ Quiz ID:",
             quiz_id
         )
 
         # ====================================================
-        # SAVE QUESTIONS
+        # INSERT QUESTIONS
         # ====================================================
 
-        for index, q in enumerate(
-            questions,
-            start=1
-        ):
+        for q in questions:
 
             cursor.execute(
                 """
@@ -939,18 +923,30 @@ def create_quiz():
                 """,
                 (
                     quiz_id,
-                    str(q["question"]).strip(),
-                    str(q["option_a"]).strip(),
-                    str(q["option_b"]).strip(),
-                    str(q["option_c"]).strip(),
-                    str(q["option_d"]).strip(),
-                    str(q["correct_option"]).strip(),
+                    str(
+                        q["question"]
+                    ).strip(),
+
+                    str(
+                        q["option_a"]
+                    ).strip(),
+
+                    str(
+                        q["option_b"]
+                    ).strip(),
+
+                    str(
+                        q["option_c"]
+                    ).strip(),
+
+                    str(
+                        q["option_d"]
+                    ).strip(),
+
+                    q["correct_option"],
+
                     q["difficulty"]
                 )
-            )
-
-            print(
-                f"✅ Question {index} saved"
             )
 
         # ====================================================
@@ -964,7 +960,7 @@ def create_quiz():
         if not qr_path:
 
             raise Exception(
-                "QR code generation failed."
+                "QR generation failed."
             )
 
         cursor.execute(
@@ -988,7 +984,7 @@ def create_quiz():
         db.commit()
 
         print(
-            f"🎉 QUIZ {quiz_id} CREATED SUCCESSFULLY"
+            f"🎉 QUIZ {quiz_id} CREATED"
         )
 
         return redirect(
@@ -998,20 +994,13 @@ def create_quiz():
     except Exception as e:
 
         print(
-            "❌ DATABASE / QUIZ CREATION ERROR:",
-            type(e).__name__,
-            str(e)
+            "❌ QUIZ CREATION ERROR:",
+            e
         )
 
         if db:
 
-            try:
-
-                db.rollback()
-
-            except Exception:
-
-                pass
+            db.rollback()
 
         return error_page(
             f"Quiz creation failed: {str(e)}"
@@ -1021,17 +1010,11 @@ def create_quiz():
 
         if cursor:
 
-            try:
-                cursor.close()
-            except Exception:
-                pass
+            cursor.close()
 
         if db:
 
-            try:
-                db.close()
-            except Exception:
-                pass
+            db.close()
 
 
 # ============================================================
@@ -1077,7 +1060,6 @@ def quiz_generated(quiz_id):
             FROM quizzes
 
             WHERE quiz_id=%s
-
             AND teacher_id=%s
             """,
             (
@@ -1115,13 +1097,15 @@ def quiz_generated(quiz_id):
 
             ORDER BY question_id
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
         questions = cursor.fetchall()
 
         # ====================================================
-        # LIVE STUDENTS
+        # LIVE PARTICIPANTS
         # ====================================================
 
         cursor.execute(
@@ -1129,43 +1113,41 @@ def quiz_generated(quiz_id):
             SELECT
 
                 COUNT(
-                    DISTINCT
-                    COALESCE(
-                        attempt_id::text,
-                        student_id::text
-                    )
+                    DISTINCT attempt_id
                 ) AS total_students
 
             FROM student_answers
 
             WHERE quiz_id=%s
 
-            AND (
-                attempt_id IS NOT NULL
-                OR student_id IS NOT NULL
-            )
+            AND attempt_id IS NOT NULL
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
         live_stats = cursor.fetchone()
+
+        live_total_students = int(
+            live_stats["total_students"] or 0
+        )
+
+        return render_template(
+            "quiz_generated.html",
+
+            quiz=quiz,
+
+            questions=questions,
+
+            live_total_students=
+                live_total_students
+        )
 
     finally:
 
         cursor.close()
         db.close()
-
-    return render_template(
-        "quiz_generated.html",
-
-        quiz=quiz,
-
-        questions=questions,
-
-        live_total_students=(
-            live_stats["total_students"] or 0
-        )
-    )
 
 
 # ============================================================
@@ -1192,12 +1174,12 @@ def add_questions(quiz_id):
 
         cursor.execute(
             """
-            SELECT quiz_id
+            SELECT
+                quiz_id
 
             FROM quizzes
 
             WHERE quiz_id=%s
-
             AND teacher_id=%s
             """,
             (
@@ -1218,205 +1200,206 @@ def add_questions(quiz_id):
         return "Quiz not found.", 404
 
     # ========================================================
+    # GET
+    # ========================================================
+
+    if request.method == "GET":
+
+        return render_template(
+            "add_questions.html",
+            quiz_id=quiz_id
+        )
+
+    # ========================================================
     # POST
     # ========================================================
 
-    if request.method == "POST":
+    question = request.form.get(
+        "question",
+        ""
+    ).strip()
 
-        question = request.form.get(
-            "question",
-            ""
-        ).strip()
+    option_a = request.form.get(
+        "option_a",
+        ""
+    ).strip()
 
-        option_a = request.form.get(
-            "option_a",
-            ""
-        ).strip()
+    option_b = request.form.get(
+        "option_b",
+        ""
+    ).strip()
 
-        option_b = request.form.get(
-            "option_b",
-            ""
-        ).strip()
+    option_c = request.form.get(
+        "option_c",
+        ""
+    ).strip()
 
-        option_c = request.form.get(
-            "option_c",
-            ""
-        ).strip()
+    option_d = request.form.get(
+        "option_d",
+        ""
+    ).strip()
 
-        option_d = request.form.get(
-            "option_d",
-            ""
-        ).strip()
+    correct_option = request.form.get(
+        "correct_option",
+        ""
+    ).strip().upper()
 
-        correct_option = request.form.get(
-            "correct_option",
-            ""
-        ).strip().upper()
+    difficulty = request.form.get(
+        "difficulty",
+        "Medium"
+    ).strip()
 
-        difficulty = request.form.get(
-            "difficulty",
-            "Medium"
-        ).strip()
+    # ========================================================
+    # VALIDATION
+    # ========================================================
 
-        # ====================================================
-        # VALIDATION
-        # ====================================================
+    if not question:
 
-        if not question:
+        return error_page(
+            "Question is required.",
+            f"/add_questions/{quiz_id}"
+        )
 
-            return error_page(
-                "Question is required.",
-                f"/add_questions/{quiz_id}"
+    if not all([
+        option_a,
+        option_b,
+        option_c,
+        option_d
+    ]):
+
+        return error_page(
+            "All four options are required.",
+            f"/add_questions/{quiz_id}"
+        )
+
+    if correct_option not in [
+        "A",
+        "B",
+        "C",
+        "D"
+    ]:
+
+        return error_page(
+            "Correct option must be A, B, C or D.",
+            f"/add_questions/{quiz_id}"
+        )
+
+    if difficulty not in [
+        "Easy",
+        "Medium",
+        "Hard"
+    ]:
+
+        difficulty = "Medium"
+
+    # ========================================================
+    # SAVE
+    # ========================================================
+
+    db = get_db_connection()
+
+    cursor = db.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            INSERT INTO questions
+            (
+                quiz_id,
+                question,
+                option_a,
+                option_b,
+                option_c,
+                option_d,
+                correct_option,
+                difficulty
             )
 
-        if (
-            not option_a
-            or not option_b
-            or not option_c
-            or not option_d
-        ):
-
-            return error_page(
-                "All four options are required.",
-                f"/add_questions/{quiz_id}"
+            VALUES
+            (
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s
             )
-
-        if correct_option not in [
-            "A",
-            "B",
-            "C",
-            "D"
-        ]:
-
-            return error_page(
-                "Correct option must be A, B, C or D.",
-                f"/add_questions/{quiz_id}"
+            """,
+            (
+                quiz_id,
+                question,
+                option_a,
+                option_b,
+                option_c,
+                option_d,
+                correct_option,
+                difficulty
             )
+        )
 
         # ====================================================
-        # INSERT
+        # UPDATE COUNT
         # ====================================================
 
-        db = get_db_connection()
+        cursor.execute(
+            """
+            UPDATE quizzes
 
-        cursor = db.cursor()
+            SET total_questions =
+            (
+                SELECT COUNT(*)
 
-        try:
-
-            cursor.execute(
-                """
-                INSERT INTO questions
-                (
-                    quiz_id,
-                    question,
-                    option_a,
-                    option_b,
-                    option_c,
-                    option_d,
-                    correct_option,
-                    difficulty
-                )
-
-                VALUES
-                (
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s
-                )
-                """,
-                (
-                    quiz_id,
-                    question,
-                    option_a,
-                    option_b,
-                    option_c,
-                    option_d,
-                    correct_option,
-                    difficulty
-                )
-            )
-
-            # =================================================
-            # UPDATE QUESTION COUNT
-            # =================================================
-
-            cursor.execute(
-                """
-                UPDATE quizzes
-
-                SET total_questions = (
-                    SELECT COUNT(*)
-
-                    FROM questions
-
-                    WHERE quiz_id=%s
-                )
+                FROM questions
 
                 WHERE quiz_id=%s
-                """,
-                (
-                    quiz_id,
-                    quiz_id
-                )
             )
 
-            db.commit()
-
-        except Exception as e:
-
-            db.rollback()
-
-            print(
-                "❌ ADD QUESTION ERROR:",
-                e
+            WHERE quiz_id=%s
+            """,
+            (
+                quiz_id,
+                quiz_id
             )
+        )
 
-            return error_page(
-                f"Error adding question: {e}",
-                f"/quiz_generated/{quiz_id}"
-            )
+        db.commit()
 
-        finally:
+    except Exception as e:
 
-            cursor.close()
-            db.close()
+        db.rollback()
 
-        return redirect(
+        print(
+            "❌ ADD QUESTION ERROR:",
+            e
+        )
+
+        return error_page(
+            f"Error adding question: {str(e)}",
             f"/quiz_generated/{quiz_id}"
         )
 
-    return render_template(
-        "add_questions.html",
-        quiz_id=quiz_id
+    finally:
+
+        cursor.close()
+        db.close()
+
+    return redirect(
+        f"/quiz_generated/{quiz_id}"
     )
 
 
 # ============================================================
 # VIEW RESULTS
-# ============================================================
 #
 # IMPORTANT:
+# Guest attempts are NOT assumed to have a guest_name column.
 #
-# This version DOES NOT assume:
-#
-#     qa.guest_name
-#
-# exists.
-#
-# It dynamically checks the actual quiz_attempts columns.
-#
-# It supports:
-#
-# 1. Registered students
-# 2. Guest students
-# 3. results.attempt_id if available
-# 4. Older databases without results.attempt_id
-#
+# We use to_jsonb(qa) so PostgreSQL can safely read possible
+# guest fields without crashing when a particular field does
+# not exist as a physical column.
 # ============================================================
 
 @teacher.route("/view_results")
@@ -1440,476 +1423,278 @@ def view_results():
         teacher_id = session["teacher_id"]
 
         # ====================================================
-        # GET quiz_attempts COLUMNS
+        # REGISTERED STUDENT RESULTS
         # ====================================================
 
         cursor.execute(
             """
-            SELECT column_name
+            SELECT
 
-            FROM information_schema.columns
+                r.*,
 
-            WHERE table_schema = 'public'
+                q.title AS quiz_title,
 
-            AND table_name = 'quiz_attempts'
-            """
+                COALESCE(
+                    s.full_name,
+                    'Student'
+                ) AS full_name,
+
+                COALESCE(
+                    s.roll_number,
+                    '—'
+                ) AS roll_number,
+
+                'registered' AS participant_type
+
+            FROM results r
+
+            INNER JOIN quizzes q
+                ON r.quiz_id=q.quiz_id
+
+            LEFT JOIN students s
+                ON r.student_id=s.student_id
+
+            WHERE q.teacher_id=%s
+
+            AND r.student_id IS NOT NULL
+
+            ORDER BY
+                r.submitted_at DESC NULLS LAST
+            """,
+            (
+                teacher_id,
+            )
         )
 
-        attempt_columns = {
-            row["column_name"]
-            for row in cursor.fetchall()
-        }
-
-        print(
-            "📋 quiz_attempts columns:",
-            attempt_columns
-        )
+        registered_results = cursor.fetchall()
 
         # ====================================================
-        # DETECT GUEST NAME COLUMN
-        # ====================================================
-
-        guest_name_column = None
-
-        for column in [
-
-            "guest_name",
-            "name",
-            "student_name",
-            "full_name"
-
-        ]:
-
-            if column in attempt_columns:
-
-                guest_name_column = column
-
-                break
-
-        # ====================================================
-        # DETECT GUEST ROLL COLUMN
-        # ====================================================
-
-        guest_roll_column = None
-
-        for column in [
-
-            "guest_roll_number",
-            "roll_number",
-            "student_roll_number",
-            "guest_roll"
-
-        ]:
-
-            if column in attempt_columns:
-
-                guest_roll_column = column
-
-                break
-
-        print(
-            "👤 Guest name column:",
-            guest_name_column
-        )
-
-        print(
-            "🎓 Guest roll column:",
-            guest_roll_column
-        )
-
-        # ====================================================
-        # GET RESULTS COLUMNS
+        # GUEST RESULTS
+        #
+        # Guest attempts are stored in quiz_attempts.
+        #
+        # student_id = NULL
+        # status = submitted
+        #
+        # Guest name/roll can differ depending on schema.
+        # to_jsonb() allows safe lookup.
         # ====================================================
 
         cursor.execute(
             """
-            SELECT column_name
+            SELECT
 
-            FROM information_schema.columns
+                qa.attempt_id,
 
-            WHERE table_schema = 'public'
+                qa.quiz_id,
 
-            AND table_name = 'results'
-            """
+                q.title AS quiz_title,
+
+                COALESCE(
+
+                    NULLIF(
+                        to_jsonb(qa)
+                        ->>'guest_name',
+                        ''
+                    ),
+
+                    NULLIF(
+                        to_jsonb(qa)
+                        ->>'name',
+                        ''
+                    ),
+
+                    NULLIF(
+                        to_jsonb(qa)
+                        ->>'student_name',
+                        ''
+                    ),
+
+                    NULLIF(
+                        to_jsonb(qa)
+                        ->>'participant_name',
+                        ''
+                    ),
+
+                    'Guest Student'
+
+                ) AS full_name,
+
+                COALESCE(
+
+                    NULLIF(
+                        to_jsonb(qa)
+                        ->>'guest_roll_number',
+                        ''
+                    ),
+
+                    NULLIF(
+                        to_jsonb(qa)
+                        ->>'roll_number',
+                        ''
+                    ),
+
+                    NULLIF(
+                        to_jsonb(qa)
+                        ->>'student_roll_number',
+                        ''
+                    ),
+
+                    '—'
+
+                ) AS roll_number,
+
+                COALESCE(
+                    qa.score,
+                    0
+                ) AS score,
+
+                COALESCE(
+                    qa.percentage,
+                    0
+                ) AS percentage,
+
+                qa.submitted_at,
+
+                'guest' AS participant_type
+
+            FROM quiz_attempts qa
+
+            INNER JOIN quizzes q
+                ON qa.quiz_id=q.quiz_id
+
+            WHERE q.teacher_id=%s
+
+            AND qa.student_id IS NULL
+
+            AND qa.status='submitted'
+
+            ORDER BY
+                qa.submitted_at DESC NULLS LAST
+            """,
+            (
+                teacher_id,
+            )
         )
 
-        result_columns = {
-            row["column_name"]
-            for row in cursor.fetchall()
-        }
-
-        print(
-            "📋 results columns:",
-            result_columns
-        )
-
-        has_result_attempt_id = (
-            "attempt_id" in result_columns
-        )
-
-        has_attempt_id = (
-            "attempt_id" in attempt_columns
-        )
+        guest_results = cursor.fetchall()
 
         # ====================================================
-        # CASE 1:
-        # RESULTS HAS attempt_id
+        # COMBINE
         # ====================================================
 
-        if (
-            has_result_attempt_id
-            and has_attempt_id
-        ):
+        results = []
 
-            if guest_name_column:
+        for row in registered_results:
 
-                guest_name_sql = (
-                    f"qa.{guest_name_column}"
-                )
-
-            else:
-
-                guest_name_sql = "NULL"
-
-            if guest_roll_column:
-
-                guest_roll_sql = (
-                    f"qa.{guest_roll_column}"
-                )
-
-            else:
-
-                guest_roll_sql = "NULL"
-
-            query = f"""
-                SELECT
-
-                    r.*,
-
-                    q.title AS quiz_title,
-
-                    s.full_name AS student_name,
-
-                    s.roll_number AS student_roll_number,
-
-                    CASE
-
-                        WHEN r.student_id IS NULL
-
-                        THEN {guest_name_sql}
-
-                        ELSE s.full_name
-
-                    END AS display_name,
-
-                    CASE
-
-                        WHEN r.student_id IS NULL
-
-                        THEN {guest_roll_sql}
-
-                        ELSE s.roll_number
-
-                    END AS display_roll_number
-
-                FROM results r
-
-                INNER JOIN quizzes q
-
-                    ON r.quiz_id = q.quiz_id
-
-                LEFT JOIN students s
-
-                    ON r.student_id =
-                       s.student_id
-
-                LEFT JOIN quiz_attempts qa
-
-                    ON r.attempt_id =
-                       qa.attempt_id
-
-                WHERE q.teacher_id=%s
-
-                ORDER BY
-                    r.submitted_at DESC
-            """
-
-            cursor.execute(
-                query,
-                (teacher_id,)
+            results.append(
+                dict(row)
             )
 
-            results = cursor.fetchall()
+        for row in guest_results:
 
-        else:
-
-            # =================================================
-            # CASE 2:
-            # Older results table
-            #
-            # We first get normal results.
-            # Then we attach guest information where possible.
-            # =================================================
-
-            cursor.execute(
-                """
-                SELECT
-
-                    r.*,
-
-                    q.title AS quiz_title,
-
-                    s.full_name AS student_name,
-
-                    s.roll_number AS student_roll_number
-
-                FROM results r
-
-                INNER JOIN quizzes q
-
-                    ON r.quiz_id = q.quiz_id
-
-                LEFT JOIN students s
-
-                    ON r.student_id =
-                       s.student_id
-
-                WHERE q.teacher_id=%s
-
-                ORDER BY
-                    r.submitted_at DESC
-                """,
-                (teacher_id,)
+            results.append(
+                dict(row)
             )
 
-            results = cursor.fetchall()
-
-            # =================================================
-            # GET GUEST ATTEMPTS
-            # =================================================
-
-            if has_attempt_id:
-
-                guest_query = f"""
-                    SELECT
-
-                        qa.attempt_id,
-
-                        qa.quiz_id,
-
-                        qa.submitted_at,
-
-                        qa.status,
-
-                        {(
-                            f"qa.{guest_name_column}"
-                            if guest_name_column
-                            else "NULL"
-                        )} AS guest_name,
-
-                        {(
-                            f"qa.{guest_roll_column}"
-                            if guest_roll_column
-                            else "NULL"
-                        )} AS guest_roll_number
-
-                    FROM quiz_attempts qa
-
-                    INNER JOIN quizzes q
-
-                        ON qa.quiz_id =
-                           q.quiz_id
-
-                    WHERE q.teacher_id=%s
-
-                    AND qa.status='submitted'
-
-                    ORDER BY
-                        qa.submitted_at DESC
-                """
-
-                cursor.execute(
-                    guest_query,
-                    (teacher_id,)
-                )
-
-                guest_attempts = cursor.fetchall()
-
-            else:
-
-                guest_attempts = []
-
-            # =================================================
-            # MATCH GUEST ATTEMPTS
-            #
-            # We use quiz_id + submitted time proximity.
-            # =================================================
-
-            used_attempts = set()
-
-            formatted_results = []
-
-            for result in results:
-
-                item = dict(result)
-
-                # ---------------------------------------------
-                # REGISTERED STUDENT
-                # ---------------------------------------------
-
-                if result.get("student_id") is not None:
-
-                    item["display_name"] = (
-                        result.get("student_name")
-                        or "Student"
-                    )
-
-                    item["display_roll_number"] = (
-                        result.get(
-                            "student_roll_number"
-                        )
-                        or "-"
-                    )
-
-                    formatted_results.append(
-                        item
-                    )
-
-                    continue
-
-                # ---------------------------------------------
-                # GUEST RESULT
-                # ---------------------------------------------
-
-                matched_guest = None
-
-                result_quiz_id = (
-                    result.get("quiz_id")
-                )
-
-                result_time = (
-                    result.get("submitted_at")
-                )
-
-                for guest in guest_attempts:
-
-                    if guest["attempt_id"] in used_attempts:
-
-                        continue
-
-                    if guest["quiz_id"] != result_quiz_id:
-
-                        continue
-
-                    guest_time = (
-                        guest.get("submitted_at")
-                    )
-
-                    # -----------------------------------------
-                    # If timestamps are available, find closest
-                    # -----------------------------------------
-
-                    if (
-                        result_time is not None
-                        and guest_time is not None
-                    ):
-
-                        try:
-
-                            difference = abs(
-                                (
-                                    result_time
-                                    -
-                                    guest_time
-                                ).total_seconds()
-                            )
-
-                            if difference <= 300:
-
-                                matched_guest = guest
-
-                                break
-
-                        except Exception:
-
-                            pass
-
-                    else:
-
-                        matched_guest = guest
-
-                        break
-
-                # ---------------------------------------------
-                # GUEST FOUND
-                # ---------------------------------------------
-
-                if matched_guest:
-
-                    used_attempts.add(
-                        matched_guest["attempt_id"]
-                    )
-
-                    item["display_name"] = (
-                        matched_guest.get(
-                            "guest_name"
-                        )
-                        or "Guest Student"
-                    )
-
-                    item["display_roll_number"] = (
-                        matched_guest.get(
-                            "guest_roll_number"
-                        )
-                        or "-"
-                    )
-
-                else:
-
-                    item["display_name"] = (
-                        "Guest Student"
-                    )
-
-                    item["display_roll_number"] = "-"
-
-                formatted_results.append(
-                    item
-                )
-
-            results = formatted_results
-
         # ====================================================
-        # FINAL DEBUG
+        # SORT BY SUBMISSION TIME
         # ====================================================
 
-        print(
-            "========================================"
+        def result_time(row):
+
+            value = row.get(
+                "submitted_at"
+            )
+
+            if value is None:
+
+                return datetime.min
+
+            return value
+
+        results.sort(
+            key=result_time,
+            reverse=True
         )
 
-        print(
-            "✅ VIEW RESULTS SUCCESS"
-        )
+        # ====================================================
+        # FINAL NORMALIZATION
+        # ====================================================
+
+        for row in results:
+
+            if not row.get(
+                "full_name"
+            ):
+
+                row["full_name"] = (
+                    "Guest Student"
+                    if row.get(
+                        "participant_type"
+                    ) == "guest"
+                    else "Student"
+                )
+
+            if not row.get(
+                "roll_number"
+            ):
+
+                row["roll_number"] = "—"
+
+            if row.get(
+                "score"
+            ) is None:
+
+                row["score"] = 0
+
+            if row.get(
+                "percentage"
+            ) is None:
+
+                row["percentage"] = 0
+
+        # ====================================================
+        # DEBUG
+        # ====================================================
+
+        print("\n")
+        print("=" * 70)
+        print("📊 VIEW RESULTS")
+        print("=" * 70)
 
         print(
-            "👨‍🏫 Teacher ID:",
+            "Teacher ID:",
             teacher_id
         )
 
         print(
-            "📊 Total results:",
+            "Registered results:",
+            len(registered_results)
+        )
+
+        print(
+            "Guest results:",
+            len(guest_results)
+        )
+
+        print(
+            "Total results:",
             len(results)
         )
 
-        for result in results:
+        for row in results:
 
             print(
                 "RESULT:",
-                dict(result)
+                row
             )
 
-        print(
-            "========================================"
-        )
+        print("=" * 70)
+
+        # ====================================================
+        # RENDER
+        # ====================================================
 
         return render_template(
             "view_results.html",
@@ -1918,13 +1703,10 @@ def view_results():
 
     except Exception as e:
 
-        print(
-            "========================================"
-        )
-
-        print(
-            "❌ VIEW RESULTS ERROR"
-        )
+        print("\n")
+        print("=" * 70)
+        print("❌ VIEW RESULTS ERROR")
+        print("=" * 70)
 
         print(
             "ERROR TYPE:",
@@ -1936,9 +1718,7 @@ def view_results():
             str(e)
         )
 
-        print(
-            "========================================"
-        )
+        print("=" * 70)
 
         return f"""
         <!DOCTYPE html>
@@ -1953,13 +1733,10 @@ def view_results():
 
                 body {{
                     margin: 0;
-
                     min-height: 100vh;
 
                     display: flex;
-
                     align-items: center;
-
                     justify-content: center;
 
                     background: #f5f7fb;
@@ -1971,57 +1748,63 @@ def view_results():
                 }}
 
                 .error-card {{
+                    width:
+                        min(650px, 90%);
 
-                    width: min(650px, 90%);
+                    background:
+                        white;
 
-                    background: white;
+                    padding:
+                        35px;
 
-                    padding: 35px;
-
-                    border-radius: 20px;
+                    border-radius:
+                        20px;
 
                     box-shadow:
                         0 20px 50px
-                        rgba(0,0,0,0.10);
-
-                    border:
-                        1px solid #e5e7eb;
+                        rgba(0,0,0,0.08);
                 }}
 
                 h2 {{
-
-                    margin-top: 0;
-
-                    color: #dc2626;
+                    color:
+                        #dc2626;
                 }}
 
                 p {{
+                    color:
+                        #4b5563;
 
-                    color: #4b5563;
+                    line-height:
+                        1.6;
 
-                    line-height: 1.6;
-
-                    word-break: break-word;
+                    word-break:
+                        break-word;
                 }}
 
                 a {{
+                    display:
+                        inline-block;
 
-                    display: inline-block;
-
-                    margin-top: 15px;
+                    margin-top:
+                        20px;
 
                     padding:
                         12px 20px;
 
-                    background: #4f46e5;
+                    background:
+                        #4f46e5;
 
-                    color: white;
+                    color:
+                        white;
 
-                    text-decoration: none;
+                    text-decoration:
+                        none;
 
-                    border-radius: 10px;
+                    border-radius:
+                        10px;
 
-                    font-weight: 700;
+                    font-weight:
+                        700;
                 }}
 
             </style>
@@ -2264,7 +2047,8 @@ def delete_quiz(quiz_id):
 
         cursor.execute(
             """
-            SELECT quiz_id
+            SELECT
+                quiz_id
 
             FROM quizzes
 
@@ -2287,7 +2071,7 @@ def delete_quiz(quiz_id):
             )
 
         # ====================================================
-        # STUDENT ANSWERS
+        # ANSWERS
         # ====================================================
 
         cursor.execute(
@@ -2296,7 +2080,9 @@ def delete_quiz(quiz_id):
 
             WHERE quiz_id=%s
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
         # ====================================================
@@ -2309,7 +2095,9 @@ def delete_quiz(quiz_id):
 
             WHERE quiz_id=%s
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
         # ====================================================
@@ -2322,7 +2110,9 @@ def delete_quiz(quiz_id):
 
             WHERE quiz_id=%s
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
         # ====================================================
@@ -2335,7 +2125,9 @@ def delete_quiz(quiz_id):
 
             WHERE quiz_id=%s
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
         # ====================================================
@@ -2392,7 +2184,7 @@ def test_ai():
 
     print("\n")
     print("=" * 70)
-    print("🧪 TEST AI ROUTE")
+    print("🧪 TEST AI")
     print("=" * 70)
 
     try:
@@ -2408,27 +2200,19 @@ def test_ai():
 
         end = datetime.now()
 
-        print(
-            "⏱️ AI time:",
-            (
-                end - start
-            ).total_seconds(),
-            "seconds"
-        )
-
-        print(
-            "Questions:",
-            questions
-        )
-
         return {
-
             "status": "success",
 
-            "count": len(questions),
+            "count":
+                len(questions),
 
-            "questions": questions
+            "time":
+                (
+                    end - start
+                ).total_seconds(),
 
+            "questions":
+                questions
         }
 
     except Exception as e:
@@ -2439,7 +2223,6 @@ def test_ai():
         )
 
         return {
-
             "status": "error",
 
             "error_type":
@@ -2447,7 +2230,6 @@ def test_ai():
 
             "error":
                 str(e)
-
         }, 500
 
 
@@ -2463,11 +2245,8 @@ def teacher_quizzes():
     if not teacher_logged_in():
 
         return jsonify({
-
             "success": False,
-
             "error": "Unauthorized"
-
         }), 401
 
     db = get_db_connection()
@@ -2500,11 +2279,18 @@ def teacher_quizzes():
 
         quizzes = cursor.fetchall()
 
+        # RealDictRow -> dict
+        quizzes = [
+            dict(q)
+            for q in quizzes
+        ]
+
         return jsonify({
 
             "success": True,
 
-            "quizzes": quizzes
+            "quizzes":
+                quizzes
 
         })
 
@@ -2519,7 +2305,8 @@ def teacher_quizzes():
 
             "success": False,
 
-            "error": str(e)
+            "error":
+                str(e)
 
         }), 500
 
@@ -2541,11 +2328,8 @@ def quiz_progress(quiz_id):
     if not teacher_logged_in():
 
         return jsonify({
-
             "success": False,
-
             "error": "Unauthorized"
-
         }), 401
 
     db = get_db_connection()
@@ -2585,11 +2369,8 @@ def quiz_progress(quiz_id):
         if not quiz:
 
             return jsonify({
-
                 "success": False,
-
                 "error": "Quiz not found"
-
             }), 404
 
         # ====================================================
@@ -2606,19 +2387,22 @@ def quiz_progress(quiz_id):
 
             WHERE quiz_id=%s
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
-        question_count = cursor.fetchone()
+        row = cursor.fetchone()
 
         total_questions = int(
-            question_count[
-                "total_questions"
-            ] or 0
+            row["total_questions"] or 0
         )
 
         # ====================================================
         # TOTAL PARTICIPANTS
+        #
+        # quiz_attempts is the reliable source because
+        # guest attempts also have attempts.
         # ====================================================
 
         cursor.execute(
@@ -2626,29 +2410,22 @@ def quiz_progress(quiz_id):
             SELECT
 
                 COUNT(
-                    DISTINCT
-                    COALESCE(
-                        attempt_id::text,
-                        student_id::text
-                    )
+                    DISTINCT attempt_id
                 ) AS total_students
 
-            FROM student_answers
+            FROM quiz_attempts
 
             WHERE quiz_id=%s
-
-            AND (
-                attempt_id IS NOT NULL
-                OR student_id IS NOT NULL
-            )
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
-        total = cursor.fetchone()
+        row = cursor.fetchone()
 
         total_students = int(
-            total["total_students"] or 0
+            row["total_students"] or 0
         )
 
         # ====================================================
@@ -2664,27 +2441,20 @@ def quiz_progress(quiz_id):
                 q.question,
 
                 COUNT(
-                    DISTINCT
-                    COALESCE(
-                        sa.attempt_id::text,
-                        sa.student_id::text
-                    )
+                    DISTINCT sa.attempt_id
                 ) AS response_count
 
             FROM questions q
 
             LEFT JOIN student_answers sa
 
-                ON sa.question_id =
+                ON sa.question_id=
                    q.question_id
 
-                AND sa.quiz_id =
+                AND sa.quiz_id=
                     q.quiz_id
 
-                AND (
-                    sa.attempt_id IS NOT NULL
-                    OR sa.student_id IS NOT NULL
-                )
+                AND sa.attempt_id IS NOT NULL
 
             WHERE q.quiz_id=%s
 
@@ -2696,10 +2466,16 @@ def quiz_progress(quiz_id):
             ORDER BY
                 q.question_id
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
         progress = cursor.fetchall()
+
+        # ====================================================
+        # FORMAT
+        # ====================================================
 
         question_progress = []
 
@@ -2742,7 +2518,6 @@ def quiz_progress(quiz_id):
 
                 "percentage":
                     percentage
-
             })
 
         # ====================================================
@@ -2753,10 +2528,12 @@ def quiz_progress(quiz_id):
 
             1
 
-            for item in question_progress
+            for item
+            in question_progress
 
-            if item["response_count"] > 0
-
+            if item[
+                "response_count"
+            ] > 0
         )
 
         # ====================================================
@@ -2766,14 +2543,11 @@ def quiz_progress(quiz_id):
         if total_questions > 0:
 
             overall_progress = round(
-
                 (
                     answered_questions /
                     total_questions
                 ) * 100,
-
                 1
-
             )
 
         else:
@@ -2811,7 +2585,6 @@ def quiz_progress(quiz_id):
 
             "progress":
                 question_progress
-
         })
 
     except Exception as e:
@@ -2825,7 +2598,8 @@ def quiz_progress(quiz_id):
 
             "success": False,
 
-            "error": str(e)
+            "error":
+                str(e)
 
         }), 500
 
