@@ -6,47 +6,74 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <title>Teacher Dashboard | AI Quiz System</title>
+    <title>
+        Teacher Dashboard | AI Quiz System
+    </title>
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
 
-    <link rel="preconnect"
-          href="https://fonts.googleapis.com">
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
 
-    <link rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet">
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
 
 
 <style>
+
+/* =========================================================
+   GLOBAL
+========================================================= */
 
 * {
     box-sizing: border-box;
 }
 
+html {
+    scroll-behavior: smooth;
+}
 
 body {
 
     margin: 0;
 
-    font-family: "Inter", sans-serif;
+    font-family:
+        "Inter",
+        sans-serif;
 
-    background: #f5f7fb;
+    background:
+        #f7f8fc;
 
-    color: #172033;
-
+    color:
+        #172033;
 }
-
 
 a {
     text-decoration: none;
+}
+
+button {
+    font-family: inherit;
 }
 
 
@@ -58,6 +85,14 @@ a {
 
     min-height: 100vh;
 
+    background:
+        radial-gradient(
+            circle at 15% 0%,
+            rgba(99,102,241,0.06),
+            transparent 25%
+        ),
+
+        #f7f8fc;
 }
 
 
@@ -69,11 +104,11 @@ a {
 
     height: 72px;
 
-    background: rgba(255,255,255,0.92);
+    position: sticky;
 
-    backdrop-filter: blur(16px);
+    top: 0;
 
-    border-bottom: 1px solid #e8ebf2;
+    z-index: 100;
 
     display: flex;
 
@@ -81,14 +116,17 @@ a {
 
     justify-content: space-between;
 
-    padding: 0 5%;
+    padding:
+        0 5%;
 
-    position: sticky;
+    background:
+        rgba(255,255,255,0.88);
 
-    top: 0;
+    backdrop-filter:
+        blur(18px);
 
-    z-index: 100;
-
+    border-bottom:
+        1px solid #e9ebf2;
 }
 
 
@@ -99,7 +137,6 @@ a {
     align-items: center;
 
     gap: 12px;
-
 }
 
 
@@ -109,26 +146,26 @@ a {
 
     height: 42px;
 
-    border-radius: 12px;
-
     display: flex;
 
     align-items: center;
 
     justify-content: center;
 
+    border-radius: 13px;
+
     font-size: 21px;
 
     background:
         linear-gradient(
             135deg,
-            #5b5bf7,
+            #4f46e5,
             #7c3aed
         );
 
     box-shadow:
-        0 8px 22px rgba(91,91,247,0.25);
-
+        0 8px 25px
+        rgba(79,70,229,0.24);
 }
 
 
@@ -136,12 +173,11 @@ a {
 
     margin: 0;
 
-    font-size: 17px;
+    font-size: 16px;
 
     font-weight: 800;
 
-    color: #151b2d;
-
+    color: #161b2c;
 }
 
 
@@ -149,14 +185,13 @@ a {
 
     display: block;
 
-    margin-top: 2px;
+    margin-top: 3px;
 
-    font-size: 11px;
+    font-size: 10px;
 
-    color: #8991a5;
+    color: #9299aa;
 
     font-weight: 500;
-
 }
 
 
@@ -166,8 +201,7 @@ a {
 
     align-items: center;
 
-    gap: 18px;
-
+    gap: 14px;
 }
 
 
@@ -179,20 +213,21 @@ a {
 
     gap: 9px;
 
-    padding: 8px 13px;
+    padding:
+        6px 11px 6px 7px;
 
     background: #f5f6fa;
 
-    border: 1px solid #e7e9ef;
+    border:
+        1px solid #e7e9ef;
 
     border-radius: 30px;
 
-    font-size: 13px;
+    font-size: 12px;
 
     font-weight: 600;
 
     color: #4b5568;
-
 }
 
 
@@ -210,64 +245,60 @@ a {
 
     border-radius: 50%;
 
+    color: white;
+
+    font-size: 12px;
+
+    font-weight: 800;
+
     background:
         linear-gradient(
             135deg,
             #6366f1,
             #8b5cf6
         );
-
-    color: white;
-
-    font-size: 13px;
-
-    font-weight: 700;
-
 }
 
 
 .logout-btn {
 
-    display: flex;
-
-    align-items: center;
-
-    gap: 7px;
-
-    padding: 9px 14px;
+    padding:
+        9px 13px;
 
     border-radius: 10px;
 
     color: #dc3545;
 
-    font-size: 13px;
+    font-size: 12px;
 
-    font-weight: 600;
+    font-weight: 700;
 
-    transition: 0.2s ease;
-
+    transition:
+        0.2s ease;
 }
 
 
 .logout-btn:hover {
 
-    background: #fff1f2;
-
+    background:
+        #fff1f2;
 }
 
 
 /* =========================================================
-   MAIN
+   CONTAINER
 ========================================================= */
 
 .dashboard-container {
 
-    width: min(1180px, 92%);
+    width:
+        min(1240px, 92%);
 
-    margin: 0 auto;
+    margin:
+        auto;
 
-    padding: 42px 0 70px;
-
+    padding:
+        34px 0 70px;
 }
 
 
@@ -275,59 +306,72 @@ a {
    HERO
 ========================================================= */
 
-.welcome-box {
+.hero {
 
     position: relative;
 
     overflow: hidden;
 
-    padding: 38px 40px;
+    padding:
+        34px 38px;
 
-    border-radius: 24px;
-
-    background:
-        radial-gradient(
-            circle at 90% 20%,
-            rgba(255,255,255,0.18),
-            transparent 25%
-        ),
-        linear-gradient(
-            135deg,
-            #4f46e5,
-            #6d5dfc 55%,
-            #7c3aed
-        );
+    border-radius:
+        26px;
 
     color: white;
 
-    box-shadow:
-        0 20px 45px rgba(79,70,229,0.22);
+    background:
 
+        radial-gradient(
+            circle at 85% 15%,
+            rgba(255,255,255,0.22),
+            transparent 24%
+        ),
+
+        linear-gradient(
+            135deg,
+            #4338ca,
+            #5b5bf7 55%,
+            #7c3aed
+        );
+
+    box-shadow:
+        0 22px 50px
+        rgba(79,70,229,0.20);
 }
 
 
-.welcome-box::after {
+.hero::after {
 
     content: "";
 
     position: absolute;
 
-    width: 230px;
+    width: 270px;
 
-    height: 230px;
+    height: 270px;
 
-    right: -80px;
+    right: -100px;
 
-    bottom: -110px;
+    bottom: -150px;
+
+    border:
+        45px solid
+        rgba(255,255,255,0.08);
 
     border-radius: 50%;
-
-    border: 35px solid rgba(255,255,255,0.08);
-
 }
 
 
-.hero-label {
+.hero-content {
+
+    position: relative;
+
+    z-index: 2;
+}
+
+
+.hero-badge {
 
     display: inline-flex;
 
@@ -335,105 +379,115 @@ a {
 
     gap: 7px;
 
-    padding: 6px 11px;
+    padding:
+        6px 11px;
 
     border-radius: 20px;
 
-    background: rgba(255,255,255,0.14);
+    background:
+        rgba(255,255,255,0.14);
 
-    font-size: 11px;
+    font-size: 10px;
 
-    font-weight: 600;
+    font-weight: 700;
 
-    margin-bottom: 15px;
-
+    margin-bottom: 13px;
 }
 
 
-.welcome-box h1 {
+.hero h1 {
 
-    position: relative;
+    margin:
+        0 0 8px;
 
-    z-index: 2;
+    font-size:
+        clamp(25px,4vw,34px);
 
-    margin: 0 0 10px;
+    letter-spacing:
+        -1px;
 
-    font-size: clamp(25px,4vw,34px);
-
-    font-weight: 800;
-
-    letter-spacing: -0.8px;
-
+    font-weight:
+        800;
 }
 
 
-.welcome-box p {
-
-    position: relative;
-
-    z-index: 2;
-
-    max-width: 650px;
+.hero p {
 
     margin: 0;
 
-    color: rgba(255,255,255,0.84);
+    max-width: 680px;
 
-    font-size: 14px;
+    color:
+        rgba(255,255,255,0.82);
 
-    line-height: 1.7;
+    line-height:
+        1.7;
 
+    font-size:
+        13px;
 }
 
 
 /* =========================================================
-   STATS
+   STAT CARDS
 ========================================================= */
 
-.stats {
+.stats-grid {
 
     display: grid;
 
     grid-template-columns:
         repeat(3,1fr);
 
-    gap: 18px;
+    gap: 16px;
 
-    margin-top: 24px;
-
+    margin-top: 20px;
 }
 
 
 .stat-card {
 
-    background: white;
+    background:
+        white;
 
-    border: 1px solid #e9ecf3;
+    border:
+        1px solid #e8ebf2;
 
-    border-radius: 18px;
+    border-radius:
+        19px;
 
-    padding: 23px;
+    padding:
+        21px;
 
-    transition: 0.25s ease;
+    display: flex;
 
+    align-items: center;
+
+    gap: 15px;
+
+    transition:
+        0.25s ease;
 }
 
 
 .stat-card:hover {
 
-    transform: translateY(-4px);
+    transform:
+        translateY(-3px);
 
     box-shadow:
-        0 14px 35px rgba(31,41,55,0.08);
-
+        0 14px 35px
+        rgba(31,41,55,0.07);
 }
 
 
 .stat-icon {
 
-    width: 46px;
+    width: 48px;
 
-    height: 46px;
+    height: 48px;
+
+    flex-shrink: 0;
 
     display: flex;
 
@@ -441,38 +495,42 @@ a {
 
     justify-content: center;
 
-    border-radius: 13px;
+    border-radius: 14px;
 
-    background: #f1f3ff;
+    background:
+        #f1f3ff;
 
     font-size: 21px;
-
-    margin-bottom: 15px;
-
 }
 
 
-.stat-card h3 {
+.stat-info span {
 
-    margin: 0 0 6px;
+    display: block;
 
-    font-size: 15px;
+    color:
+        #9098aa;
 
-    font-weight: 700;
+    font-size:
+        11px;
 
+    margin-bottom:
+        4px;
 }
 
 
-.stat-card p {
+.stat-info strong {
 
-    margin: 0;
+    display: block;
 
-    color: #8a91a3;
+    font-size:
+        22px;
 
-    font-size: 12px;
+    font-weight:
+        800;
 
-    line-height: 1.5;
-
+    color:
+        #171d30;
 }
 
 
@@ -484,12 +542,14 @@ a {
 
     display: flex;
 
-    align-items: flex-end;
+    align-items:
+        flex-end;
 
-    justify-content: space-between;
+    justify-content:
+        space-between;
 
-    margin: 42px 0 18px;
-
+    margin:
+        38px 0 16px;
 }
 
 
@@ -497,623 +557,495 @@ a {
 
     margin: 0;
 
-    font-size: 20px;
+    font-size:
+        19px;
 
-    font-weight: 800;
-
-    color: #161d2f;
-
+    font-weight:
+        800;
 }
 
 
 .section-subtitle {
 
-    margin: 5px 0 0;
+    margin:
+        5px 0 0;
 
-    color: #9299aa;
+    color:
+        #9299aa;
 
-    font-size: 12px;
-
+    font-size:
+        11px;
 }
 
 
 /* =========================================================
-   ACTION GRID
+   QUICK ACTIONS
 ========================================================= */
 
-.action-grid {
+.quick-actions {
 
-    display: grid;
+    display:
+        grid;
 
     grid-template-columns:
         repeat(4,1fr);
 
-    gap: 16px;
-
+    gap:
+        14px;
 }
 
 
-.action-card {
+.quick-card {
 
-    position: relative;
+    position:
+        relative;
 
-    background: white;
+    display:
+        block;
 
-    border: 1px solid #e8ebf2;
+    padding:
+        20px;
 
-    border-radius: 18px;
+    border-radius:
+        18px;
 
-    padding: 23px;
+    background:
+        white;
 
-    color: #172033;
+    border:
+        1px solid #e8ebf2;
 
-    transition: 0.25s ease;
+    color:
+        #172033;
 
+    transition:
+        0.25s ease;
 }
 
 
-.action-card:hover {
+.quick-card:hover {
 
-    transform: translateY(-5px);
+    transform:
+        translateY(-4px);
 
-    border-color: #cfd3ff;
+    border-color:
+        #cdd1ff;
 
     box-shadow:
-        0 16px 35px rgba(31,41,55,0.09);
-
+        0 15px 35px
+        rgba(31,41,55,0.08);
 }
 
 
-.action-icon {
+.quick-icon {
 
-    width: 48px;
+    width:
+        44px;
 
-    height: 48px;
+    height:
+        44px;
 
-    display: flex;
+    display:
+        flex;
 
-    align-items: center;
+    align-items:
+        center;
 
-    justify-content: center;
+    justify-content:
+        center;
 
-    border-radius: 14px;
+    border-radius:
+        13px;
 
-    background: #f1f3ff;
+    background:
+        #f1f3ff;
 
-    font-size: 22px;
+    font-size:
+        20px;
 
-    margin-bottom: 18px;
-
+    margin-bottom:
+        15px;
 }
 
 
-.action-card h3 {
+.quick-card h3 {
 
-    margin: 0 0 7px;
+    margin:
+        0 0 6px;
 
-    font-size: 14px;
+    font-size:
+        13px;
 
-    font-weight: 750;
-
+    font-weight:
+        800;
 }
 
 
-.action-card p {
+.quick-card p {
 
-    margin: 0;
+    margin:
+        0;
 
-    color: #8b93a5;
+    color:
+        #8b93a5;
 
-    font-size: 11px;
+    font-size:
+        10px;
 
-    line-height: 1.55;
-
+    line-height:
+        1.55;
 }
 
 
-.arrow {
+.quick-arrow {
 
-    position: absolute;
+    position:
+        absolute;
 
-    right: 18px;
+    right:
+        16px;
 
-    top: 20px;
+    top:
+        17px;
 
-    color: #a2a8b7;
+    color:
+        #a4a9b8;
 
-    font-size: 17px;
-
-    transition: 0.2s ease;
-
+    transition:
+        0.2s ease;
 }
 
 
-.action-card:hover .arrow {
+.quick-card:hover
+.quick-arrow {
 
-    color: #5b5bf7;
+    color:
+        #5b5bf7;
 
-    transform: translateX(3px);
-
+    transform:
+        translateX(3px);
 }
 
 
 /* =========================================================
-   LIVE PROGRESS SECTION
+   LIVE MONITOR
 ========================================================= */
 
-.live-progress-section {
+.live-layout {
 
-    margin-top: 42px;
+    display:
+        grid;
 
-    background: white;
+    grid-template-columns:
+        310px 1fr;
 
-    border: 1px solid #e7eaf2;
-
-    border-radius: 24px;
-
-    padding: 28px;
-
-    box-shadow:
-        0 10px 30px rgba(31,41,55,0.05);
-
+    gap:
+        18px;
 }
 
 
-/* HEADER */
+/* =========================================================
+   QUIZ LIST
+========================================================= */
 
-.live-header {
+.quiz-selector {
 
-    display: flex;
+    background:
+        white;
 
-    justify-content: space-between;
+    border:
+        1px solid #e8ebf2;
 
-    align-items: center;
+    border-radius:
+        20px;
 
-    gap: 20px;
+    padding:
+        15px;
 
-    margin-bottom: 24px;
+    max-height:
+        440px;
 
+    overflow-y:
+        auto;
 }
 
 
-.live-title-area {
+.quiz-selector-title {
 
-    display: flex;
+    padding:
+        5px 8px 12px;
 
-    align-items: center;
+    font-size:
+        11px;
 
-    gap: 14px;
+    color:
+        #9299aa;
 
+    font-weight:
+        700;
+
+    text-transform:
+        uppercase;
+
+    letter-spacing:
+        .5px;
 }
 
 
-.live-icon {
+.quiz-select-item {
 
-    width: 50px;
+    width:
+        100%;
 
-    height: 50px;
+    border:
+        1px solid transparent;
 
-    border-radius: 15px;
+    background:
+        transparent;
 
-    display: flex;
+    text-align:
+        left;
 
-    align-items: center;
+    padding:
+        13px;
 
-    justify-content: center;
+    border-radius:
+        14px;
 
-    background: #eef2ff;
+    cursor:
+        pointer;
 
-    font-size: 23px;
+    transition:
+        0.2s ease;
 
+    margin-bottom:
+        5px;
 }
 
 
-.live-title-area h2 {
+.quiz-select-item:hover {
 
-    margin: 0 0 5px;
-
-    font-size: 18px;
-
-    font-weight: 800;
-
+    background:
+        #f7f7ff;
 }
 
 
-.live-title-area p {
+.quiz-select-item.active {
 
-    margin: 0;
+    background:
+        #f0efff;
 
-    color: #8b93a5;
-
-    font-size: 12px;
-
+    border-color:
+        #ddd9ff;
 }
 
 
-/* LIVE BADGE */
+.quiz-select-item strong {
 
-.live-badge {
+    display:
+        block;
 
-    display: inline-flex;
+    color:
+        #20263a;
 
-    align-items: center;
+    font-size:
+        12px;
 
-    gap: 7px;
+    margin-bottom:
+        5px;
+}
 
-    padding: 7px 12px;
 
-    border-radius: 20px;
+.quiz-select-meta {
 
-    background: #ecfdf5;
+    display:
+        flex;
 
-    color: #15803d;
+    justify-content:
+        space-between;
 
-    font-size: 11px;
+    color:
+        #969dae;
 
-    font-weight: 700;
-
+    font-size:
+        9px;
 }
 
 
 .live-dot {
 
-    width: 8px;
+    display:
+        inline-block;
 
-    height: 8px;
+    width:
+        7px;
 
-    border-radius: 50%;
+    height:
+        7px;
 
-    background: #22c55e;
+    margin-right:
+        4px;
 
-    box-shadow:
-        0 0 0 4px rgba(34,197,94,0.12);
-
-    animation: livePulse 1.5s infinite;
-
-}
-
-
-@keyframes livePulse {
-
-    0% {
-        opacity: 1;
-        transform: scale(1);
-    }
-
-    50% {
-        opacity: 0.5;
-        transform: scale(0.75);
-    }
-
-    100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-
-}
-
-
-/* SELECTOR */
-
-.quiz-selector {
-
-    display: grid;
-
-    grid-template-columns:
-        1fr auto;
-
-    gap: 12px;
-
-    margin-bottom: 25px;
-
-}
-
-
-.quiz-selector select {
-
-    width: 100%;
-
-    height: 48px;
-
-    padding: 0 15px;
-
-    border-radius: 12px;
-
-    border: 1px solid #dfe3eb;
-
-    background: #fafbfe;
-
-    color: #273044;
-
-    font-family: inherit;
-
-    font-size: 13px;
-
-    font-weight: 600;
-
-    outline: none;
-
-}
-
-
-.quiz-selector select:focus {
-
-    border-color: #6366f1;
-
-    box-shadow:
-        0 0 0 3px rgba(99,102,241,0.10);
-
-}
-
-
-.load-progress-btn {
-
-    height: 48px;
-
-    padding: 0 20px;
-
-    border: 0;
-
-    border-radius: 12px;
+    border-radius:
+        50%;
 
     background:
-        linear-gradient(
-            135deg,
-            #4f46e5,
-            #7c3aed
-        );
-
-    color: white;
-
-    font-family: inherit;
-
-    font-size: 12px;
-
-    font-weight: 700;
-
-    cursor: pointer;
-
-    transition: 0.2s ease;
-
-}
-
-
-.load-progress-btn:hover {
-
-    transform: translateY(-2px);
+        #22c55e;
 
     box-shadow:
-        0 8px 20px rgba(79,70,229,0.22);
-
+        0 0 0 4px
+        rgba(34,197,94,0.10);
 }
 
 
-/* EMPTY STATE */
+/* =========================================================
+   LIVE PANEL
+========================================================= */
 
-.live-empty {
+.live-panel {
 
-    text-align: center;
+    position:
+        relative;
 
-    padding: 35px 20px;
+    background:
+        white;
 
-    border-radius: 16px;
+    border:
+        1px solid #e8ebf2;
 
-    background: #f8f9fc;
+    border-radius:
+        20px;
 
-    border: 1px dashed #dfe3eb;
+    padding:
+        25px;
 
+    min-height:
+        420px;
 }
 
 
-.live-empty-icon {
+.live-panel-header {
 
-    font-size: 35px;
+    display:
+        flex;
 
-    margin-bottom: 10px;
+    align-items:
+        flex-start;
 
+    justify-content:
+        space-between;
+
+    gap:
+        15px;
 }
 
 
-.live-empty h3 {
+.live-title {
 
-    margin: 0 0 6px;
+    margin:
+        0 0 6px;
 
-    font-size: 15px;
+    font-size:
+        18px;
 
+    font-weight:
+        800;
 }
 
 
-.live-empty p {
+.live-id {
 
-    margin: 0;
+    color:
+        #9299aa;
 
-    color: #9299aa;
-
-    font-size: 12px;
-
+    font-size:
+        10px;
 }
 
 
-/* DASHBOARD */
+.live-badge {
 
-.live-dashboard {
+    display:
+        inline-flex;
 
-    display: none;
+    align-items:
+        center;
 
+    gap:
+        6px;
+
+    padding:
+        7px 10px;
+
+    border-radius:
+        20px;
+
+    background:
+        #ecfdf5;
+
+    color:
+        #15803d;
+
+    font-size:
+        10px;
+
+    font-weight:
+        800;
 }
 
 
-/* QUIZ INFO */
+/* =========================================================
+   BIG PROGRESS
+========================================================= */
 
-.live-quiz-info {
+.progress-summary {
 
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    margin-bottom: 20px;
-
-}
-
-
-.live-quiz-name {
-
-    margin: 0;
-
-    font-size: 15px;
-
-    font-weight: 800;
-
-}
-
-
-.last-updated {
-
-    font-size: 10px;
-
-    color: #9aa1b1;
-
-}
-
-
-/* METRICS */
-
-.live-metrics {
-
-    display: grid;
+    display:
+        grid;
 
     grid-template-columns:
-        repeat(3,1fr);
+        1fr 145px;
 
-    gap: 14px;
+    align-items:
+        center;
 
-    margin-bottom: 25px;
+    gap:
+        25px;
 
-}
-
-
-.live-metric {
-
-    padding: 18px;
-
-    border-radius: 16px;
-
-    background: #f8f9fc;
-
-    border: 1px solid #edf0f5;
-
-}
-
-
-.metric-label {
-
-    display: block;
-
-    color: #8b93a5;
-
-    font-size: 10px;
-
-    font-weight: 600;
-
-    margin-bottom: 7px;
-
-}
-
-
-.metric-value {
-
-    font-size: 25px;
-
-    font-weight: 800;
-
-    color: #1d2538;
-
-}
-
-
-.metric-value small {
-
-    font-size: 12px;
-
-    color: #9299aa;
-
-    font-weight: 600;
-
-}
-
-
-/* OVERALL PROGRESS */
-
-.overall-progress-card {
-
-    padding: 20px;
-
-    background: #fafbff;
-
-    border: 1px solid #e9ecf4;
-
-    border-radius: 17px;
-
-    margin-bottom: 25px;
-
-}
-
-
-.overall-progress-top {
-
-    display: flex;
-
-    justify-content: space-between;
-
-    align-items: center;
-
-    margin-bottom: 11px;
-
-}
-
-
-.overall-progress-top strong {
-
-    font-size: 13px;
-
-}
-
-
-.overall-percentage {
-
-    font-size: 15px;
-
-    font-weight: 800;
-
-    color: #5b5bf7;
-
+    margin:
+        30px 0;
 }
 
 
 .progress-track {
 
-    width: 100%;
+    width:
+        100%;
 
-    height: 12px;
+    height:
+        13px;
 
-    background: #e7eaf2;
+    overflow:
+        hidden;
 
-    border-radius: 20px;
+    background:
+        #edf0f7;
 
-    overflow: hidden;
-
+    border-radius:
+        20px;
 }
 
 
 .progress-fill {
 
-    height: 100%;
+    height:
+        100%;
 
-    width: 0%;
+    width:
+        0%;
 
-    border-radius: 20px;
+    border-radius:
+        20px;
 
     background:
         linear-gradient(
@@ -1123,129 +1055,487 @@ a {
         );
 
     transition:
-        width 0.5s ease;
-
+        width .5s ease;
 }
 
 
-/* QUESTION PROGRESS */
+.progress-label {
 
-.question-progress-title {
+    margin-bottom:
+        9px;
 
-    margin: 0 0 14px;
+    display:
+        flex;
 
-    font-size: 14px;
+    justify-content:
+        space-between;
 
-    font-weight: 800;
+    font-size:
+        11px;
 
+    color:
+        #737b8f;
+
+    font-weight:
+        600;
 }
 
 
-.question-list {
+.progress-number {
 
-    display: flex;
-
-    flex-direction: column;
-
-    gap: 11px;
-
+    text-align:
+        center;
 }
 
 
-.question-progress-item {
+.progress-number strong {
 
-    padding: 15px;
+    display:
+        block;
 
-    border: 1px solid #edf0f5;
+    font-size:
+        35px;
 
-    border-radius: 14px;
+    font-weight:
+        800;
 
-    background: white;
-
+    color:
+        #4f46e5;
 }
 
 
-.question-top {
+.progress-number span {
 
-    display: flex;
+    color:
+        #949bab;
 
-    justify-content: space-between;
+    font-size:
+        10px;
+}
 
-    gap: 15px;
 
-    margin-bottom: 9px;
+/* =========================================================
+   LIVE METRICS
+========================================================= */
 
+.live-metrics {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(3,1fr);
+
+    gap:
+        12px;
+}
+
+
+.live-metric {
+
+    padding:
+        15px;
+
+    background:
+        #f8f9fc;
+
+    border:
+        1px solid #edf0f5;
+
+    border-radius:
+        14px;
+}
+
+
+.live-metric span {
+
+    display:
+        block;
+
+    color:
+        #9299aa;
+
+    font-size:
+        9px;
+
+    margin-bottom:
+        6px;
+}
+
+
+.live-metric strong {
+
+    font-size:
+        18px;
+
+    font-weight:
+        800;
+}
+
+
+/* =========================================================
+   QUESTION PROGRESS
+========================================================= */
+
+.question-progress {
+
+    margin-top:
+        25px;
+}
+
+
+.question-progress h4 {
+
+    margin:
+        0 0 12px;
+
+    font-size:
+        12px;
+
+    font-weight:
+        800;
+}
+
+
+.question-row {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        35px 1fr 45px;
+
+    gap:
+        10px;
+
+    align-items:
+        center;
+
+    margin-bottom:
+        9px;
 }
 
 
 .question-number {
 
-    font-size: 11px;
+    color:
+        #9299aa;
 
-    font-weight: 800;
-
-    color: #5b5bf7;
-
+    font-size:
+        9px;
 }
 
 
-.question-text {
+.question-mini-track {
 
-    flex: 1;
-
-    font-size: 11px;
-
-    color: #555e70;
-
-    line-height: 1.5;
-
-}
-
-
-.question-percent {
-
-    font-size: 11px;
-
-    font-weight: 800;
-
-    color: #20283b;
-
-}
-
-
-.question-track {
-
-    width: 100%;
-
-    height: 7px;
-
-    background: #eef0f5;
-
-    border-radius: 20px;
-
-    overflow: hidden;
-
-}
-
-
-.question-fill {
-
-    height: 100%;
-
-    width: 0%;
+    height:
+        7px;
 
     background:
-        linear-gradient(
-            90deg,
-            #6366f1,
-            #8b5cf6
-        );
+        #edf0f5;
 
-    border-radius: 20px;
+    border-radius:
+        10px;
+
+    overflow:
+        hidden;
+}
+
+
+.question-mini-fill {
+
+    height:
+        100%;
+
+    width:
+        0%;
+
+    background:
+        #6366f1;
+
+    border-radius:
+        10px;
 
     transition:
-        width 0.5s ease;
+        width .4s ease;
+}
 
+
+.question-count {
+
+    text-align:
+        right;
+
+    color:
+        #737b8f;
+
+    font-size:
+        9px;
+}
+
+
+/* =========================================================
+   LIVE ACTION
+========================================================= */
+
+.live-action {
+
+    margin-top:
+        20px;
+
+    display:
+        flex;
+
+    justify-content:
+        flex-end;
+}
+
+
+.open-live-btn {
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    gap:
+        8px;
+
+    padding:
+        11px 16px;
+
+    border-radius:
+        11px;
+
+    background:
+        #4f46e5;
+
+    color:
+        white;
+
+    font-size:
+        11px;
+
+    font-weight:
+        800;
+
+    transition:
+        .2s ease;
+}
+
+
+.open-live-btn:hover {
+
+    background:
+        #4338ca;
+
+    transform:
+        translateY(-1px);
+}
+
+
+/* =========================================================
+   EMPTY LIVE
+========================================================= */
+
+.live-empty {
+
+    min-height:
+        360px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    text-align:
+        center;
+}
+
+
+.live-empty-icon {
+
+    width:
+        65px;
+
+    height:
+        65px;
+
+    margin:
+        0 auto 15px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    border-radius:
+        18px;
+
+    background:
+        #f1f3ff;
+
+    font-size:
+        28px;
+}
+
+
+.live-empty h3 {
+
+    margin:
+        0 0 6px;
+
+    font-size:
+        15px;
+}
+
+
+.live-empty p {
+
+    margin:
+        0;
+
+    color:
+        #9299aa;
+
+    font-size:
+        11px;
+}
+
+
+/* =========================================================
+   RECENT QUIZZES
+========================================================= */
+
+.quiz-table {
+
+    overflow:
+        hidden;
+
+    background:
+        white;
+
+    border:
+        1px solid #e8ebf2;
+
+    border-radius:
+        20px;
+}
+
+
+.quiz-table-header,
+.quiz-row {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        2fr 1fr 1fr 1fr 120px;
+
+    gap:
+        15px;
+
+    align-items:
+        center;
+
+    padding:
+        15px 20px;
+}
+
+
+.quiz-table-header {
+
+    background:
+        #fafbfc;
+
+    color:
+        #9299aa;
+
+    font-size:
+        9px;
+
+    font-weight:
+        800;
+
+    text-transform:
+        uppercase;
+
+    letter-spacing:
+        .4px;
+}
+
+
+.quiz-row {
+
+    border-top:
+        1px solid #f0f1f5;
+
+    font-size:
+        10px;
+}
+
+
+.quiz-row strong {
+
+    font-size:
+        11px;
+
+    color:
+        #20263a;
+}
+
+
+.quiz-row span {
+
+    color:
+        #7e8698;
+}
+
+
+.quiz-status {
+
+    display:
+        inline-flex;
+
+    width:
+        fit-content;
+
+    padding:
+        5px 8px;
+
+    border-radius:
+        20px;
+
+    background:
+        #ecfdf5;
+
+    color:
+        #15803d;
+
+    font-size:
+        8px;
+
+    font-weight:
+        800;
+}
+
+
+.quiz-view {
+
+    color:
+        #4f46e5;
+
+    font-weight:
+        800;
 }
 
 
@@ -1253,117 +1543,139 @@ a {
    AI STATUS
 ========================================================= */
 
-.info-box {
+.ai-box {
 
-    margin-top: 30px;
+    margin-top:
+        25px;
 
-    padding: 22px 24px;
+    display:
+        flex;
 
-    background: white;
+    align-items:
+        center;
 
-    border: 1px solid #e8ebf2;
+    gap:
+        15px;
 
-    border-radius: 18px;
+    padding:
+        18px 20px;
 
-    display: flex;
+    background:
+        white;
 
-    align-items: center;
+    border:
+        1px solid #e8ebf2;
 
-    gap: 18px;
-
-    box-shadow:
-        0 8px 25px rgba(31,41,55,0.035);
-
+    border-radius:
+        18px;
 }
 
 
-.ai-status-icon {
+.ai-icon {
 
-    flex-shrink: 0;
+    width:
+        45px;
 
-    width: 48px;
+    height:
+        45px;
 
-    height: 48px;
+    flex-shrink:
+        0;
 
-    display: flex;
+    display:
+        flex;
 
-    align-items: center;
+    align-items:
+        center;
 
-    justify-content: center;
+    justify-content:
+        center;
 
-    border-radius: 14px;
+    border-radius:
+        13px;
 
-    background: #ecfdf5;
+    background:
+        #ecfdf5;
 
-    font-size: 22px;
-
+    font-size:
+        20px;
 }
 
 
-.ai-status-content {
+.ai-content {
 
-    flex: 1;
-
+    flex:
+        1;
 }
 
 
-.ai-status-content h2 {
+.ai-content h3 {
 
-    margin: 0 0 5px;
+    margin:
+        0 0 4px;
 
-    font-size: 14px;
-
-    font-weight: 750;
-
+    font-size:
+        12px;
 }
 
 
-.ai-status-content p {
+.ai-content p {
 
-    margin: 0;
+    margin:
+        0;
 
-    color: #8991a3;
+    color:
+        #9299aa;
 
-    font-size: 12px;
-
-    line-height: 1.6;
-
+    font-size:
+        10px;
 }
 
 
-.status-badge {
+.ai-online {
 
-    display: inline-flex;
+    display:
+        flex;
 
-    align-items: center;
+    align-items:
+        center;
 
-    gap: 6px;
+    gap:
+        6px;
 
-    padding: 6px 10px;
+    padding:
+        6px 9px;
 
-    background: #ecfdf5;
+    border-radius:
+        20px;
 
-    color: #15803d;
+    background:
+        #ecfdf5;
 
-    border-radius: 20px;
+    color:
+        #15803d;
 
-    font-size: 11px;
+    font-size:
+        9px;
 
-    font-weight: 700;
-
+    font-weight:
+        800;
 }
 
 
-.status-dot {
+.ai-dot {
 
-    width: 7px;
+    width:
+        6px;
 
-    height: 7px;
+    height:
+        6px;
 
-    border-radius: 50%;
+    border-radius:
+        50%;
 
-    background: #22c55e;
-
+    background:
+        #22c55e;
 }
 
 
@@ -1371,141 +1683,138 @@ a {
    MOBILE
 ========================================================= */
 
-@media (max-width: 900px) {
+@media(max-width:1000px) {
 
-    .action-grid {
+    .quick-actions {
 
         grid-template-columns:
             repeat(2,1fr);
+    }
 
+    .live-layout {
+
+        grid-template-columns:
+            1fr;
+    }
+
+    .quiz-selector {
+
+        max-height:
+            250px;
     }
 
 }
 
 
-@media (max-width: 700px) {
+@media(max-width:700px) {
 
     .top-navbar {
 
-        padding: 0 4%;
-
+        padding:
+            0 4%;
     }
 
     .brand-text span,
     .teacher-pill {
 
-        display: none;
-
+        display:
+            none;
     }
 
     .dashboard-container {
 
-        width: 92%;
+        width:
+            92%;
 
-        padding-top: 25px;
-
+        padding-top:
+            22px;
     }
 
-    .welcome-box {
+    .hero {
 
-        padding: 28px 24px;
+        padding:
+            27px 23px;
 
-        border-radius: 20px;
-
+        border-radius:
+            21px;
     }
 
-    .stats {
+    .stats-grid {
 
-        grid-template-columns: 1fr;
-
+        grid-template-columns:
+            1fr;
     }
 
-    .action-grid {
+    .quick-actions {
 
         grid-template-columns:
             1fr 1fr;
-
-        gap: 12px;
-
     }
 
-    .live-progress-section {
+    .progress-summary {
 
-        padding: 20px;
-
+        grid-template-columns:
+            1fr;
     }
 
-    .live-header {
+    .progress-number {
 
-        align-items: flex-start;
-
-        flex-direction: column;
-
-    }
-
-    .quiz-selector {
-
-        grid-template-columns: 1fr;
-
+        text-align:
+            left;
     }
 
     .live-metrics {
 
-        grid-template-columns: 1fr;
-
+        grid-template-columns:
+            1fr 1fr 1fr;
     }
 
-    .info-box {
+    .quiz-table {
 
-        align-items: flex-start;
-
+        overflow-x:
+            auto;
     }
 
-    .status-badge {
+    .quiz-table-header,
+    .quiz-row {
 
-        display: none;
+        min-width:
+            680px;
+    }
 
+    .ai-box {
+
+        align-items:
+            flex-start;
+    }
+
+    .ai-online {
+
+        display:
+            none;
     }
 
 }
 
 
-@media (max-width: 430px) {
+@media(max-width:430px) {
 
-    .brand-text h2 {
+    .quick-actions {
 
-        font-size: 14px;
-
+        grid-template-columns:
+            1fr;
     }
 
-    .action-grid {
+    .live-metrics {
 
-        grid-template-columns: 1fr;
-
+        grid-template-columns:
+            1fr;
     }
 
-    .welcome-box h1 {
+    .navbar-actions {
 
-        font-size: 25px;
-
-    }
-
-    .welcome-box p {
-
-        font-size: 13px;
-
-    }
-
-    .live-progress-section {
-
-        padding: 16px;
-
-    }
-
-    .live-title-area h2 {
-
-        font-size: 16px;
-
+        gap:
+            4px;
     }
 
 }
@@ -1521,9 +1830,9 @@ a {
 <div class="dashboard-page">
 
 
-<!-- =====================================================
+<!-- =======================================================
      NAVBAR
-===================================================== -->
+======================================================= -->
 
 <nav class="top-navbar">
 
@@ -1561,11 +1870,11 @@ a {
         </div>
 
 
-        <a href="/logout"
-           class="logout-btn">
-
+        <a
+            href="/logout"
+            class="logout-btn"
+        >
             🚪 Logout
-
         </a>
 
     </div>
@@ -1574,41 +1883,45 @@ a {
 
 
 
-<!-- =====================================================
+<!-- =======================================================
      MAIN
-===================================================== -->
+======================================================= -->
 
 <main class="dashboard-container">
 
 
-<!-- =====================================================
+<!-- =======================================================
      HERO
-===================================================== -->
+======================================================= -->
 
-<section class="welcome-box">
+<section class="hero">
 
-    <div class="hero-label">
-        ✨ Teacher Workspace
+    <div class="hero-content">
+
+        <div class="hero-badge">
+            ✨ Teacher Workspace
+        </div>
+
+        <h1>
+            Welcome back, {{ name }} 👋
+        </h1>
+
+        <p>
+            Create smarter assessments, monitor live student activity
+            and understand performance — all from one place.
+        </p>
+
     </div>
-
-    <h1>
-        Welcome back, {{ name }} 👋
-    </h1>
-
-    <p>
-        Create intelligent assessments, share quizzes instantly
-        and monitor student performance from one powerful dashboard.
-    </p>
 
 </section>
 
 
 
-<!-- =====================================================
-     PLATFORM HIGHLIGHTS
-===================================================== -->
+<!-- =======================================================
+     STATISTICS
+======================================================= -->
 
-<section class="stats">
+<section class="stats-grid">
 
 
     <div class="stat-card">
@@ -1617,49 +1930,59 @@ a {
             📚
         </div>
 
-        <h3>
-            Smart Quiz Management
-        </h3>
+        <div class="stat-info">
 
-        <p>
-            Create, organize and manage AI-powered assessments.
-        </p>
+            <span>
+                Total Quizzes
+            </span>
+
+            <strong>
+                {{ total_quizzes }}
+            </strong>
+
+        </div>
 
     </div>
-
 
 
     <div class="stat-card">
 
         <div class="stat-icon">
-            📱
+            👥
         </div>
 
-        <h3>
-            Instant QR Sharing
-        </h3>
+        <div class="stat-info">
 
-        <p>
-            Let students access quizzes instantly using QR codes.
-        </p>
+            <span>
+                Total Participants
+            </span>
+
+            <strong>
+                {{ total_participants }}
+            </strong>
+
+        </div>
 
     </div>
-
 
 
     <div class="stat-card">
 
         <div class="stat-icon">
-            📊
+            📈
         </div>
 
-        <h3>
-            Student Analytics
-        </h3>
+        <div class="stat-info">
 
-        <p>
-            Review scores and monitor student performance easily.
-        </p>
+            <span>
+                Average Score
+            </span>
+
+            <strong>
+                {{ average_score }}%
+            </strong>
+
+        </div>
 
     </div>
 
@@ -1668,9 +1991,9 @@ a {
 
 
 
-<!-- =====================================================
+<!-- =======================================================
      QUICK ACTIONS
-===================================================== -->
+======================================================= -->
 
 <div class="section-header">
 
@@ -1681,7 +2004,7 @@ a {
         </h2>
 
         <p class="section-subtitle">
-            Everything you need to manage your assessments.
+            Your most important tools, one click away.
         </p>
 
     </div>
@@ -1689,18 +2012,19 @@ a {
 </div>
 
 
+<section class="quick-actions">
 
-<section class="action-grid">
 
+    <a
+        href="/create_quiz"
+        class="quick-card"
+    >
 
-    <a href="/create_quiz"
-       class="action-card">
-
-        <span class="arrow">
+        <span class="quick-arrow">
             →
         </span>
 
-        <div class="action-icon">
+        <div class="quick-icon">
             🤖
         </div>
 
@@ -1715,38 +2039,40 @@ a {
     </a>
 
 
+    <a
+        href="#live-monitor"
+        class="quick-card"
+    >
 
-    <a href="/manage_quizzes"
-       class="action-card">
-
-        <span class="arrow">
+        <span class="quick-arrow">
             →
         </span>
 
-        <div class="action-icon">
-            📚
+        <div class="quick-icon">
+            🔴
         </div>
 
         <h3>
-            Manage Quizzes
+            Live Progress
         </h3>
 
         <p>
-            View and manage your assessments.
+            Monitor students answering questions live.
         </p>
 
     </a>
 
 
+    <a
+        href="/generate_qr_page"
+        class="quick-card"
+    >
 
-    <a href="/generate_qr_page"
-       class="action-card">
-
-        <span class="arrow">
+        <span class="quick-arrow">
             →
         </span>
 
-        <div class="action-icon">
+        <div class="quick-icon">
             📱
         </div>
 
@@ -1755,21 +2081,22 @@ a {
         </h3>
 
         <p>
-            Share quizzes with students instantly.
+            Share your quiz instantly with students.
         </p>
 
     </a>
 
 
+    <a
+        href="/view_results"
+        class="quick-card"
+    >
 
-    <a href="/view_results"
-       class="action-card">
-
-        <span class="arrow">
+        <span class="quick-arrow">
             →
         </span>
 
-        <div class="action-icon">
+        <div class="quick-icon">
             📊
         </div>
 
@@ -1788,129 +2115,180 @@ a {
 
 
 
-<!-- =====================================================
-     LIVE PROGRESS
-===================================================== -->
+<!-- =======================================================
+     LIVE MONITOR
+======================================================= -->
 
-<section class="live-progress-section">
+<div
+    class="section-header"
+    id="live-monitor"
+>
 
+    <div>
 
-    <!-- HEADER -->
+        <h2 class="section-title">
+            🔴 Live Quiz Monitoring
+        </h2>
 
-    <div class="live-header">
-
-
-        <div class="live-title-area">
-
-            <div class="live-icon">
-                📡
-            </div>
-
-            <div>
-
-                <h2>
-                    Live Quiz Progress
-                </h2>
-
-                <p>
-                    Monitor student responses in real time.
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <div class="live-badge">
-
-            <span class="live-dot"></span>
-
-            LIVE
-
-        </div>
-
-
-    </div>
-
-
-
-    <!-- QUIZ SELECTOR -->
-
-    <div class="quiz-selector">
-
-
-        <select id="quizSelector">
-
-            <option value="">
-                Select a quiz to monitor...
-            </option>
-
-        </select>
-
-
-        <button
-            type="button"
-            class="load-progress-btn"
-            onclick="loadSelectedQuiz()"
-        >
-
-            📡 View Live Progress
-
-        </button>
-
-
-    </div>
-
-
-
-    <!-- EMPTY STATE -->
-
-    <div
-        class="live-empty"
-        id="liveEmpty"
-    >
-
-        <div class="live-empty-icon">
-            📊
-        </div>
-
-        <h3>
-            Select a quiz
-        </h3>
-
-        <p>
-            Choose any of your quizzes above to view its live progress.
+        <p class="section-subtitle">
+            Select any active quiz to monitor student progress in real time.
         </p>
 
     </div>
 
+</div>
 
 
-    <!-- LIVE DASHBOARD -->
+<section class="live-layout">
+
+
+    <!-- ===================================================
+         QUIZ SELECTOR
+    ==================================================== -->
+
+    <div class="quiz-selector">
+
+        <div class="quiz-selector-title">
+            Available Quizzes
+        </div>
+
+
+        {% if quizzes %}
+
+            {% for quiz in quizzes %}
+
+            <button
+                type="button"
+                class="quiz-select-item {% if loop.first %}active{% endif %}"
+                data-quiz-id="{{ quiz.quiz_id }}"
+                onclick="selectQuiz({{ quiz.quiz_id }}, this)"
+            >
+
+                <strong>
+                    {{ quiz.title }}
+                </strong>
+
+                <div class="quiz-select-meta">
+
+                    <span>
+                        #{{ quiz.quiz_id }}
+                    </span>
+
+                    <span>
+                        {{ quiz.participants }} participants
+                    </span>
+
+                </div>
+
+            </button>
+
+            {% endfor %}
+
+        {% else %}
+
+            <div style="
+                padding:25px 10px;
+                text-align:center;
+                color:#9299aa;
+                font-size:10px;
+            ">
+
+                No quizzes created yet.
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+
+    <!-- ===================================================
+         LIVE PANEL
+    ==================================================== -->
 
     <div
-        class="live-dashboard"
-        id="liveDashboard"
+        class="live-panel"
+        id="livePanel"
     >
 
+        {% if quizzes %}
 
-        <!-- QUIZ NAME -->
+        <div class="live-panel-header">
 
-        <div class="live-quiz-info">
+            <div>
 
-            <h3
-                class="live-quiz-name"
-                id="liveQuizName"
-            >
-                —
-            </h3>
+                <h2
+                    class="live-title"
+                    id="liveTitle"
+                >
+                    {{ quizzes[0].title }}
+                </h2>
 
-            <span
-                class="last-updated"
-                id="lastUpdated"
-            >
-                Updating...
-            </span>
+                <div
+                    class="live-id"
+                    id="liveId"
+                >
+                    Quiz #{{ quizzes[0].quiz_id }}
+                </div>
+
+            </div>
+
+
+            <div class="live-badge">
+
+                <span class="live-dot"></span>
+
+                LIVE MONITOR
+
+            </div>
+
+        </div>
+
+
+
+        <!-- PROGRESS -->
+
+        <div class="progress-summary">
+
+            <div>
+
+                <div class="progress-label">
+
+                    <span>
+                        Overall Answer Progress
+                    </span>
+
+                    <span id="progressText">
+                        0%
+                    </span>
+
+                </div>
+
+
+                <div class="progress-track">
+
+                    <div
+                        class="progress-fill"
+                        id="overallProgress"
+                    ></div>
+
+                </div>
+
+            </div>
+
+
+            <div class="progress-number">
+
+                <strong id="progressNumber">
+                    0%
+                </strong>
+
+                <span>
+                    overall progress
+                </span>
+
+            </div>
 
         </div>
 
@@ -1923,86 +2301,39 @@ a {
 
             <div class="live-metric">
 
-                <span class="metric-label">
+                <span>
                     PARTICIPANTS
                 </span>
 
-                <div
-                    class="metric-value"
-                    id="totalStudents"
-                >
+                <strong id="studentCount">
                     0
-                </div>
-
-            </div>
-
-
-
-            <div class="live-metric">
-
-                <span class="metric-label">
-                    QUESTIONS ANSWERED
-                </span>
-
-                <div
-                    class="metric-value"
-                    id="answeredQuestions"
-                >
-                    0
-                </div>
-
-            </div>
-
-
-
-            <div class="live-metric">
-
-                <span class="metric-label">
-                    RESPONSES
-                </span>
-
-                <div
-                    class="metric-value"
-                    id="totalResponses"
-                >
-                    0
-                </div>
-
-            </div>
-
-
-        </div>
-
-
-
-        <!-- OVERALL PROGRESS -->
-
-        <div class="overall-progress-card">
-
-
-            <div class="overall-progress-top">
-
-                <strong>
-                    Overall Quiz Progress
                 </strong>
 
-                <span
-                    class="overall-percentage"
-                    id="overallPercentage"
-                >
-                    0%
+            </div>
+
+
+            <div class="live-metric">
+
+                <span>
+                    QUESTIONS
                 </span>
+
+                <strong id="questionCount">
+                    0
+                </strong>
 
             </div>
 
 
-            <div class="progress-track">
+            <div class="live-metric">
 
-                <div
-                    class="progress-fill"
-                    id="overallProgress"
-                >
-                </div>
+                <span>
+                    ANSWER EVENTS
+                </span>
+
+                <strong id="answerEvents">
+                    0
+                </strong>
 
             </div>
 
@@ -2013,52 +2344,228 @@ a {
 
         <!-- QUESTION PROGRESS -->
 
-        <h3 class="question-progress-title">
-            Question-wise Progress
-        </h3>
+        <div class="question-progress">
+
+            <h4>
+                Question-wise Progress
+            </h4>
 
 
-        <div
-            class="question-list"
-            id="questionList"
-        >
+            <div id="questionProgressContainer">
+
+                <div style="
+                    color:#9299aa;
+                    font-size:10px;
+                ">
+                    Loading live data...
+                </div>
+
+            </div>
 
         </div>
 
 
-    </div>
 
+        <!-- ACTION -->
+
+        <div class="live-action">
+
+            <a
+                id="openLiveBtn"
+                href="/quiz_progress/{{ quizzes[0].quiz_id }}"
+                class="open-live-btn"
+            >
+                Open Detailed Progress →
+            </a>
+
+        </div>
+
+
+        {% else %}
+
+
+        <div class="live-empty">
+
+            <div>
+
+                <div class="live-empty-icon">
+                    📊
+                </div>
+
+                <h3>
+                    No Quiz Available
+                </h3>
+
+                <p>
+                    Create your first quiz to start monitoring students.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        {% endif %}
+
+    </div>
 
 </section>
 
 
 
-<!-- =====================================================
-     AI STATUS
-===================================================== -->
+<!-- =======================================================
+     RECENT QUIZZES
+======================================================= -->
 
-<section class="info-box">
+<div class="section-header">
 
-    <div class="ai-status-icon">
-        🤖
-    </div>
+    <div>
 
-    <div class="ai-status-content">
-
-        <h2>
-            AI Assessment Engine
+        <h2 class="section-title">
+            Recent Quizzes
         </h2>
 
-        <p>
-            Your AI quiz generation engine is connected and ready
-            to generate intelligent assessments.
+        <p class="section-subtitle">
+            Quickly access your latest assessments.
         </p>
 
     </div>
 
-    <div class="status-badge">
+    <a
+        href="/manage_quizzes"
+        style="
+            color:#4f46e5;
+            font-size:10px;
+            font-weight:800;
+        "
+    >
+        View All →
+    </a>
 
-        <span class="status-dot"></span>
+</div>
+
+
+<section class="quiz-table">
+
+
+    <div class="quiz-table-header">
+
+        <span>
+            Quiz
+        </span>
+
+        <span>
+            Questions
+        </span>
+
+        <span>
+            Participants
+        </span>
+
+        <span>
+            Duration
+        </span>
+
+        <span>
+            Action
+        </span>
+
+    </div>
+
+
+    {% if quizzes %}
+
+        {% for quiz in quizzes %}
+
+        <div class="quiz-row">
+
+            <div>
+
+                <strong>
+                    {{ quiz.title }}
+                </strong>
+
+                <br>
+
+                <span>
+                    Quiz #{{ quiz.quiz_id }}
+                </span>
+
+            </div>
+
+
+            <span>
+                {{ quiz.total_questions }}
+            </span>
+
+
+            <span>
+                {{ quiz.participants }}
+            </span>
+
+
+            <span>
+                {{ quiz.duration_minutes }} min
+            </span>
+
+
+            <a
+                href="/quiz_generated/{{ quiz.quiz_id }}"
+                class="quiz-view"
+            >
+                Open →
+            </a>
+
+        </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div style="
+            padding:40px;
+            text-align:center;
+            color:#9299aa;
+            font-size:11px;
+        ">
+
+            No quizzes created yet.
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+
+
+<!-- =======================================================
+     AI STATUS
+======================================================= -->
+
+<section class="ai-box">
+
+    <div class="ai-icon">
+        🤖
+    </div>
+
+
+    <div class="ai-content">
+
+        <h3>
+            AI Assessment Engine
+        </h3>
+
+        <p>
+            Your AI engine is connected and ready to generate intelligent assessments.
+        </p>
+
+    </div>
+
+
+    <div class="ai-online">
+
+        <span class="ai-dot"></span>
 
         AI Online
 
@@ -2069,7 +2576,6 @@ a {
 
 </main>
 
-
 </div>
 
 
@@ -2077,170 +2583,91 @@ a {
 
 
 
+<!-- =======================================================
+     LIVE PROGRESS JAVASCRIPT
+======================================================= -->
+
 <script>
 
-/* =========================================================
-   LIVE QUIZ PROGRESS
-========================================================= */
-
-let selectedQuizId = null;
-
-let progressTimer = null;
-
-
-/* =========================================================
-   LOAD TEACHER QUIZZES
-========================================================= */
-
-async function loadQuizList() {
-
-    const selector =
-        document.getElementById("quizSelector");
-
-    try {
-
-        const response =
-            await fetch("/teacher_quizzes");
-
-        const data =
-            await response.json();
-
-        if (!data.success) {
-
-            throw new Error(
-                data.error || "Unable to load quizzes"
-            );
-
-        }
+let selectedQuizId =
+    {% if quizzes %}
+        {{ quizzes[0].quiz_id }}
+    {% else %}
+        null
+    {% endif %};
 
 
-        selector.innerHTML = `
-            <option value="">
-                Select a quiz to monitor...
-            </option>
-        `;
-
-
-        if (!data.quizzes.length) {
-
-            selector.innerHTML = `
-                <option value="">
-                    No quizzes available
-                </option>
-            `;
-
-            return;
-
-        }
-
-
-        data.quizzes.forEach(
-            quiz => {
-
-                const option =
-                    document.createElement("option");
-
-                option.value =
-                    quiz.quiz_id;
-
-                option.textContent =
-                    `#${quiz.quiz_id} — ${quiz.title}`;
-
-                selector.appendChild(option);
-
-            }
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "QUIZ LIST ERROR:",
-            error
-        );
-
-        selector.innerHTML = `
-            <option value="">
-                Unable to load quizzes
-            </option>
-        `;
-
-    }
-
-}
+let progressInterval = null;
 
 
 /* =========================================================
    SELECT QUIZ
 ========================================================= */
 
-function loadSelectedQuiz() {
+function selectQuiz(
+    quizId,
+    element
+) {
 
-    const selector =
-        document.getElementById("quizSelector");
-
-    const quizId =
-        selector.value;
+    selectedQuizId = quizId;
 
 
-    if (!quizId) {
+    document
+        .querySelectorAll(".quiz-select-item")
+        .forEach(item => {
 
-        alert(
-            "Please select a quiz first."
+            item.classList.remove(
+                "active"
+            );
+
+        });
+
+
+    element.classList.add(
+        "active"
+    );
+
+
+    document
+        .getElementById("liveId")
+        .textContent =
+        "Quiz #" + quizId;
+
+
+    document
+        .getElementById("openLiveBtn")
+        .href =
+        "/quiz_progress/" + quizId;
+
+
+    loadLiveProgress();
+
+
+    if (progressInterval) {
+
+        clearInterval(
+            progressInterval
         );
 
-        return;
-
     }
 
 
-    selectedQuizId =
-        quizId;
-
-
-    document.getElementById(
-        "liveEmpty"
-    ).style.display = "none";
-
-
-    document.getElementById(
-        "liveDashboard"
-    ).style.display = "block";
-
-
-    fetchLiveProgress();
-
-
-    if (progressTimer) {
-
-        clearInterval(progressTimer);
-
-    }
-
-
-    /*
-       Refresh every 5 seconds.
-    */
-
-    progressTimer =
+    progressInterval =
         setInterval(
-            fetchLiveProgress,
-            5000
+            loadLiveProgress,
+            3000
         );
-
 }
 
 
 /* =========================================================
-   FETCH LIVE DATA
+   LOAD LIVE PROGRESS
 ========================================================= */
 
-async function fetchLiveProgress() {
+async function loadLiveProgress() {
 
     if (!selectedQuizId) {
-
         return;
-
     }
 
 
@@ -2248,7 +2675,9 @@ async function fetchLiveProgress() {
 
         const response =
             await fetch(
-                `/quiz_progress/${selectedQuizId}`,
+                "/quiz_progress/" +
+                selectedQuizId,
+
                 {
                     cache: "no-store"
                 }
@@ -2266,19 +2695,138 @@ async function fetchLiveProgress() {
             );
 
             return;
-
         }
 
 
-        updateLiveDashboard(
-            data
-        );
+        /* TITLE */
+
+        document
+            .getElementById("liveTitle")
+            .textContent =
+            data.title;
 
 
-    } catch (error) {
+        /* PARTICIPANTS */
+
+        document
+            .getElementById("studentCount")
+            .textContent =
+            data.total_students;
+
+
+        /* QUESTIONS */
+
+        document
+            .getElementById("questionCount")
+            .textContent =
+            data.total_questions;
+
+
+        /* ANSWER EVENTS */
+
+        document
+            .getElementById("answerEvents")
+            .textContent =
+            data.total_answer_events;
+
+
+        /* OVERALL */
+
+        const progress =
+            Number(
+                data.overall_progress || 0
+            );
+
+
+        document
+            .getElementById("progressText")
+            .textContent =
+            progress + "%";
+
+
+        document
+            .getElementById("progressNumber")
+            .textContent =
+            progress + "%";
+
+
+        document
+            .getElementById("overallProgress")
+            .style.width =
+            progress + "%";
+
+
+        /* QUESTION PROGRESS */
+
+        const container =
+            document.getElementById(
+                "questionProgressContainer"
+            );
+
+
+        if (
+            !data.progress ||
+            data.progress.length === 0
+        ) {
+
+            container.innerHTML = `
+                <div style="
+                    color:#9299aa;
+                    font-size:10px;
+                    padding:10px 0;
+                ">
+                    No question responses yet.
+                </div>
+            `;
+
+            return;
+        }
+
+
+        container.innerHTML =
+            data.progress
+                .map(
+                    (question, index) => {
+
+                        return `
+
+                        <div class="question-row">
+
+                            <div class="question-number">
+                                Q${index + 1}
+                            </div>
+
+                            <div class="question-mini-track">
+
+                                <div
+                                    class="question-mini-fill"
+                                    style="
+                                        width:${question.percentage}%;
+                                    "
+                                ></div>
+
+                            </div>
+
+                            <div class="question-count">
+
+                                ${question.response_count}
+
+                            </div>
+
+                        </div>
+
+                        `;
+
+                    }
+                )
+                .join("");
+
+    }
+
+    catch(error) {
 
         console.error(
-            "LIVE PROGRESS ERROR:",
+            "Live progress error:",
             error
         );
 
@@ -2288,214 +2836,21 @@ async function fetchLiveProgress() {
 
 
 /* =========================================================
-   UPDATE DASHBOARD
+   START LIVE MONITOR
 ========================================================= */
 
-function updateLiveDashboard(data) {
+if (selectedQuizId) {
+
+    loadLiveProgress();
 
 
-    /* QUIZ NAME */
-
-    document.getElementById(
-        "liveQuizName"
-    ).textContent =
-        `#${data.quiz_id} — ${data.title}`;
-
-
-    /* PARTICIPANTS */
-
-    document.getElementById(
-        "totalStudents"
-    ).textContent =
-        data.total_students;
-
-
-    /* ANSWERED QUESTIONS */
-
-    document.getElementById(
-        "answeredQuestions"
-    ).textContent =
-        `${data.answered_questions}/${data.total_questions}`;
-
-
-    /* RESPONSES */
-
-    document.getElementById(
-        "totalResponses"
-    ).textContent =
-        data.total_answer_events;
-
-
-    /* OVERALL */
-
-    const percentage =
-        Number(
-            data.overall_progress || 0
+    progressInterval =
+        setInterval(
+            loadLiveProgress,
+            3000
         );
 
-
-    document.getElementById(
-        "overallPercentage"
-    ).textContent =
-        `${percentage}%`;
-
-
-    document.getElementById(
-        "overallProgress"
-    ).style.width =
-        `${percentage}%`;
-
-
-    /* LAST UPDATED */
-
-    const now =
-        new Date();
-
-
-    document.getElementById(
-        "lastUpdated"
-    ).textContent =
-        `Updated ${now.toLocaleTimeString()}`;
-
-
-    /* QUESTIONS */
-
-    const questionList =
-        document.getElementById(
-            "questionList"
-        );
-
-
-    questionList.innerHTML = "";
-
-
-    if (
-        !data.progress ||
-        data.progress.length === 0
-    ) {
-
-        questionList.innerHTML = `
-            <div class="live-empty">
-                <div class="live-empty-icon">
-                    📝
-                </div>
-
-                <h3>
-                    No questions found
-                </h3>
-
-                <p>
-                    This quiz does not contain any questions yet.
-                </p>
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    data.progress.forEach(
-        (item, index) => {
-
-
-            const percentage =
-                Number(
-                    item.percentage || 0
-                );
-
-
-            const question =
-                document.createElement(
-                    "div"
-                );
-
-
-            question.className =
-                "question-progress-item";
-
-
-            question.innerHTML = `
-
-                <div class="question-top">
-
-                    <span class="question-number">
-                        Q${index + 1}
-                    </span>
-
-                    <span class="question-text">
-                        ${escapeHtml(item.question)}
-                    </span>
-
-                    <span class="question-percent">
-                        ${item.response_count}
-                        responses
-                        •
-                        ${percentage}%
-                    </span>
-
-                </div>
-
-
-                <div class="question-track">
-
-                    <div
-                        class="question-fill"
-                        style="width:${percentage}%"
-                    >
-                    </div>
-
-                </div>
-
-            `;
-
-
-            questionList.appendChild(
-                question
-            );
-
-        }
-    );
-
 }
-
-
-/* =========================================================
-   ESCAPE HTML
-========================================================= */
-
-function escapeHtml(value) {
-
-    if (value === null ||
-        value === undefined) {
-
-        return "";
-
-    }
-
-
-    return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-
-}
-
-
-/* =========================================================
-   INITIALIZE
-========================================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function() {
-
-        loadQuizList();
-
-    }
-);
 
 </script>
 

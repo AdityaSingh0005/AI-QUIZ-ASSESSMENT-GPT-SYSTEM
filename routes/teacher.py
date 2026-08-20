@@ -110,6 +110,10 @@ def error_page(message, back_url="/create_quiz"):
 # TEACHER DASHBOARD
 # ============================================================
 
+# ============================================================
+# TEACHER DASHBOARD
+# ============================================================
+
 @teacher.route("/teacher_dashboard")
 def teacher_dashboard():
 
@@ -124,13 +128,89 @@ def teacher_dashboard():
 
     try:
 
+        teacher_id = session["teacher_id"]
+
         # ====================================================
-        # GET TEACHER'S QUIZZES
+        # TOTAL QUIZZES
+        # ====================================================
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total_quizzes
+
+            FROM quizzes
+
+            WHERE teacher_id=%s
+            """,
+            (teacher_id,)
+        )
+
+        total_quizzes = cursor.fetchone()
+
+        total_quizzes = int(
+            total_quizzes["total_quizzes"] or 0
+        )
+
+        # ====================================================
+        # TOTAL PARTICIPANTS
+        # ====================================================
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS total_participants
+
+            FROM quiz_attempts qa
+
+            INNER JOIN quizzes q
+                ON qa.quiz_id = q.quiz_id
+
+            WHERE q.teacher_id=%s
+            """,
+            (teacher_id,)
+        )
+
+        total_participants = cursor.fetchone()
+
+        total_participants = int(
+            total_participants["total_participants"] or 0
+        )
+
+        # ====================================================
+        # AVERAGE SCORE
         # ====================================================
 
         cursor.execute(
             """
             SELECT
+                AVG(r.percentage) AS average_score
+
+            FROM results r
+
+            INNER JOIN quizzes q
+                ON r.quiz_id = q.quiz_id
+
+            WHERE q.teacher_id=%s
+            """,
+            (teacher_id,)
+        )
+
+        average_score = cursor.fetchone()
+
+        average_score = round(
+            float(
+                average_score["average_score"] or 0
+            ),
+            1
+        )
+
+        # ====================================================
+        # RECENT QUIZZES
+        # ====================================================
+
+        cursor.execute(
+            """
+            SELECT
+
                 q.quiz_id,
                 q.title,
                 q.total_questions,
@@ -140,25 +220,20 @@ def teacher_dashboard():
                 q.available_until,
                 q.created_at,
 
-                COALESCE(
-                    COUNT(
-                        DISTINCT
-                        COALESCE(
-                            sa.attempt_id::text,
-                            sa.student_id::text
-                        )
-                    ),
-                    0
-                ) AS total_students
+                COUNT(
+                    DISTINCT
+                    qa.attempt_id
+                ) AS participants
 
             FROM quizzes q
 
-            LEFT JOIN student_answers sa
-                ON sa.quiz_id = q.quiz_id
+            LEFT JOIN quiz_attempts qa
+                ON qa.quiz_id = q.quiz_id
 
             WHERE q.teacher_id=%s
 
             GROUP BY
+
                 q.quiz_id,
                 q.title,
                 q.total_questions,
@@ -168,14 +243,48 @@ def teacher_dashboard():
                 q.available_until,
                 q.created_at
 
-            ORDER BY q.quiz_id DESC
+            ORDER BY q.created_at DESC
+
+            LIMIT 6
             """,
-            (
-                session["teacher_id"],
-            )
+            (teacher_id,)
         )
 
         quizzes = cursor.fetchall()
+
+        # ====================================================
+        # ACTIVE / LIVE QUIZZES
+        # ====================================================
+
+        cursor.execute(
+            """
+            SELECT
+
+                q.quiz_id,
+                q.title,
+                q.total_questions,
+                q.duration_minutes,
+                q.available_from,
+                q.available_until
+
+            FROM quizzes q
+
+            WHERE q.teacher_id=%s
+
+            AND q.available_from <= NOW()
+
+            AND
+            (
+                q.available_until IS NULL
+                OR q.available_until > NOW()
+            )
+
+            ORDER BY q.created_at DESC
+            """,
+            (teacher_id,)
+        )
+
+        live_quizzes = cursor.fetchall()
 
     except Exception as e:
 
@@ -184,7 +293,10 @@ def teacher_dashboard():
             e
         )
 
-        quizzes = []
+        return f"""
+        <h2>Dashboard Error</h2>
+        <p>{e}</p>
+        """
 
     finally:
 
@@ -193,13 +305,22 @@ def teacher_dashboard():
 
     return render_template(
         "teacher_dashboard.html",
+
         name=session.get(
             "name",
             "Teacher"
         ),
-        quizzes=quizzes
-    )
 
+        total_quizzes=total_quizzes,
+
+        total_participants=total_participants,
+
+        average_score=average_score,
+
+        quizzes=quizzes,
+
+        live_quizzes=live_quizzes
+    )
 
 # ============================================================
 # CREATE QUIZ
