@@ -1402,329 +1402,166 @@ def add_questions(quiz_id):
 # not exist as a physical column.
 # ============================================================
 
+# ============================================================
+# VIEW ALL STUDENT RESULTS
+# ============================================================
+
 @teacher.route("/view_results")
 def view_results():
 
-    if not teacher_logged_in():
+    # ========================================================
+    # TEACHER LOGIN CHECK
+    # ========================================================
+
+    if "teacher_id" not in session:
         return redirect("/")
 
-    db = None
-    cursor = None
+    db = get_db_connection()
+
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
 
     try:
 
-        print("=" * 70)
-        print("📊 VIEW RESULTS")
-        print("=" * 70)
-
-        db = get_db_connection()
-
-        cursor = db.cursor(
-            cursor_factory=RealDictCursor
-        )
-
-        teacher_id = session["teacher_id"]
-
         # ====================================================
-        # RESULTS
-        # IMPORTANT:
-        # NO PYTHON DATETIME COMPARISON HERE
-        # PostgreSQL handles ordering.
+        # GET ALL RESULTS
+        #
+        # Registered student:
+        #   students.full_name
+        #   students.roll_number
+        #
+        # Guest student:
+        #   quiz_attempts.student_name
+        #   quiz_attempts.roll_number
+        #
+        # results.attempt_id connects result with attempt.
         # ====================================================
 
         cursor.execute(
             """
             SELECT
 
-                r.result_id,
+                results.result_id,
 
-                r.quiz_id,
+                results.quiz_id,
 
-                r.student_id,
+                quizzes.title,
 
-                r.attempt_id,
+                results.score,
 
-                r.score,
+                results.percentage,
 
-                r.percentage,
+                results.submitted_at,
 
-                r.submitted_at,
-
-                q.title AS quiz_title,
+                results.attempt_id,
 
                 COALESCE(
-                    s.full_name,
+                    students.full_name,
+                    quiz_attempts.student_name,
                     'Guest Student'
-                ) AS student_name,
+                ) AS full_name,
 
                 COALESCE(
-                    s.roll_number,
-                    '-'
-                ) AS student_roll_number
+                    students.roll_number,
+                    quiz_attempts.roll_number,
+                    'N/A'
+                ) AS roll_number,
 
-            FROM results r
+                CASE
 
-            INNER JOIN quizzes q
-                ON r.quiz_id = q.quiz_id
+                    WHEN quiz_attempts.attempt_mode = 'guest'
+                    THEN 'Guest'
 
-            LEFT JOIN students s
-                ON r.student_id = s.student_id
+                    ELSE 'Registered'
 
-            WHERE q.teacher_id = %s
+                END AS attempt_type
+
+            FROM results
+
+            LEFT JOIN students
+                ON results.student_id =
+                   students.student_id
+
+            LEFT JOIN quiz_attempts
+                ON results.attempt_id =
+                   quiz_attempts.attempt_id
+
+            LEFT JOIN quizzes
+                ON results.quiz_id =
+                   quizzes.quiz_id
 
             ORDER BY
-                r.submitted_at DESC
-            """,
-            (teacher_id,)
+                results.submitted_at DESC
+            """
         )
 
         results = cursor.fetchall()
-
-        print(
-            "✅ RESULTS FOUND:",
-            len(results)
-        )
-
-        # ====================================================
-        # CONVERT RealDictRow TO NORMAL DICTIONARY
-        # ====================================================
-
-        clean_results = []
-
-        for row in results:
-
-            result = dict(row)
-
-            # ------------------------------------------------
-            # Safe datetime formatting
-            # ------------------------------------------------
-
-            submitted_at = result.get(
-                "submitted_at"
-            )
-
-            if submitted_at:
-
-                try:
-
-                    # PostgreSQL TIMESTAMPTZ usually returns
-                    # timezone-aware datetime.
-                    #
-                    # We DON'T compare it with datetime.now().
-                    # We only format it for display.
-
-                    result["submitted_at_display"] = (
-                        submitted_at.strftime(
-                            "%d %b %Y, %I:%M %p"
-                        )
-                    )
-
-                except Exception:
-
-                    result["submitted_at_display"] = str(
-                        submitted_at
-                    )
-
-            else:
-
-                result["submitted_at_display"] = "-"
-
-            # ------------------------------------------------
-            # Guest identification
-            # ------------------------------------------------
-
-            if result.get("student_id") is None:
-
-                result["student_type"] = "Guest"
-
-            else:
-
-                result["student_type"] = "Registered"
-
-            clean_results.append(
-                result
-            )
 
         # ====================================================
         # DEBUG
         # ====================================================
 
-        for result in clean_results:
+        print("=" * 70)
+
+        print("✅ VIEW RESULTS SUCCESS")
+
+        print(
+            f"📊 TOTAL RESULTS: {len(results)}"
+        )
+
+        for r in results:
 
             print(
-                "----------------------------------------"
-            )
-
-            print(
-                "Quiz:",
-                result.get("quiz_title")
-            )
-
-            print(
-                "Name:",
-                result.get("student_name")
-            )
-
-            print(
-                "Roll:",
-                result.get("student_roll_number")
-            )
-
-            print(
-                "Type:",
-                result.get("student_type")
-            )
-
-            print(
-                "Score:",
-                result.get("score")
-            )
-
-            print(
-                "Percentage:",
-                result.get("percentage")
-            )
-
-            print(
-                "Submitted:",
-                result.get("submitted_at_display")
+                f"Quiz: {r.get('title')} | "
+                f"Name: {r.get('full_name')} | "
+                f"Roll: {r.get('roll_number')} | "
+                f"Type: {r.get('attempt_type')} | "
+                f"Score: {r.get('score')} | "
+                f"Percentage: {r.get('percentage')} | "
+                f"Submitted: {r.get('submitted_at')}"
             )
 
         print("=" * 70)
-
-        return render_template(
-            "view_results.html",
-            results=clean_results
-        )
 
     except Exception as e:
 
+        db.rollback()
+
         print("=" * 70)
+
         print("❌ VIEW RESULTS ERROR")
+
         print(
             "ERROR TYPE:",
             type(e).__name__
         )
+
         print(
             "ERROR:",
-            str(e)
+            e
         )
+
         print("=" * 70)
 
-        return f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-
-            <title>View Results Error</title>
-
-            <style>
-
-                body {{
-                    margin: 0;
-                    min-height: 100vh;
-
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-
-                    background: #f5f7fb;
-
-                    font-family:
-                        Inter,
-                        Arial,
-                        sans-serif;
-                }}
-
-                .error-card {{
-                    width: min(650px, 90%);
-
-                    background: white;
-
-                    padding: 35px;
-
-                    border-radius: 20px;
-
-                    box-shadow:
-                        0 15px 40px
-                        rgba(0,0,0,0.08);
-
-                    border:
-                        1px solid #e8ebf2;
-                }}
-
-                h2 {{
-                    margin-top: 0;
-                    color: #dc2626;
-                }}
-
-                p {{
-                    color: #596274;
-                    line-height: 1.6;
-                    word-break: break-word;
-                }}
-
-                a {{
-                    display: inline-block;
-
-                    margin-top: 15px;
-
-                    padding:
-                        12px 18px;
-
-                    background:
-                        #4f46e5;
-
-                    color: white;
-
-                    text-decoration: none;
-
-                    border-radius: 10px;
-
-                    font-weight: 700;
-                }}
-
-            </style>
-
-        </head>
-
-        <body>
-
-            <div class="error-card">
-
-                <h2>
-                    ❌ View Results Error
-                </h2>
-
-                <p>
-                    {str(e)}
-                </p>
-
-                <a href="/teacher_dashboard">
-                    ← Back to Dashboard
-                </a>
-
-            </div>
-
-        </body>
-        </html>
-        """
+        return render_template(
+            "error.html",
+            error_message=str(e)
+        )
 
     finally:
 
-        if cursor:
+        cursor.close()
+        db.close()
 
-            try:
-                cursor.close()
-            except Exception:
-                pass
+    # ========================================================
+    # RENDER PAGE
+    # ========================================================
 
-        if db:
-
-            try:
-                db.close()
-            except Exception:
-                pass
+    return render_template(
+        "view_results.html",
+        results=results
+    )
 
 # ============================================================
 # SHOW QR
