@@ -1763,7 +1763,85 @@ def test_ai():
             "error": str(e)
         }, 500
 
+# ============================================================
+# TEACHER QUIZ LIST - FOR LIVE PROGRESS SELECTOR
+# ============================================================
 
+@teacher.route("/teacher_quizzes")
+def teacher_quizzes():
+
+    if not teacher_logged_in():
+
+        return jsonify({
+            "success": False,
+            "error": "Unauthorized"
+        }), 401
+
+
+    db = get_db_connection()
+
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+
+    try:
+
+        cursor.execute(
+            """
+            SELECT
+                quiz_id,
+                title,
+                total_questions,
+                created_at
+
+            FROM quizzes
+
+            WHERE teacher_id=%s
+
+            ORDER BY quiz_id DESC
+            """,
+            (
+                session["teacher_id"],
+            )
+        )
+
+
+        quizzes = cursor.fetchall()
+
+
+        return jsonify({
+
+            "success": True,
+
+            "quizzes": quizzes
+
+        })
+
+
+    except Exception as e:
+
+        print(
+            "❌ TEACHER QUIZ LIST ERROR:",
+            e
+        )
+
+
+        return jsonify({
+
+            "success": False,
+
+            "error": str(e)
+
+        }), 500
+
+
+    finally:
+
+        cursor.close()
+
+        db.close()
+        
 # ============================================================
 # LIVE QUIZ PROGRESS
 # ============================================================
