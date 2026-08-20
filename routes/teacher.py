@@ -1469,8 +1469,109 @@ def add_questions(quiz_id):
 # VIEW RESULTS
 # ============================================================
 
+# ============================================================
+# VIEW RESULTS
+# ============================================================
+
 @teacher.route("/view_results")
 def view_results():
+
+    if not teacher_logged_in():
+        return redirect("/")
+
+    db = get_db_connection()
+
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+    try:
+
+        cursor.execute(
+            """
+            SELECT
+
+                r.result_id,
+
+                r.quiz_id,
+
+                q.title AS quiz_title,
+
+                r.score,
+
+                r.percentage,
+
+                r.submitted_at,
+
+                /* Registered student */
+                s.full_name AS student_name,
+
+                s.roll_number AS student_roll_number,
+
+                /* Guest participant */
+                qa.guest_name,
+
+                qa.guest_roll_number,
+
+                qa.status AS attempt_status
+
+            FROM results r
+
+            INNER JOIN quizzes q
+                ON r.quiz_id = q.quiz_id
+
+            LEFT JOIN students s
+                ON r.student_id = s.student_id
+
+            LEFT JOIN quiz_attempts qa
+                ON r.quiz_id = qa.quiz_id
+
+                AND (
+                    (
+                        r.student_id IS NOT NULL
+                        AND qa.student_id = r.student_id
+                    )
+
+                    OR
+
+                    (
+                        r.student_id IS NULL
+                        AND qa.attempt_id = r.attempt_id
+                    )
+                )
+
+            WHERE q.teacher_id = %s
+
+            ORDER BY r.submitted_at DESC
+            """,
+            (
+                session["teacher_id"],
+            )
+        )
+
+        results = cursor.fetchall()
+
+    except Exception as e:
+
+        print(
+            "❌ VIEW RESULTS ERROR:",
+            e
+        )
+
+        return f"""
+        <h2>View Results Error</h2>
+        <p>{e}</p>
+        """
+
+    finally:
+
+        cursor.close()
+        db.close()
+
+    return render_template(
+        "view_results.html",
+        results=results
+    )
 
     if not teacher_logged_in():
         return redirect("/")
