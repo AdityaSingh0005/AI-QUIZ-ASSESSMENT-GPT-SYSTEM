@@ -1402,16 +1402,8 @@ def add_questions(quiz_id):
 # not exist as a physical column.
 # ============================================================
 
-# ============================================================
-# VIEW RESULTS
-# ============================================================
-
 @teacher.route("/view_results")
 def view_results():
-
-    # ========================================================
-    # TEACHER LOGIN CHECK
-    # ========================================================
 
     if not teacher_logged_in():
         return redirect("/")
@@ -1421,521 +1413,199 @@ def view_results():
 
     try:
 
-        print("\n")
-        print("=" * 70)
-        print("📊 VIEW RESULTS")
-        print("=" * 70)
-
         db = get_db_connection()
 
         cursor = db.cursor(
             cursor_factory=RealDictCursor
         )
 
-        teacher_id = session["teacher_id"]
-
-        # ====================================================
-        # GET RESULTS
-        #
-        # IMPORTANT:
-        # We DO NOT use qa.guest_name because your
-        # quiz_attempts table does not contain that column.
-        #
-        # Guest information is safely obtained only if the
-        # corresponding columns actually exist.
-        # ====================================================
-
-        # ----------------------------------------------------
-        # Check available columns in quiz_attempts
-        # ----------------------------------------------------
+        print("=" * 70)
+        print("📊 VIEW RESULTS")
+        print("=" * 70)
 
         cursor.execute(
             """
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_schema = 'public'
-            AND table_name = 'quiz_attempts'
-            """
-        )
-
-        attempt_columns = {
-            row["column_name"]
-            for row in cursor.fetchall()
-        }
-
-        print(
-            "📋 quiz_attempts columns:",
-            attempt_columns
-        )
-
-        # ====================================================
-        # DETERMINE GUEST NAME COLUMN
-        # ====================================================
-
-        guest_name_column = None
-
-        possible_name_columns = [
-            "name",
-            "student_name",
-            "guest_name",
-            "full_name"
-        ]
-
-        for column in possible_name_columns:
-
-            if column in attempt_columns:
-
-                guest_name_column = column
-                break
-
-        # ====================================================
-        # DETERMINE GUEST ROLL NUMBER COLUMN
-        # ====================================================
-
-        guest_roll_column = None
-
-        possible_roll_columns = [
-            "roll_number",
-            "student_roll_number",
-            "guest_roll_number",
-            "roll_no"
-        ]
-
-        for column in possible_roll_columns:
-
-            if column in attempt_columns:
-
-                guest_roll_column = column
-                break
-
-        print(
-            "👤 Guest name column:",
-            guest_name_column
-        )
-
-        print(
-            "🎓 Guest roll column:",
-            guest_roll_column
-        )
-
-        # ====================================================
-        # BUILD SAFE GUEST EXPRESSIONS
-        # ====================================================
-
-        if guest_name_column:
-
-            guest_name_expression = (
-                f"qa.{guest_name_column}"
-            )
-
-        else:
-
-            guest_name_expression = "NULL"
-
-        if guest_roll_column:
-
-            guest_roll_expression = (
-                f"qa.{guest_roll_column}"
-            )
-
-        else:
-
-            guest_roll_expression = "NULL"
-
-        # ====================================================
-        # RESULTS QUERY
-        # ====================================================
-        #
-        # This query supports:
-        #
-        # 1. Normal logged-in students
-        # 2. Guest quiz attempts
-        # 3. Results connected through quiz_attempts
-        #
-        # Timestamp is converted to text by PostgreSQL.
-        # Therefore Python will NEVER compare naive/aware
-        # datetime objects.
-        #
-        # ====================================================
-
-        query = f"""
             SELECT
 
                 r.result_id,
-
                 r.quiz_id,
-
                 r.student_id,
-
                 r.score,
-
                 r.percentage,
-
-                TO_CHAR(
-                    r.submitted_at,
-                    'DD Mon YYYY, HH12:MI AM'
-                ) AS submitted_at_display,
+                r.submitted_at,
 
                 q.title AS quiz_title,
 
-                q.total_questions,
+                /* ==========================================
+                   STUDENT NAME
+                   Registered student -> students
+                   Guest student -> quiz_attempts
+                   ========================================== */
 
                 COALESCE(
                     NULLIF(TRIM(s.full_name), ''),
-                    NULLIF(TRIM({guest_name_expression}), ''),
+                    NULLIF(TRIM(qa.guest_name), ''),
                     'Guest Student'
-                ) AS full_name,
+                ) AS student_name,
+
+                /* ==========================================
+                   ROLL NUMBER
+                   ========================================== */
 
                 COALESCE(
                     NULLIF(TRIM(s.roll_number), ''),
-                    NULLIF(TRIM({guest_roll_expression}), ''),
+                    NULLIF(TRIM(qa.guest_roll_number), ''),
                     '-'
-                ) AS roll_number
+                ) AS student_roll_number,
+
+                /* ==========================================
+                   IDENTIFY GUEST / REGISTERED
+                   ========================================== */
+
+                CASE
+                    WHEN qa.attempt_id IS NOT NULL
+                         AND qa.student_id IS NULL
+                    THEN 'Guest'
+
+                    ELSE 'Registered'
+                END AS student_type
 
             FROM results r
 
             INNER JOIN quizzes q
                 ON r.quiz_id = q.quiz_id
 
+            /* Registered student */
             LEFT JOIN students s
                 ON r.student_id = s.student_id
 
+            /* Guest / attempt information */
             LEFT JOIN quiz_attempts qa
-                ON r.attempt_id = qa.attempt_id
+                ON qa.attempt_id = r.attempt_id
 
             WHERE q.teacher_id = %s
 
             ORDER BY
-                r.submitted_at DESC NULLS LAST
-        """
-
-        # ====================================================
-        # CHECK WHETHER results HAS attempt_id
-        # ====================================================
-
-        cursor.execute(
-            """
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_schema = 'public'
-            AND table_name = 'results'
-            """
+                r.submitted_at DESC
+            """,
+            (
+                session["teacher_id"],
+            )
         )
-
-        result_columns = {
-            row["column_name"]
-            for row in cursor.fetchall()
-        }
-
-        print(
-            "📋 results columns:",
-            result_columns
-        )
-
-        # ====================================================
-        # IF results DOES NOT HAVE attempt_id
-        # ====================================================
-
-        if "attempt_id" not in result_columns:
-
-            print(
-                "⚠️ results table does not contain attempt_id."
-            )
-
-            # -----------------------------------------------
-            # Use only student results.
-            # -----------------------------------------------
-
-            query = """
-                SELECT
-
-                    r.result_id,
-
-                    r.quiz_id,
-
-                    r.student_id,
-
-                    r.score,
-
-                    r.percentage,
-
-                    TO_CHAR(
-                        r.submitted_at,
-                        'DD Mon YYYY, HH12:MI AM'
-                    ) AS submitted_at_display,
-
-                    q.title AS quiz_title,
-
-                    q.total_questions,
-
-                    COALESCE(
-                        NULLIF(TRIM(s.full_name), ''),
-                        'Guest Student'
-                    ) AS full_name,
-
-                    COALESCE(
-                        NULLIF(TRIM(s.roll_number), ''),
-                        '-'
-                    ) AS roll_number
-
-                FROM results r
-
-                INNER JOIN quizzes q
-                    ON r.quiz_id = q.quiz_id
-
-                LEFT JOIN students s
-                    ON r.student_id = s.student_id
-
-                WHERE q.teacher_id = %s
-
-                ORDER BY
-                    r.submitted_at DESC NULLS LAST
-            """
-
-            cursor.execute(
-                query,
-                (teacher_id,)
-            )
-
-        else:
-
-            # =================================================
-            # results HAS attempt_id
-            # =================================================
-
-            cursor.execute(
-                query,
-                (teacher_id,)
-            )
 
         results = cursor.fetchall()
 
-        # ====================================================
-        # CONVERT RESULT ROWS TO NORMAL DICTIONARIES
-        # ====================================================
-        #
-        # This prevents template problems with RealDictRow
-        # attribute access.
-        #
-        # ====================================================
-
-        clean_results = []
-
-        for row in results:
-
-            result = dict(row)
-
-            # ------------------------------------------------
-            # Ensure template fields ALWAYS exist
-            # ------------------------------------------------
-
-            result["full_name"] = (
-                result.get("full_name")
-                or "Guest Student"
-            )
-
-            result["roll_number"] = (
-                result.get("roll_number")
-                or "-"
-            )
-
-            result["quiz_title"] = (
-                result.get("quiz_title")
-                or "Untitled Quiz"
-            )
-
-            result["score"] = (
-                result.get("score")
-                if result.get("score") is not None
-                else 0
-            )
-
-            result["percentage"] = (
-                result.get("percentage")
-                if result.get("percentage") is not None
-                else 0
-            )
-
-            result["submitted_at"] = (
-                result.get("submitted_at_display")
-                or "-"
-            )
-
-            clean_results.append(result)
-
-        # ====================================================
-        # DEBUG
-        # ====================================================
-
         print(
             "✅ RESULTS FOUND:",
-            len(clean_results)
+            len(results)
         )
 
-        for result in clean_results:
+        for row in results:
 
             print(
                 "----------------------------------------"
             )
 
             print(
+                "Quiz:",
+                row.get("quiz_title")
+            )
+
+            print(
                 "Name:",
-                result.get("full_name")
+                row.get("student_name")
             )
 
             print(
                 "Roll:",
-                result.get("roll_number")
+                row.get("student_roll_number")
             )
 
             print(
-                "Quiz:",
-                result.get("quiz_title")
+                "Type:",
+                row.get("student_type")
             )
 
             print(
                 "Score:",
-                result.get("score")
+                row.get("score")
             )
 
             print(
                 "Percentage:",
-                result.get("percentage")
-            )
-
-            print(
-                "Submitted:",
-                result.get("submitted_at")
+                row.get("percentage")
             )
 
         print("=" * 70)
-
-        # ====================================================
-        # RENDER
-        # ====================================================
 
         return render_template(
             "view_results.html",
-            results=clean_results
+            results=results
         )
-
-    # ========================================================
-    # ERROR
-    # ========================================================
 
     except Exception as e:
 
-        print("\n")
         print("=" * 70)
         print("❌ VIEW RESULTS ERROR")
-        print(
-            "ERROR TYPE:",
-            type(e).__name__
-        )
-        print(
-            "ERROR:",
-            str(e)
-        )
+        print("ERROR TYPE:", type(e).__name__)
+        print("ERROR:", str(e))
         print("=" * 70)
 
         return f"""
         <!DOCTYPE html>
-
         <html>
-
         <head>
-
             <title>View Results Error</title>
 
             <style>
-
                 body {{
                     margin: 0;
                     min-height: 100vh;
-
                     display: flex;
                     align-items: center;
                     justify-content: center;
-
                     background: #f5f7fb;
-
-                    font-family:
-                        Inter,
-                        Arial,
-                        sans-serif;
+                    font-family: Arial, sans-serif;
                 }}
 
                 .error-card {{
-
-                    width: min(
-                        650px,
-                        90%
-                    );
-
+                    width: min(650px, 90%);
                     background: white;
-
-                    border-radius: 20px;
-
                     padding: 35px;
-
-                    box-shadow:
-                        0 15px 40px
-                        rgba(0,0,0,0.08);
-
-                    border:
-                        1px solid #e8ebf2;
+                    border-radius: 20px;
+                    box-shadow: 0 15px 40px rgba(0,0,0,0.08);
                 }}
 
                 h2 {{
-
-                    margin-top: 0;
-
                     color: #dc2626;
                 }}
 
                 p {{
-
-                    color: #596274;
-
+                    color: #555;
                     line-height: 1.6;
-
                     word-break: break-word;
                 }}
 
                 a {{
-
                     display: inline-block;
-
                     margin-top: 15px;
-
-                    padding: 12px 18px;
-
+                    padding: 12px 20px;
                     background: #4f46e5;
-
                     color: white;
-
                     text-decoration: none;
-
                     border-radius: 10px;
-
-                    font-weight: 700;
+                    font-weight: bold;
                 }}
-
             </style>
-
         </head>
 
         <body>
 
             <div class="error-card">
 
-                <h2>
-                    ❌ View Results Error
-                </h2>
+                <h2>❌ View Results Error</h2>
 
-                <p>
-                    {str(e)}
-                </p>
+                <p>{e}</p>
 
                 <a href="/teacher_dashboard">
                     ← Back to Dashboard
@@ -1944,29 +1614,16 @@ def view_results():
             </div>
 
         </body>
-
         </html>
         """
-
-    # ========================================================
-    # CLOSE DATABASE
-    # ========================================================
 
     finally:
 
         if cursor:
-
-            try:
-                cursor.close()
-            except Exception:
-                pass
+            cursor.close()
 
         if db:
-
-            try:
-                db.close()
-            except Exception:
-                pass
+            db.close()
 # ============================================================
 # SHOW QR
 # ============================================================
