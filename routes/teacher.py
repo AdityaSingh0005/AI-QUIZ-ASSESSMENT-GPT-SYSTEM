@@ -1491,29 +1491,13 @@ def view_results():
             """
             SELECT
 
-                r.result_id,
-
-                r.quiz_id,
+                r.*,
 
                 q.title AS quiz_title,
 
-                r.score,
-
-                r.percentage,
-
-                r.submitted_at,
-
-                /* Registered student */
                 s.full_name AS student_name,
 
-                s.roll_number AS student_roll_number,
-
-                /* Guest participant */
-                qa.guest_name,
-
-                qa.guest_roll_number,
-
-                qa.status AS attempt_status
+                s.roll_number AS student_roll_number
 
             FROM results r
 
@@ -1522,23 +1506,6 @@ def view_results():
 
             LEFT JOIN students s
                 ON r.student_id = s.student_id
-
-            LEFT JOIN quiz_attempts qa
-                ON r.quiz_id = qa.quiz_id
-
-                AND (
-                    (
-                        r.student_id IS NOT NULL
-                        AND qa.student_id = r.student_id
-                    )
-
-                    OR
-
-                    (
-                        r.student_id IS NULL
-                        AND qa.attempt_id = r.attempt_id
-                    )
-                )
 
             WHERE q.teacher_id = %s
 
@@ -1550,6 +1517,17 @@ def view_results():
         )
 
         results = cursor.fetchall()
+
+        print(
+            "✅ RESULTS FOUND:",
+            len(results)
+        )
+
+        for result in results:
+            print(
+                "RESULT:",
+                dict(result)
+            )
 
     except Exception as e:
 
