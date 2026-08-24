@@ -1406,6 +1406,10 @@ def add_questions(quiz_id):
 # VIEW ALL STUDENT RESULTS
 # ============================================================
 
+# ============================================================
+# VIEW ALL STUDENT RESULTS
+# ============================================================
+
 @teacher.route("/view_results")
 def view_results():
 
@@ -1413,90 +1417,236 @@ def view_results():
     # TEACHER LOGIN CHECK
     # ========================================================
 
-    if "teacher_id" not in session:
+    if not teacher_logged_in():
         return redirect("/")
 
-    db = get_db_connection()
-
-    cursor = db.cursor(
-        cursor_factory=RealDictCursor
-    )
+    db = None
+    cursor = None
 
     try:
 
+        db = get_db_connection()
+
+        cursor = db.cursor(
+            cursor_factory=RealDictCursor
+        )
+
         # ====================================================
-        # GET ALL RESULTS
+        # IMPORTANT
         #
-        # Registered student:
-        #   students.full_name
-        #   students.roll_number
+        # quiz_attempts is the MAIN SOURCE here.
         #
-        # Guest student:
-        #   quiz_attempts.student_name
-        #   quiz_attempts.roll_number
+        # This is important for GUEST students because:
         #
-        # results.attempt_id connects result with attempt.
+        # quiz_attempts.student_name
+        # quiz_attempts.roll_number
+        #
+        # contains the information entered on the QR page.
+        #
+        # results is LEFT JOINED only for score/result data.
         # ====================================================
 
         cursor.execute(
             """
             SELECT
 
-                results.result_id,
+                qa.attempt_id,
 
-                results.quiz_id,
+                qa.quiz_id,
 
-                quizzes.title,
+                q.title,
 
-                results.score,
+                qa.student_id,
 
-                results.percentage,
+                qa.student_name,
 
-                results.submitted_at,
+                qa.roll_number,
 
-                results.attempt_id,
+                qa.attempt_mode,
 
-                COALESCE(
-                    students.full_name,
-                    quiz_attempts.student_name,
-                    'Guest Student'
-                ) AS full_name,
+                qa.status,
 
-                COALESCE(
-                    students.roll_number,
-                    quiz_attempts.roll_number,
-                    'N/A'
-                ) AS roll_number,
+                qa.score AS attempt_score,
 
-                CASE
+                qa.percentage AS attempt_percentage,
 
-                    WHEN quiz_attempts.attempt_mode = 'guest'
-                    THEN 'Guest'
+                qa.submitted_at AS attempt_submitted_at,
 
-                    ELSE 'Registered'
+                r.result_id,
 
-                END AS attempt_type
+                r.score AS result_score,
 
-            FROM results
+                r.percentage AS result_percentage,
 
-            LEFT JOIN students
-                ON results.student_id =
-                   students.student_id
+                r.submitted_at AS result_submitted_at,
 
-            LEFT JOIN quiz_attempts
-                ON results.attempt_id =
-                   quiz_attempts.attempt_id
+                s.full_name AS registered_name,
 
-            LEFT JOIN quizzes
-                ON results.quiz_id =
-                   quizzes.quiz_id
+                s.roll_number AS registered_roll_number
+
+            FROM quiz_attempts qa
+
+            INNER JOIN quizzes q
+                ON qa.quiz_id = q.quiz_id
+
+            LEFT JOIN results r
+                ON r.attempt_id = qa.attempt_id
+
+            LEFT JOIN students s
+                ON qa.student_id = s.student_id
+
+            WHERE q.teacher_id = %s
+
+            AND qa.status = 'submitted'
 
             ORDER BY
-                results.submitted_at DESC
-            """
+
+                COALESCE(
+                    qa.submitted_at,
+                    r.submitted_at
+                ) DESC
+            """,
+            (
+                session["teacher_id"],
+            )
         )
 
-        results = cursor.fetchall()
+        attempts = cursor.fetchall()
+
+        # ====================================================
+        # FORMAT RESULTS FOR TEMPLATE
+        # ====================================================
+
+        results = []
+
+        for attempt in attempts:
+
+            # =================================================
+            # DETERMINE STUDENT NAME
+            # =================================================
+
+            if (
+                attempt.get("attempt_mode") == "guest"
+            ):
+
+                full_name = (
+                    attempt.get("student_name")
+                    or "Guest Student"
+                )
+
+            else:
+
+                full_name = (
+                    attempt.get("registered_name")
+                    or attempt.get("student_name")
+                    or "Student"
+                )
+
+            # =================================================
+            # DETERMINE ROLL NUMBER
+            # =================================================
+
+            if (
+                attempt.get("attempt_mode") == "guest"
+            ):
+
+                roll_number = (
+                    attempt.get("roll_number")
+                    or "N/A"
+                )
+
+            else:
+
+                roll_number = (
+                    attempt.get("registered_roll_number")
+                    or attempt.get("roll_number")
+                    or "N/A"
+                )
+
+            # =================================================
+            # SCORE
+            #
+            # Prefer results table.
+            # If unavailable, use quiz_attempts.
+            # =================================================
+
+            score = (
+                attempt.get("result_score")
+                if attempt.get("result_score") is not None
+                else attempt.get("attempt_score")
+            )
+
+            # =================================================
+            # PERCENTAGE
+            # =================================================
+
+            percentage = (
+                attempt.get("result_percentage")
+                if attempt.get("result_percentage") is not None
+                else attempt.get("attempt_percentage")
+            )
+
+            # =================================================
+            # SUBMITTED TIME
+            # =================================================
+
+            submitted_at = (
+                attempt.get("result_submitted_at")
+                if attempt.get("result_submitted_at") is not None
+                else attempt.get("attempt_submitted_at")
+            )
+
+            # =================================================
+            # ATTEMPT TYPE
+            # =================================================
+
+            if (
+                attempt.get("attempt_mode") == "guest"
+            ):
+
+                attempt_type = "Guest"
+
+            else:
+
+                attempt_type = "Registered"
+
+            # =================================================
+            # CREATE CLEAN RESULT OBJECT
+            # =================================================
+
+            results.append({
+
+                "result_id":
+                    attempt.get("result_id"),
+
+                "attempt_id":
+                    attempt.get("attempt_id"),
+
+                "quiz_id":
+                    attempt.get("quiz_id"),
+
+                "title":
+                    attempt.get("title"),
+
+                "full_name":
+                    full_name,
+
+                "roll_number":
+                    roll_number,
+
+                "attempt_type":
+                    attempt_type,
+
+                "score":
+                    score,
+
+                "percentage":
+                    percentage,
+
+                "submitted_at":
+                    submitted_at
+
+            })
 
         # ====================================================
         # DEBUG
@@ -1507,7 +1657,8 @@ def view_results():
         print("✅ VIEW RESULTS SUCCESS")
 
         print(
-            f"📊 TOTAL RESULTS: {len(results)}"
+            f"📊 TOTAL SUBMITTED ATTEMPTS: "
+            f"{len(results)}"
         )
 
         for r in results:
@@ -1524,9 +1675,19 @@ def view_results():
 
         print("=" * 70)
 
+        # ====================================================
+        # RENDER
+        # ====================================================
+
+        return render_template(
+            "view_results.html",
+            results=results
+        )
+
     except Exception as e:
 
-        db.rollback()
+        if db:
+            db.rollback()
 
         print("=" * 70)
 
@@ -1551,18 +1712,19 @@ def view_results():
 
     finally:
 
-        cursor.close()
-        db.close()
+        if cursor:
 
-    # ========================================================
-    # RENDER PAGE
-    # ========================================================
+            try:
+                cursor.close()
+            except Exception:
+                pass
 
-    return render_template(
-        "view_results.html",
-        results=results
-    )
+        if db:
 
+            try:
+                db.close()
+            except Exception:
+                pass
 # ============================================================
 # SHOW QR
 # ============================================================

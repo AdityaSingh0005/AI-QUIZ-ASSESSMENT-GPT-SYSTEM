@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
@@ -16,66 +15,901 @@
     </title>
 
     <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='css/style.css') }}"
-    >
-
-    <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
         rel="stylesheet"
     >
 
+    <style>
+
+        /* =====================================================
+           RESET
+        ===================================================== */
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+
+        /* =====================================================
+           PAGE
+        ===================================================== */
+
+        body {
+            min-height: 100vh;
+
+            font-family: "Inter", sans-serif;
+
+            background:
+                radial-gradient(
+                    circle at top left,
+                    rgba(59, 130, 246, 0.18),
+                    transparent 35%
+                ),
+                radial-gradient(
+                    circle at bottom right,
+                    rgba(139, 92, 246, 0.15),
+                    transparent 35%
+                ),
+                #f8fafc;
+
+            color: #0f172a;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 24px;
+        }
+
+
+        /* =====================================================
+           MAIN CONTAINER
+        ===================================================== */
+
+        .guest-page {
+            width: 100%;
+            max-width: 980px;
+
+            min-height: 580px;
+
+            display: grid;
+            grid-template-columns: 0.9fr 1.1fr;
+
+            background: #ffffff;
+
+            border: 1px solid #e2e8f0;
+
+            border-radius: 28px;
+
+            overflow: hidden;
+
+            box-shadow:
+                0 25px 70px rgba(15, 23, 42, 0.12);
+        }
+
+
+        /* =====================================================
+           LEFT BRAND PANEL
+        ===================================================== */
+
+        .guest-brand {
+            position: relative;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 48px;
+
+            color: white;
+
+            background:
+                radial-gradient(
+                    circle at 20% 10%,
+                    rgba(96, 165, 250, 0.35),
+                    transparent 35%
+                ),
+                linear-gradient(
+                    145deg,
+                    #0f172a,
+                    #1e293b 55%,
+                    #312e81
+                );
+
+            overflow: hidden;
+        }
+
+
+        .guest-brand::before {
+            content: "";
+
+            position: absolute;
+
+            width: 260px;
+            height: 260px;
+
+            border-radius: 50%;
+
+            background: rgba(255,255,255,0.05);
+
+            top: -100px;
+            right: -100px;
+        }
+
+
+        .guest-brand::after {
+            content: "";
+
+            position: absolute;
+
+            width: 180px;
+            height: 180px;
+
+            border-radius: 50%;
+
+            background: rgba(96,165,250,0.08);
+
+            bottom: -70px;
+            left: -70px;
+        }
+
+
+        .brand-inner {
+            position: relative;
+            z-index: 2;
+
+            max-width: 360px;
+        }
+
+
+        /* =====================================================
+           BRAND BADGE
+        ===================================================== */
+
+        .guest-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+
+            padding: 8px 13px;
+
+            margin-bottom: 25px;
+
+            border-radius: 999px;
+
+            font-size: 12px;
+            font-weight: 700;
+
+            letter-spacing: 0.5px;
+
+            color: #dbeafe;
+
+            background: rgba(255,255,255,0.09);
+
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+
+
+        /* =====================================================
+           LOGO
+        ===================================================== */
+
+        .guest-logo {
+            width: 72px;
+            height: 72px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            margin-bottom: 22px;
+
+            border-radius: 20px;
+
+            font-size: 36px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #3b82f6,
+                    #6366f1
+                );
+
+            box-shadow:
+                0 15px 35px rgba(37,99,235,0.35);
+        }
+
+
+        /* =====================================================
+           BRAND TEXT
+        ===================================================== */
+
+        .brand-inner h1 {
+            font-size: 38px;
+
+            line-height: 1.12;
+
+            font-weight: 800;
+
+            letter-spacing: -1px;
+
+            margin-bottom: 18px;
+        }
+
+
+        .brand-inner h1 span {
+            display: block;
+
+            margin-top: 5px;
+
+            color: #93c5fd;
+        }
+
+
+        .brand-description {
+            max-width: 330px;
+
+            color: #cbd5e1;
+
+            font-size: 15px;
+
+            line-height: 1.7;
+        }
+
+
+        /* =====================================================
+           RIGHT FORM PANEL
+        ===================================================== */
+
+        .guest-form-section {
+            display: flex;
+            align-items: center;
+
+            padding: 48px;
+        }
+
+
+        .guest-card {
+            width: 100%;
+            max-width: 450px;
+
+            margin: 0 auto;
+        }
+
+
+        /* =====================================================
+           HEADER
+        ===================================================== */
+
+        .guest-header {
+            margin-bottom: 22px;
+        }
+
+
+        .guest-icon {
+            width: 50px;
+            height: 50px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            margin-bottom: 14px;
+
+            border-radius: 15px;
+
+            font-size: 24px;
+
+            background: #eff6ff;
+
+            border: 1px solid #dbeafe;
+        }
+
+
+        .guest-header h2 {
+            font-size: 28px;
+
+            font-weight: 800;
+
+            letter-spacing: -0.6px;
+
+            color: #0f172a;
+
+            margin-bottom: 7px;
+        }
+
+
+        .guest-header p {
+            color: #64748b;
+
+            font-size: 14px;
+
+            line-height: 1.5;
+        }
+
+
+        /* =====================================================
+           QUIZ INFORMATION
+        ===================================================== */
+
+        .quiz-info {
+            padding: 15px 16px;
+
+            margin-bottom: 22px;
+
+            border-radius: 14px;
+
+            background: #f8fafc;
+
+            border: 1px solid #e2e8f0;
+        }
+
+
+        .quiz-info-title {
+            font-size: 15px;
+
+            font-weight: 700;
+
+            color: #0f172a;
+
+            line-height: 1.4;
+        }
+
+
+        .quiz-info-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            margin-top: 7px;
+
+            font-size: 12px;
+
+            color: #64748b;
+        }
+
+
+        .quiz-id {
+            padding: 4px 8px;
+
+            border-radius: 6px;
+
+            font-weight: 700;
+
+            color: #2563eb;
+
+            background: #eff6ff;
+        }
+
+
+        /* =====================================================
+           FORM
+        ===================================================== */
+
+        .guest-form {
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 17px;
+        }
+
+
+        .form-group {
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 7px;
+        }
+
+
+        .form-group label {
+            font-size: 13px;
+
+            font-weight: 700;
+
+            color: #334155;
+        }
+
+
+        .input-wrapper {
+            position: relative;
+        }
+
+
+        .input-icon {
+            position: absolute;
+
+            left: 14px;
+            top: 50%;
+
+            transform: translateY(-50%);
+
+            font-size: 17px;
+
+            pointer-events: none;
+        }
+
+
+        .guest-input {
+            width: 100%;
+
+            height: 50px;
+
+            padding: 0 14px 0 45px;
+
+            border-radius: 12px;
+
+            border: 1px solid #cbd5e1;
+
+            background: #ffffff;
+
+            color: #0f172a;
+
+            font-family: inherit;
+
+            font-size: 14px;
+
+            outline: none;
+
+            transition:
+                border-color 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+
+        .guest-input::placeholder {
+            color: #94a3b8;
+        }
+
+
+        .guest-input:focus {
+            border-color: #3b82f6;
+
+            box-shadow:
+                0 0 0 4px rgba(59,130,246,0.10);
+        }
+
+
+        /* =====================================================
+           ERROR
+        ===================================================== */
+
+        .guest-error {
+            padding: 11px 13px;
+
+            margin-bottom: 17px;
+
+            border-radius: 10px;
+
+            color: #b91c1c;
+
+            background: #fef2f2;
+
+            border: 1px solid #fecaca;
+
+            font-size: 13px;
+
+            font-weight: 600;
+        }
+
+
+        /* =====================================================
+           START BUTTON
+        ===================================================== */
+
+        .start-button {
+            width: 100%;
+
+            height: 52px;
+
+            margin-top: 2px;
+
+            border: none;
+
+            border-radius: 13px;
+
+            cursor: pointer;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            gap: 12px;
+
+            color: white;
+
+            font-family: inherit;
+
+            font-size: 15px;
+
+            font-weight: 700;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #2563eb,
+                    #4f46e5
+                );
+
+            box-shadow:
+                0 10px 25px rgba(37,99,235,0.22);
+
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+
+        .start-button:hover {
+            transform: translateY(-2px);
+
+            box-shadow:
+                0 14px 30px rgba(37,99,235,0.30);
+        }
+
+
+        .button-arrow {
+            font-size: 20px;
+
+            transition:
+                transform 0.2s ease;
+        }
+
+
+        .start-button:hover .button-arrow {
+            transform: translateX(4px);
+        }
+
+
+        /* =====================================================
+           SECURITY
+        ===================================================== */
+
+        .guest-security {
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            gap: 7px;
+
+            margin-top: 17px;
+
+            color: #64748b;
+
+            font-size: 12px;
+
+            text-align: center;
+        }
+
+
+        /* =====================================================
+           TABLET
+        ===================================================== */
+
+        @media (max-width: 800px) {
+
+            body {
+                padding: 18px;
+            }
+
+            .guest-page {
+                grid-template-columns: 1fr;
+
+                max-width: 520px;
+
+                min-height: auto;
+
+                border-radius: 22px;
+            }
+
+            .guest-brand {
+                padding: 30px 28px;
+
+                min-height: 210px;
+
+                align-items: flex-start;
+            }
+
+            .brand-inner {
+                max-width: 100%;
+            }
+
+            .guest-badge {
+                margin-bottom: 15px;
+            }
+
+            .guest-logo {
+                width: 54px;
+                height: 54px;
+
+                margin-bottom: 13px;
+
+                border-radius: 15px;
+
+                font-size: 27px;
+            }
+
+            .brand-inner h1 {
+                font-size: 28px;
+
+                margin-bottom: 8px;
+            }
+
+            .brand-inner h1 span {
+                display: inline;
+
+                margin-left: 4px;
+            }
+
+            .brand-description {
+                display: none;
+            }
+
+            .guest-form-section {
+                padding: 30px 28px 32px;
+            }
+
+        }
+
+
+        /* =====================================================
+           MOBILE
+        ===================================================== */
+
+        @media (max-width: 500px) {
+
+            body {
+                min-height: 100svh;
+
+                padding: 12px;
+
+                align-items: center;
+            }
+
+
+            .guest-page {
+                width: 100%;
+
+                border-radius: 20px;
+
+                box-shadow:
+                    0 15px 40px rgba(15,23,42,0.10);
+            }
+
+
+            .guest-brand {
+                padding: 22px 20px;
+
+                min-height: 150px;
+            }
+
+
+            .guest-badge {
+                padding: 6px 10px;
+
+                margin-bottom: 10px;
+
+                font-size: 10px;
+            }
+
+
+            .guest-logo {
+                width: 44px;
+                height: 44px;
+
+                margin-bottom: 9px;
+
+                border-radius: 12px;
+
+                font-size: 22px;
+            }
+
+
+            .brand-inner h1 {
+                font-size: 22px;
+
+                line-height: 1.2;
+
+                letter-spacing: -0.4px;
+
+                margin-bottom: 0;
+            }
+
+
+            .brand-inner h1 span {
+                margin-left: 2px;
+            }
+
+
+            .guest-form-section {
+                padding: 24px 20px 22px;
+            }
+
+
+            .guest-header {
+                margin-bottom: 17px;
+            }
+
+
+            .guest-icon {
+                width: 42px;
+                height: 42px;
+
+                margin-bottom: 10px;
+
+                border-radius: 12px;
+
+                font-size: 20px;
+            }
+
+
+            .guest-header h2 {
+                font-size: 23px;
+
+                margin-bottom: 5px;
+            }
+
+
+            .guest-header p {
+                font-size: 12px;
+            }
+
+
+            .quiz-info {
+                padding: 12px 13px;
+
+                margin-bottom: 17px;
+            }
+
+
+            .quiz-info-title {
+                font-size: 13px;
+            }
+
+
+            .quiz-info-meta {
+                margin-top: 5px;
+
+                font-size: 11px;
+            }
+
+
+            .guest-form {
+                gap: 13px;
+            }
+
+
+            .form-group {
+                gap: 6px;
+            }
+
+
+            .form-group label {
+                font-size: 12px;
+            }
+
+
+            .guest-input {
+                height: 46px;
+
+                padding-left: 42px;
+
+                border-radius: 10px;
+
+                font-size: 13px;
+            }
+
+
+            .input-icon {
+                left: 13px;
+
+                font-size: 15px;
+            }
+
+
+            .start-button {
+                height: 48px;
+
+                border-radius: 11px;
+
+                font-size: 14px;
+            }
+
+
+            .guest-security {
+                margin-top: 12px;
+
+                font-size: 10px;
+            }
+
+        }
+
+
+        /* =====================================================
+           VERY SMALL PHONES
+        ===================================================== */
+
+        @media (max-width: 360px) {
+
+            body {
+                padding: 8px;
+            }
+
+            .guest-brand {
+                padding: 18px 16px;
+
+                min-height: 135px;
+            }
+
+            .guest-form-section {
+                padding: 20px 16px;
+            }
+
+            .brand-inner h1 {
+                font-size: 20px;
+            }
+
+            .guest-header h2 {
+                font-size: 21px;
+            }
+
+            .quiz-info {
+                margin-bottom: 14px;
+            }
+
+            .guest-form {
+                gap: 11px;
+            }
+
+        }
+
+    </style>
+
 </head>
 
 
-<body class="login-body">
+<body>
 
 
-<div class="login-wrapper">
+<div class="guest-page">
 
 
-    <!-- ==========================================
+    <!-- =====================================================
          BRAND PANEL
-    =========================================== -->
+    ====================================================== -->
 
-    <section class="brand-panel">
+    <section class="guest-brand">
 
-        <div class="brand-content">
+        <div class="brand-inner">
 
-            <div class="brand-badge">
-
-                <span class="brand-icon">
-                    ✦
-                </span>
-
-                AI Powered
-
+            <div class="guest-badge">
+                <span>✦</span>
+                AI POWERED ASSESSMENT
             </div>
 
 
-            <div class="brand-logo">
+            <div class="guest-logo">
                 🧠
             </div>
 
 
             <h1>
-
                 AI Quiz
-
                 <span>
                     Assessment System
                 </span>
-
             </h1>
 
 
             <p class="brand-description">
-
                 You're almost ready!
-
-                Enter your details to start
-                the assessment.
-
+                Enter your details and start
+                your assessment.
             </p>
 
         </div>
@@ -83,27 +917,26 @@
     </section>
 
 
-    <!-- ==========================================
-         DETAILS PANEL
-    =========================================== -->
+    <!-- =====================================================
+         FORM PANEL
+    ====================================================== -->
 
-    <section class="login-section">
+    <section class="guest-form-section">
+
+        <div class="guest-card">
 
 
-        <div class="login-card">
+            <!-- HEADER -->
 
+            <div class="guest-header">
 
-            <div class="login-header">
-
-                <div class="welcome-icon">
+                <div class="guest-icon">
                     🎯
                 </div>
-
 
                 <h2>
                     Join Quiz
                 </h2>
-
 
                 <p>
                     Enter your details to begin
@@ -115,63 +948,58 @@
 
             <!-- QUIZ INFO -->
 
-            <div
-                style="
-                    background:#f8faff;
-                    border:1px solid #e5e7eb;
-                    border-radius:14px;
-                    padding:16px;
-                    margin-bottom:22px;
-                "
-            >
+            <div class="quiz-info">
 
-                <strong>
+                <div class="quiz-info-title">
+
                     {{ quiz.title }}
-                </strong>
 
-                <div
-                    style="
-                        margin-top:8px;
-                        color:#64748b;
-                        font-size:13px;
-                    "
-                >
+                </div>
 
-                    Quiz ID:
-                    <strong>
+
+                <div class="quiz-info-meta">
+
+                    <span>
+                        Quiz ID
+                    </span>
+
+                    <span class="quiz-id">
                         #{{ quiz.quiz_id }}
-                    </strong>
+                    </span>
 
                 </div>
 
             </div>
 
 
-            <!-- ==================================
-                 GUEST FORM
-            =================================== -->
+            <!-- ERROR -->
+
+            {% if error %}
+
+                <div class="guest-error">
+
+                    ⚠️ {{ error }}
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- FORM -->
 
             <form
-                action="/guest_start_quiz"
+                action="{{ url_for('student.guest_start_quiz', quiz_id=quiz.quiz_id) }}"
                 method="POST"
-                class="login-form"
+                class="guest-form"
             >
-
-                <input
-                    type="hidden"
-                    name="quiz_id"
-                    value="{{ quiz.quiz_id }}"
-                >
 
 
                 <!-- NAME -->
 
                 <div class="form-group">
 
-                    <label for="name">
-
+                    <label for="student_name">
                         Full Name
-
                     </label>
 
 
@@ -183,9 +1011,10 @@
 
 
                         <input
-                            id="name"
+                            id="student_name"
                             type="text"
-                            name="name"
+                            name="student_name"
+                            class="guest-input"
                             placeholder="Enter your full name"
                             autocomplete="name"
                             maxlength="100"
@@ -202,9 +1031,7 @@
                 <div class="form-group">
 
                     <label for="roll_number">
-
                         Roll Number
-
                     </label>
 
 
@@ -219,6 +1046,7 @@
                             id="roll_number"
                             type="text"
                             name="roll_number"
+                            class="guest-input"
                             placeholder="Enter your roll number"
                             maxlength="30"
                             required
@@ -233,7 +1061,7 @@
 
                 <button
                     type="submit"
-                    class="login-button"
+                    class="start-button"
                 >
 
                     <span>
@@ -246,21 +1074,21 @@
 
                 </button>
 
+
             </form>
 
 
-            <div class="login-security">
+            <!-- SECURITY -->
+
+            <div class="guest-security">
 
                 <span>
                     🔐
                 </span>
 
-                <p>
-
-                    No registration or password
-                    required.
-
-                </p>
+                <span>
+                    No registration or password required
+                </span>
 
             </div>
 
