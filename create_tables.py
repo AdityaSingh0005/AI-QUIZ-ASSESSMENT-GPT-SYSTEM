@@ -8,10 +8,10 @@ if not DATABASE_URL:
 
 conn = psycopg2.connect(DATABASE_URL)
 conn.autocommit = True
-
 cur = conn.cursor()
 
-print("Connected to PostgreSQL!")
+print("🔄 Connecting to PostgreSQL...")
+print("✅ Connected to PostgreSQL!")
 
 cur.execute("""
 CREATE TABLE IF NOT EXISTS teachers (
@@ -44,6 +44,9 @@ CREATE TABLE IF NOT EXISTS quizzes (
     total_questions INTEGER,
     qr_code_path VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    question_time_seconds INTEGER DEFAULT 60,
+    available_from TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    available_until TIMESTAMPTZ NULL,
     FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id)
 );
 
@@ -83,7 +86,9 @@ CREATE TABLE IF NOT EXISTS student_answers (
 );
 """)
 
-print("All 6 tables created successfully!")
+print("🎉 All 6 core tables created successfully!")
 
 cur.close()
 conn.close()
+
+print("🔒 Database connection closed.")
