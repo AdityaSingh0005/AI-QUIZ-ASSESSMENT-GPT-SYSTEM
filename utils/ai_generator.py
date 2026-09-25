@@ -36,7 +36,6 @@ def generate_questions(topic, easy, medium, hard):
     total = easy + medium + hard
 
     if total <= 0:
-
         raise Exception(
             "Total questions must be greater than 0"
         )
@@ -93,6 +92,7 @@ option_c
 option_d
 correct_option
 difficulty
+explanation
 
 8. correct_option MUST be exactly one of:
 
@@ -115,6 +115,8 @@ Hard
 15. Hard questions should test deeper understanding and reasoning.
 16. Do not duplicate questions.
 17. Do not create empty fields.
+18. Keep the explanation concise and relevant.
+19. Do not generate extra questions.
 
 JSON FORMAT:
 
@@ -129,7 +131,6 @@ JSON FORMAT:
             "correct_option": "A",
             "difficulty": "Easy",
             "explanation": "Option A is correct because it represents the fundamental concept being tested."
-
         }}
     ]
 }}
@@ -310,13 +311,175 @@ Hard: exactly {hard}
 
 
             # ==================================================
-            # CHECK TOTAL COUNT
+            # REQUIRED FIELDS
+            # ========================================================
+
+            required_fields = [
+                "question",
+                "option_a",
+                "option_b",
+                "option_c",
+                "option_d",
+                "correct_option",
+                "difficulty",
+                "explanation"
+            ]
+
+
+            # ==================================================
+            # HANDLE EXTRA QUESTIONS
+            # ==================================================
+
+            if len(questions) > total:
+
+                print(
+                    f"⚠️ AI generated extra questions."
+                )
+
+                print(
+                    f"Expected: {total}"
+                )
+
+                print(
+                    f"Received: {len(questions)}"
+                )
+
+                print(
+                    "🔧 Attempting to safely remove extra questions "
+                    "while preserving difficulty distribution..."
+                )
+
+
+                # ----------------------------------------------
+                # SEPARATE QUESTIONS BY DIFFICULTY
+                # ----------------------------------------------
+
+                easy_questions = []
+
+                medium_questions = []
+
+                hard_questions = []
+
+
+                for q in questions:
+
+                    if not isinstance(q, dict):
+
+                        continue
+
+
+                    difficulty = str(
+                        q.get("difficulty", "")
+                    ).strip().capitalize()
+
+
+                    if difficulty == "Easy":
+
+                        easy_questions.append(q)
+
+
+                    elif difficulty == "Medium":
+
+                        medium_questions.append(q)
+
+
+                    elif difficulty == "Hard":
+
+                        hard_questions.append(q)
+
+
+                # ----------------------------------------------
+                # CHECK WHETHER EACH DIFFICULTY HAS ENOUGH
+                # QUESTIONS
+                # ----------------------------------------------
+
+                if (
+                    len(easy_questions) >= easy
+                    and
+                    len(medium_questions) >= medium
+                    and
+                    len(hard_questions) >= hard
+                ):
+
+                    # ------------------------------------------
+                    # SELECT EXACT REQUIRED NUMBER
+                    # ------------------------------------------
+
+                    selected_easy = easy_questions[:easy]
+
+                    selected_medium = medium_questions[:medium]
+
+                    selected_hard = hard_questions[:hard]
+
+
+                    # ------------------------------------------
+                    # COMBINE
+                    # ------------------------------------------
+
+                    questions = (
+                        selected_easy
+                        + selected_medium
+                        + selected_hard
+                    )
+
+
+                    print(
+                        "✅ Extra questions removed successfully."
+                    )
+
+                    print(
+                        f"✅ Easy selected: {len(selected_easy)}"
+                    )
+
+                    print(
+                        f"✅ Medium selected: {len(selected_medium)}"
+                    )
+
+                    print(
+                        f"✅ Hard selected: {len(selected_hard)}"
+                    )
+
+                    print(
+                        f"✅ Final question count: {len(questions)}"
+                    )
+
+
+                else:
+
+                    print(
+                        "❌ Cannot safely remove extra questions."
+                    )
+
+                    print(
+                        "❌ Difficulty distribution is insufficient."
+                    )
+
+                    print(
+                        f"Available Easy: {len(easy_questions)} "
+                        f"(Required: {easy})"
+                    )
+
+                    print(
+                        f"Available Medium: {len(medium_questions)} "
+                        f"(Required: {medium})"
+                    )
+
+                    print(
+                        f"Available Hard: {len(hard_questions)} "
+                        f"(Required: {hard})"
+                    )
+
+                    continue
+
+
+            # ==================================================
+            # CHECK TOTAL COUNT AFTER NORMALIZATION
             # ==================================================
 
             if len(questions) != total:
 
                 print(
-                    f"❌ Question count mismatch."
+                    "❌ Question count mismatch."
                 )
 
                 print(
@@ -331,22 +494,17 @@ Hard: exactly {hard}
 
 
             # ==================================================
-            # REQUIRED FIELDS
+            # VALIDATION
             # ==================================================
 
-                required_fields = [
-                    "question",
-                    "option_a",
-                    "option_b",
-                    "option_c",
-                    "option_d",
-                    "correct_option",
-                    "difficulty",
-                    "explanation"
-                ]
-
-
             valid = True
+
+
+            # ==================================================
+            # TRACK DUPLICATE QUESTIONS
+            # ==================================================
+
+            question_texts = set()
 
 
             # ==================================================
@@ -428,6 +586,40 @@ Hard: exactly {hard}
 
 
                 # ----------------------------------------------
+                # NORMALIZE QUESTION TEXT
+                # ----------------------------------------------
+
+                q["question"] = str(
+                    q["question"]
+                ).strip()
+
+
+                # ----------------------------------------------
+                # DUPLICATE QUESTION CHECK
+                # ----------------------------------------------
+
+                question_key = q[
+                    "question"
+                ].lower()
+
+
+                if question_key in question_texts:
+
+                    print(
+                        f"❌ Question {index} "
+                        f"is a duplicate question."
+                    )
+
+                    valid = False
+                    break
+
+
+                question_texts.add(
+                    question_key
+                )
+
+
+                # ----------------------------------------------
                 # NORMALIZE CORRECT OPTION
                 # ----------------------------------------------
 
@@ -483,26 +675,39 @@ Hard: exactly {hard}
 
 
                 # ----------------------------------------------
+                # NORMALIZE OPTIONS
+                # ----------------------------------------------
+
+                q["option_a"] = str(
+                    q["option_a"]
+                ).strip()
+
+                q["option_b"] = str(
+                    q["option_b"]
+                ).strip()
+
+                q["option_c"] = str(
+                    q["option_c"]
+                ).strip()
+
+                q["option_d"] = str(
+                    q["option_d"]
+                ).strip()
+
+
+                # ----------------------------------------------
                 # CHECK OPTIONS ARE DIFFERENT
                 # ----------------------------------------------
 
                 options = [
 
-                    str(
-                        q["option_a"]
-                    ).strip(),
+                    q["option_a"],
 
-                    str(
-                        q["option_b"]
-                    ).strip(),
+                    q["option_b"],
 
-                    str(
-                        q["option_c"]
-                    ).strip(),
+                    q["option_c"],
 
-                    str(
-                        q["option_d"]
-                    ).strip()
+                    q["option_d"]
 
                 ]
 
@@ -521,6 +726,15 @@ Hard: exactly {hard}
 
                     valid = False
                     break
+
+
+                # ----------------------------------------------
+                # NORMALIZE EXPLANATION
+                # ----------------------------------------------
+
+                q["explanation"] = str(
+                    q["explanation"]
+                ).strip()
 
 
             # ==================================================
@@ -635,6 +849,19 @@ Hard: exactly {hard}
 
                 print(
                     "❌ Hard distribution mismatch."
+                )
+
+                continue
+
+
+            # ==================================================
+            # FINAL COUNT CHECK
+            # ==================================================
+
+            if len(questions) != total:
+
+                print(
+                    "❌ Final question count is incorrect."
                 )
 
                 continue
