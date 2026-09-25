@@ -141,6 +141,178 @@ def error_page(
 
 
 # ============================================================
+# HELPER: CALCULATE QUIZ DURATION
+#
+# Total duration =
+# Number of questions × time per question
+#
+# Example:
+# 20 × 15 seconds = 300 seconds = 5 minutes
+#
+# duration_minutes is stored as CEILING minutes because the
+# database currently has duration_minutes rather than a
+# duration_seconds column.
+# ============================================================
+
+def calculate_duration_minutes(
+    total_questions,
+    question_time_seconds
+):
+
+    total_duration_seconds = (
+        int(total_questions) *
+        int(question_time_seconds)
+    )
+
+    duration_minutes = (
+        total_duration_seconds + 59
+    ) // 60
+
+    return duration_minutes
+
+
+# ============================================================
+# HELPER: CONVERT FORM DATETIME FROM IST TO UTC
+#
+# HTML datetime-local does not contain timezone information.
+#
+# Our application treats teacher-entered date/time as IST.
+#
+# Example:
+#
+# 27-09-2026 10:00 IST
+#
+# becomes:
+#
+# 27-09-2026 04:30 UTC
+#
+# PostgreSQL TIMESTAMPTZ will then store the timezone-aware
+# value correctly.
+# ============================================================
+
+def parse_ist_datetime(
+    value
+):
+
+    value = (
+        value or ""
+    ).strip()
+
+    if not value:
+
+        raise ValueError(
+            "Date and time are required."
+        )
+
+    try:
+
+        naive_datetime = datetime.strptime(
+            value,
+            "%Y-%m-%dT%H:%M"
+        )
+
+    except ValueError:
+
+        raise ValueError(
+            "Invalid date/time format."
+        )
+
+    # India Standard Time
+    ist = timezone(
+        timedelta(
+            hours=5,
+            minutes=30
+        )
+    )
+
+    ist_datetime = naive_datetime.replace(
+        tzinfo=ist
+    )
+
+    utc_datetime = ist_datetime.astimezone(
+        timezone.utc
+    )
+
+    return utc_datetime
+
+
+# ============================================================
+# HELPER: QUIZ STATUS
+#
+# upcoming:
+#     now < available_from
+#
+# live:
+#     available_from <= now
+#     and available_until is NULL or now < available_until
+#
+# closed:
+#     now >= available_until
+# ============================================================
+
+def get_quiz_status(
+    available_from,
+    available_until
+):
+
+    now = datetime.now(
+        timezone.utc
+    )
+
+    if available_from:
+
+        if available_from.tzinfo is None:
+
+            available_from = (
+                available_from.replace(
+                    tzinfo=timezone.utc
+                )
+            )
+
+        else:
+
+            available_from = (
+                available_from.astimezone(
+                    timezone.utc
+                )
+            )
+
+    if available_until:
+
+        if available_until.tzinfo is None:
+
+            available_until = (
+                available_until.replace(
+                    tzinfo=timezone.utc
+                )
+            )
+
+        else:
+
+            available_until = (
+                available_until.astimezone(
+                    timezone.utc
+                )
+            )
+
+    if (
+        available_from
+        and now < available_from
+    ):
+
+        return "upcoming"
+
+    if (
+        available_until
+        and now >= available_until
+    ):
+
+        return "closed"
+
+    return "live"
+
+
+# ============================================================
 # TEACHER DASHBOARD
 # ============================================================
 
@@ -323,7 +495,30 @@ def teacher_dashboard():
         quizzes = cursor.fetchall()
 
         # ====================================================
-        # ACTIVE QUIZZES
+        # ADD STATUS TO RECENT QUIZZES
+        # ====================================================
+
+        for quiz in quizzes:
+
+            quiz["status"] = get_quiz_status(
+                quiz.get("available_from"),
+                quiz.get("available_until")
+            )
+
+            # Dynamic duration information
+            quiz["calculated_duration_minutes"] = (
+                calculate_duration_minutes(
+                    quiz.get("total_questions") or 0,
+                    quiz.get("question_time_seconds") or 0
+                )
+            )
+
+        # ====================================================
+        # ACTIVE / LIVE QUIZZES
+        #
+        # IMPORTANT:
+        # The quiz is live only inside its exact availability
+        # window.
         # ====================================================
 
         cursor.execute(
@@ -334,6 +529,7 @@ def teacher_dashboard():
                 q.title,
                 q.total_questions,
                 q.duration_minutes,
+                q.question_time_seconds,
                 q.available_from,
                 q.available_until
 
@@ -349,10 +545,10 @@ def teacher_dashboard():
 
                 OR
 
-                q.available_until > NOW()
+                NOW() < q.available_until
             )
 
-            ORDER BY q.created_at DESC
+            ORDER BY q.available_from ASC
             """,
             (
                 teacher_id,
@@ -360,6 +556,17 @@ def teacher_dashboard():
         )
 
         live_quizzes = cursor.fetchall()
+
+        for quiz in live_quizzes:
+
+            quiz["status"] = "live"
+
+            quiz["calculated_duration_minutes"] = (
+                calculate_duration_minutes(
+                    quiz.get("total_questions") or 0,
+                    quiz.get("question_time_seconds") or 0
+                )
+            )
 
         return render_template(
             "teacher_dashboard.html",
@@ -453,7 +660,11 @@ def create_quiz():
     ).strip()
 
     # ========================================================
-    # COUNTS
+    # COUNTS + QUESTION TIMER
+    #
+    # duration_minutes is NOT accepted from the form anymore.
+    #
+    # It is calculated automatically.
     # ========================================================
 
     try:
@@ -476,13 +687,6 @@ def create_quiz():
             request.form.get(
                 "hard",
                 0
-            )
-        )
-
-        duration_minutes = int(
-            request.form.get(
-                "duration_minutes",
-                30
             )
         )
 
@@ -541,12 +745,6 @@ def create_quiz():
             "Please select at least one question."
         )
 
-    if duration_minutes <= 0:
-
-        return error_page(
-            "Quiz duration must be greater than 0."
-        )
-
     if question_time_seconds <= 0:
 
         return error_page(
@@ -554,63 +752,148 @@ def create_quiz():
         )
 
     # ========================================================
-    # AVAILABILITY
+    # AUTOMATIC TOTAL DURATION
+    #
+    # Example:
+    #
+    # 20 questions
+    # ×
+    # 15 seconds
+    # =
+    # 300 seconds
+    # =
+    # 5 minutes
     # ========================================================
 
-    availability = request.form.get(
-        "availability",
-        "1_day"
+    total_duration_seconds = (
+        total_questions *
+        question_time_seconds
     )
 
-    available_from = datetime.now(
+    duration_minutes = (
+        total_duration_seconds + 59
+    ) // 60
+
+    print(
+        "⏱️ TOTAL QUESTIONS:",
+        total_questions
+    )
+
+    print(
+        "⏱️ TIME PER QUESTION:",
+        question_time_seconds,
+        "seconds"
+    )
+
+    print(
+        "⏱️ TOTAL QUIZ DURATION:",
+        total_duration_seconds,
+        "seconds"
+    )
+
+    print(
+        "⏱️ STORED DURATION:",
+        duration_minutes,
+        "minutes"
+    )
+
+    # ========================================================
+    # EXACT QUIZ AVAILABILITY
+    #
+    # Teacher enters:
+    #
+    # available_from
+    # available_until
+    #
+    # datetime-local values are treated as IST.
+    # ========================================================
+
+    available_from_raw = request.form.get(
+        "available_from",
+        ""
+    ).strip()
+
+    available_until_raw = request.form.get(
+        "available_until",
+        ""
+    ).strip()
+
+    if not available_from_raw:
+
+        return error_page(
+            "Quiz start date and time are required."
+        )
+
+    if not available_until_raw:
+
+        return error_page(
+            "Quiz end date and time are required."
+        )
+
+    try:
+
+        available_from = parse_ist_datetime(
+            available_from_raw
+        )
+
+        available_until = parse_ist_datetime(
+            available_until_raw
+        )
+
+    except ValueError as e:
+
+        print(
+            "❌ AVAILABILITY ERROR:",
+            e
+        )
+
+        return error_page(
+            str(e)
+        )
+
+    # ========================================================
+    # START MUST BE BEFORE END
+    # ========================================================
+
+    if available_until <= available_from:
+
+        return error_page(
+            "Quiz end time must be later than quiz start time."
+        )
+
+    # ========================================================
+    # START CANNOT BE IN THE PAST
+    #
+    # Small tolerance of 30 seconds is allowed because the
+    # teacher may submit exactly around the selected minute.
+    # ========================================================
+
+    now_utc = datetime.now(
         timezone.utc
     )
 
-    if availability == "1_hour":
+    if available_from < (
+        now_utc -
+        timedelta(seconds=30)
+    ):
 
-        available_until = (
-            available_from +
-            timedelta(hours=1)
+        return error_page(
+            "Quiz start time cannot be in the past."
         )
 
-    elif availability == "1_day":
+    # ========================================================
+    # DEBUG AVAILABILITY
+    # ========================================================
 
-        available_until = (
-            available_from +
-            timedelta(days=1)
-        )
+    print(
+        "📅 AVAILABLE FROM (UTC):",
+        available_from
+    )
 
-    elif availability == "1_week":
-
-        available_until = (
-            available_from +
-            timedelta(weeks=1)
-        )
-
-    elif availability == "1_month":
-
-        available_until = (
-            available_from +
-            timedelta(days=30)
-        )
-
-    elif availability == "1_year":
-
-        available_until = (
-            available_from +
-            timedelta(days=365)
-        )
-
-    elif availability == "never":
-
-        available_until = None
-
-    else:
-
-        available_until = (
-            available_from +
-            timedelta(days=1)
-        )
+    print(
+        "📅 AVAILABLE UNTIL (UTC):",
+        available_until
+    )
 
     # ========================================================
     # AI GENERATION
@@ -773,6 +1056,23 @@ def create_quiz():
             return error_page(
                 "AI returned invalid correct option."
             )
+
+        # ====================================================
+        # EXPLANATION
+        #
+        # Explanation was added to the questions table.
+        #
+        # If AI somehow does not return one, store empty text
+        # instead of crashing the entire quiz.
+        # ====================================================
+
+        q["explanation"] = str(
+            q.get(
+                "explanation",
+                ""
+            )
+            or ""
+        ).strip()
 
     # ========================================================
     # DIFFICULTY CHECK
@@ -950,9 +1250,7 @@ def create_quiz():
 
                     q["difficulty"],
 
-                    str(
-                        q["explanation"]
-                    ).strip()
+                    q["explanation"]
                 )
             )
 
@@ -994,6 +1292,21 @@ def create_quiz():
             f"🎉 QUIZ {quiz_id} CREATED"
         )
 
+        print(
+            f"⏱️ Duration: "
+            f"{total_questions} × "
+            f"{question_time_seconds}s = "
+            f"{total_duration_seconds}s"
+        )
+
+        print(
+            f"📅 Start: {available_from}"
+        )
+
+        print(
+            f"📅 End: {available_until}"
+        )
+
         return redirect(
             f"/quiz_generated/{quiz_id}"
         )
@@ -1017,11 +1330,17 @@ def create_quiz():
 
         if cursor:
 
-            cursor.close()
+            try:
+                cursor.close()
+            except Exception:
+                pass
 
         if db:
 
-            db.close()
+            try:
+                db.close()
+            except Exception:
+                pass
 
 
 # ============================================================
@@ -1080,6 +1399,31 @@ def quiz_generated(quiz_id):
         if not quiz:
 
             return "Quiz not found.", 404
+
+        # ====================================================
+        # CALCULATED DURATION
+        # ====================================================
+
+        quiz["calculated_duration_minutes"] = (
+            calculate_duration_minutes(
+                quiz.get("total_questions") or 0,
+                quiz.get("question_time_seconds") or 0
+            )
+        )
+
+        quiz["total_duration_seconds"] = (
+            int(
+                quiz.get("total_questions") or 0
+            ) *
+            int(
+                quiz.get("question_time_seconds") or 0
+            )
+        )
+
+        quiz["status"] = get_quiz_status(
+            quiz.get("available_from"),
+            quiz.get("available_until")
+        )
 
         # ====================================================
         # QUESTIONS
@@ -1182,11 +1526,15 @@ def add_questions(quiz_id):
         cursor.execute(
             """
             SELECT
-                quiz_id
+
+                quiz_id,
+                total_questions,
+                question_time_seconds
 
             FROM quizzes
 
             WHERE quiz_id=%s
+
             AND teacher_id=%s
             """,
             (
@@ -1257,6 +1605,15 @@ def add_questions(quiz_id):
     ).strip()
 
     # ========================================================
+    # OPTIONAL EXPLANATION
+    # ========================================================
+
+    explanation = request.form.get(
+        "explanation",
+        ""
+    ).strip()
+
+    # ========================================================
     # VALIDATION
     # ========================================================
 
@@ -1320,11 +1677,13 @@ def add_questions(quiz_id):
                 option_c,
                 option_d,
                 correct_option,
-                difficulty
+                difficulty,
+                explanation
             )
 
             VALUES
             (
+                %s,
                 %s,
                 %s,
                 %s,
@@ -1343,36 +1702,65 @@ def add_questions(quiz_id):
                 option_c,
                 option_d,
                 correct_option,
-                difficulty
+                difficulty,
+                explanation
             )
         )
 
         # ====================================================
-        # UPDATE COUNT
+        # UPDATE QUESTION COUNT
+        #
+        # AND AUTOMATIC DURATION
+        #
+        # New duration:
+        #
+        # actual question count × existing question time
         # ====================================================
 
         cursor.execute(
             """
             UPDATE quizzes
 
-            SET total_questions =
-            (
-                SELECT COUNT(*)
+            SET
 
-                FROM questions
+                total_questions =
+                (
+                    SELECT COUNT(*)
 
-                WHERE quiz_id=%s
-            )
+                    FROM questions
+
+                    WHERE quiz_id=%s
+                ),
+
+                duration_minutes =
+                CEILING(
+                    (
+                        (
+                            SELECT COUNT(*)
+
+                            FROM questions
+
+                            WHERE quiz_id=%s
+                        )
+                        *
+                        question_time_seconds
+                    ) / 60.0
+                )::INTEGER
 
             WHERE quiz_id=%s
             """,
             (
+                quiz_id,
                 quiz_id,
                 quiz_id
             )
         )
 
         db.commit()
+
+        print(
+            f"✅ Question added to quiz {quiz_id}"
+        )
 
     except Exception as e:
 
@@ -1399,32 +1787,14 @@ def add_questions(quiz_id):
 
 
 # ============================================================
-# VIEW RESULTS
-#
-# IMPORTANT:
-# Guest attempts are NOT assumed to have a guest_name column.
-#
-# We use to_jsonb(qa) so PostgreSQL can safely read possible
-# guest fields without crashing when a particular field does
-# not exist as a physical column.
-# ============================================================
-
-# ============================================================
-# VIEW ALL STUDENT RESULTS
-# ============================================================
-
-# ============================================================
 # VIEW ALL STUDENT RESULTS
 # ============================================================
 
 @teacher.route("/view_results")
 def view_results():
 
-    # ========================================================
-    # TEACHER LOGIN CHECK
-    # ========================================================
-
     if not teacher_logged_in():
+
         return redirect("/")
 
     db = None
@@ -1437,21 +1807,6 @@ def view_results():
         cursor = db.cursor(
             cursor_factory=RealDictCursor
         )
-
-        # ====================================================
-        # IMPORTANT
-        #
-        # quiz_attempts is the MAIN SOURCE here.
-        #
-        # This is important for GUEST students because:
-        #
-        # quiz_attempts.student_name
-        # quiz_attempts.roll_number
-        #
-        # contains the information entered on the QR page.
-        #
-        # results is LEFT JOINED only for score/result data.
-        # ====================================================
 
         cursor.execute(
             """
@@ -1521,7 +1876,7 @@ def view_results():
         attempts = cursor.fetchall()
 
         # ====================================================
-        # FORMAT RESULTS FOR TEMPLATE
+        # FORMAT RESULTS
         # ====================================================
 
         results = []
@@ -1529,7 +1884,7 @@ def view_results():
         for attempt in attempts:
 
             # =================================================
-            # DETERMINE STUDENT NAME
+            # STUDENT NAME
             # =================================================
 
             if (
@@ -1550,7 +1905,7 @@ def view_results():
                 )
 
             # =================================================
-            # DETERMINE ROLL NUMBER
+            # ROLL NUMBER
             # =================================================
 
             if (
@@ -1572,9 +1927,6 @@ def view_results():
 
             # =================================================
             # SCORE
-            #
-            # Prefer results table.
-            # If unavailable, use quiz_attempts.
             # =================================================
 
             score = (
@@ -1618,7 +1970,7 @@ def view_results():
                 attempt_type = "Registered"
 
             # =================================================
-            # CREATE CLEAN RESULT OBJECT
+            # CLEAN RESULT
             # =================================================
 
             results.append({
@@ -1661,7 +2013,9 @@ def view_results():
 
         print("=" * 70)
 
-        print("✅ VIEW RESULTS SUCCESS")
+        print(
+            "✅ VIEW RESULTS SUCCESS"
+        )
 
         print(
             f"📊 TOTAL SUBMITTED ATTEMPTS: "
@@ -1682,10 +2036,6 @@ def view_results():
 
         print("=" * 70)
 
-        # ====================================================
-        # RENDER
-        # ====================================================
-
         return render_template(
             "view_results.html",
             results=results
@@ -1694,11 +2044,14 @@ def view_results():
     except Exception as e:
 
         if db:
+
             db.rollback()
 
         print("=" * 70)
 
-        print("❌ VIEW RESULTS ERROR")
+        print(
+            "❌ VIEW RESULTS ERROR"
+        )
 
         print(
             "ERROR TYPE:",
@@ -1732,6 +2085,8 @@ def view_results():
                 db.close()
             except Exception:
                 pass
+
+
 # ============================================================
 # SHOW QR
 # ============================================================
@@ -1839,6 +2194,17 @@ def generate_qr_page():
         cursor.close()
         db.close()
 
+    # ========================================================
+    # STATUS
+    # ========================================================
+
+    for quiz in quizzes:
+
+        quiz["status"] = get_quiz_status(
+            quiz.get("available_from"),
+            quiz.get("available_until")
+        )
+
     return render_template(
         "generate_qr_page.html",
         quizzes=quizzes
@@ -1896,6 +2262,33 @@ def manage_quizzes():
 
         cursor.close()
         db.close()
+
+    # ========================================================
+    # ADD STATUS + CALCULATED DURATION
+    # ========================================================
+
+    for quiz in quizzes:
+
+        quiz["status"] = get_quiz_status(
+            quiz.get("available_from"),
+            quiz.get("available_until")
+        )
+
+        quiz["calculated_duration_minutes"] = (
+            calculate_duration_minutes(
+                quiz.get("total_questions") or 0,
+                quiz.get("question_time_seconds") or 0
+            )
+        )
+
+        quiz["total_duration_seconds"] = (
+            int(
+                quiz.get("total_questions") or 0
+            ) *
+            int(
+                quiz.get("question_time_seconds") or 0
+            )
+        )
 
     return render_template(
         "manage_quizzes.html",
@@ -2145,6 +2538,10 @@ def teacher_quizzes():
                 quiz_id,
                 title,
                 total_questions,
+                duration_minutes,
+                question_time_seconds,
+                available_from,
+                available_until,
                 created_at
 
             FROM quizzes
@@ -2160,11 +2557,30 @@ def teacher_quizzes():
 
         quizzes = cursor.fetchall()
 
-        # RealDictRow -> dict
+        # ====================================================
+        # CONVERT TO DICT + ADD STATUS
+        # ====================================================
+
         quizzes = [
             dict(q)
             for q in quizzes
         ]
+
+        for quiz in quizzes:
+
+            quiz["status"] = get_quiz_status(
+                quiz.get("available_from"),
+                quiz.get("available_until")
+            )
+
+            quiz["total_duration_seconds"] = (
+                int(
+                    quiz.get("total_questions") or 0
+                ) *
+                int(
+                    quiz.get("question_time_seconds") or 0
+                )
+            )
 
         return jsonify({
 
@@ -2281,9 +2697,6 @@ def quiz_progress(quiz_id):
 
         # ====================================================
         # TOTAL PARTICIPANTS
-        #
-        # quiz_attempts is the reliable source because
-        # guest attempts also have attempts.
         # ====================================================
 
         cursor.execute(

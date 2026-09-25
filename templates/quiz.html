@@ -44,7 +44,6 @@
     background: #f8f9ff;
 
     border: 1px solid #e8eaf5;
-
 }
 
 
@@ -57,7 +56,6 @@
     align-items: center;
 
     gap: 10px;
-
 }
 
 
@@ -78,7 +76,6 @@
     background: #eef2ff;
 
     font-size: 20px;
-
 }
 
 
@@ -89,7 +86,6 @@
     flex-direction: column;
 
     gap: 3px;
-
 }
 
 
@@ -104,7 +100,6 @@
     text-transform: uppercase;
 
     letter-spacing: .6px;
-
 }
 
 
@@ -115,7 +110,6 @@
     font-size: 18px;
 
     font-weight: 800;
-
 }
 
 
@@ -136,14 +130,12 @@
     background: #ffffff;
 
     border: 1px solid #e4e6ef;
-
 }
 
 
 .question-timer-icon {
 
     font-size: 16px;
-
 }
 
 
@@ -158,7 +150,6 @@
     font-weight: 800;
 
     text-align: center;
-
 }
 
 
@@ -169,14 +160,12 @@
     background: #fff7ed;
 
     border-color: #fed7aa;
-
 }
 
 
 .timer-warning .question-time {
 
     color: #ea580c;
-
 }
 
 
@@ -187,14 +176,18 @@
     border-color: #fecaca;
 
     animation: timerPulse 1s infinite;
-
 }
 
 
 .timer-danger .question-time {
 
     color: #dc2626;
+}
 
+
+.timer-danger .timer-label {
+
+    color: #dc2626;
 }
 
 
@@ -206,6 +199,32 @@
 
     }
 
+}
+
+
+/* =========================================================
+   HARD DEADLINE NOTICE
+========================================================= */
+
+.deadline-notice {
+
+    margin-top: 12px;
+
+    padding: 10px 14px;
+
+    border-radius: 10px;
+
+    background: #fff7ed;
+
+    border: 1px solid #fed7aa;
+
+    color: #9a3412;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    text-align: center;
 }
 
 
@@ -346,7 +365,6 @@
 </nav>
 
 
-
 <!-- =====================================================
      MAIN
 ====================================================== -->
@@ -373,10 +391,10 @@
 
                 <h1>
 
-                    Question {{number}}
+                    Question {{ number }}
 
                     <span>
-                        / {{total}}
+                        / {{ total }}
                     </span>
 
                 </h1>
@@ -386,13 +404,12 @@
 
             <div class="question-counter">
 
-                {{number}} of {{total}}
+                {{ number }} of {{ total }}
 
             </div>
 
 
         </div>
-
 
 
         <!-- PROGRESS BAR -->
@@ -401,7 +418,8 @@
 
             <div
                 class="progress-fill"
-                style="width: {{ (number/total)*100 }}%">
+                style="width: {{ (number / total) * 100 }}%">
+
             </div>
 
         </div>
@@ -414,11 +432,10 @@
             </span>
 
             <strong>
-                {{ ((number/total)*100)|round|int }}%
+                {{ ((number / total) * 100)|round|int }}%
             </strong>
 
         </div>
-
 
 
         <!-- =================================================
@@ -459,7 +476,6 @@
             </div>
 
 
-
             <!-- QUESTION TIMER -->
 
             <div
@@ -492,8 +508,21 @@
         </div>
 
 
-    </section>
+        <!-- HARD DEADLINE -->
 
+        {% if quiz_available_until %}
+
+        <div class="deadline-notice">
+
+            ⏰ This quiz will close automatically at the scheduled
+            closing time.
+
+        </div>
+
+        {% endif %}
+
+
+    </section>
 
 
     <!-- =================================================
@@ -509,18 +538,16 @@
                 ✦
             </span>
 
-            QUESTION {{number}}
+            QUESTION {{ number }}
 
         </div>
 
 
-
         <h2 class="attempt-question-text">
 
-            {{question.question}}
+            {{ question.question }}
 
         </h2>
-
 
 
         <p class="select-hint">
@@ -528,7 +555,6 @@
             Select one answer from the options below.
 
         </p>
-
 
 
         <!-- =================================================
@@ -559,7 +585,7 @@
                     </span>
 
                     <span class="attempt-option-text">
-                        {{question.option_a}}
+                        {{ question.option_a }}
                     </span>
 
                     <span class="attempt-option-check">
@@ -567,7 +593,6 @@
                     </span>
 
                 </label>
-
 
 
                 <!-- OPTION B -->
@@ -584,7 +609,7 @@
                     </span>
 
                     <span class="attempt-option-text">
-                        {{question.option_b}}
+                        {{ question.option_b }}
                     </span>
 
                     <span class="attempt-option-check">
@@ -592,7 +617,6 @@
                     </span>
 
                 </label>
-
 
 
                 <!-- OPTION C -->
@@ -609,7 +633,7 @@
                     </span>
 
                     <span class="attempt-option-text">
-                        {{question.option_c}}
+                        {{ question.option_c }}
                     </span>
 
                     <span class="attempt-option-check">
@@ -617,7 +641,6 @@
                     </span>
 
                 </label>
-
 
 
                 <!-- OPTION D -->
@@ -634,7 +657,7 @@
                     </span>
 
                     <span class="attempt-option-text">
-                        {{question.option_d}}
+                        {{ question.option_d }}
                     </span>
 
                     <span class="attempt-option-check">
@@ -645,7 +668,6 @@
 
 
             </div>
-
 
 
             <!-- =================================================
@@ -676,7 +698,6 @@
 
                     {% if number == total %}
 
-
                         <span>
                             Submit Quiz
                         </span>
@@ -685,9 +706,7 @@
                             🚀
                         </span>
 
-
                     {% else %}
-
 
                         <span>
                             Next Question
@@ -696,7 +715,6 @@
                         <span class="btn-icon">
                             →
                         </span>
-
 
                     {% endif %}
 
@@ -711,7 +729,6 @@
 
 
     </section>
-
 
 
     <!-- =================================================
@@ -741,7 +758,6 @@
 </div>
 
 
-
 <!-- =====================================================
      TIMER JAVASCRIPT
 ====================================================== -->
@@ -768,12 +784,34 @@ const questionTimerBox =
    TIMER VALUES FROM FLASK
 ===================================================== */
 
+/*
+    These values are calculated by the server.
+
+    overallSeconds is already capped by:
+
+        min(
+            total attempt time,
+            quiz availability end
+        )
+*/
+
 let overallSeconds =
     Number("{{ remaining_seconds }}");
 
 
 let questionSeconds =
-    Number("{{ question_time_seconds }}");
+    Number("{{ question_remaining_seconds }}");
+
+
+/*
+    Absolute server-side effective deadline.
+
+    This is only used as an additional browser-side
+    safety mechanism.
+*/
+
+const quizDeadline =
+    Number("{{ quiz_deadline }}");
 
 
 /* =====================================================
@@ -795,9 +833,63 @@ function formatTime(seconds) {
 
     return (
         String(minutes).padStart(2, "0")
-        + ":"
-        + String(secs).padStart(2, "0")
+        +
+        ":"
+        +
+        String(secs).padStart(2, "0")
     );
+}
+
+
+/* =====================================================
+   TIMER STATE
+===================================================== */
+
+let submitted = false;
+
+let overallInterval = null;
+
+let questionInterval = null;
+
+
+/* =====================================================
+   AUTO SUBMIT
+===================================================== */
+
+function autoSubmitQuiz() {
+
+    if (submitted) {
+        return;
+    }
+
+    submitted = true;
+
+    if (overallInterval) {
+
+        clearInterval(
+            overallInterval
+        );
+
+    }
+
+    if (questionInterval) {
+
+        clearInterval(
+            questionInterval
+        );
+
+    }
+
+    /*
+        form.submit() intentionally bypasses HTML5
+        "required" validation.
+
+        This is necessary because a timer expiry must
+        submit even when the student did not select
+        an answer.
+    */
+
+    quizForm.submit();
 }
 
 
@@ -807,9 +899,21 @@ function formatTime(seconds) {
 
 function updateOverallTimer() {
 
-    overallTimer.textContent =
-        formatTime(overallSeconds);
+    /*
+        Browser countdown.
 
+        overallSeconds is the server-calculated amount.
+    */
+
+    overallTimer.textContent =
+        formatTime(
+            overallSeconds
+        );
+
+
+    /*
+        Warning
+    */
 
     if (overallSeconds <= 60) {
 
@@ -819,16 +923,15 @@ function updateOverallTimer() {
     }
 
 
+    /*
+        FINAL SECOND
+    */
+
     if (overallSeconds <= 0) {
 
-        clearInterval(overallInterval);
-
-        clearInterval(questionInterval);
-
-        quizForm.submit();
+        autoSubmitQuiz();
 
         return;
-
     }
 
 
@@ -844,13 +947,18 @@ function updateOverallTimer() {
 function updateQuestionTimer() {
 
     questionTimer.textContent =
-        formatTime(questionSeconds);
+        formatTime(
+            questionSeconds
+        );
 
 
-    /* Warning */
+    /*
+        Warning
+    */
 
     if (
-        questionSeconds <= 10 &&
+        questionSeconds <= 10
+        &&
         questionSeconds > 5
     ) {
 
@@ -861,7 +969,9 @@ function updateQuestionTimer() {
     }
 
 
-    /* Danger */
+    /*
+        Danger
+    */
 
     if (questionSeconds <= 5) {
 
@@ -876,48 +986,33 @@ function updateQuestionTimer() {
     }
 
 
-    /* Timer finished */
+    /*
+        Timer finished
+    */
 
     if (questionSeconds <= 0) {
 
-        clearInterval(questionInterval);
+        if (questionInterval) {
 
-        /*
-         * Automatically move to next question.
-         *
-         * If student selected an answer,
-         * it will be submitted.
-         *
-         * If no answer is selected,
-         * browser validation is bypassed
-         * using requestSubmit only when possible.
-         */
-
-        const selectedAnswer =
-            document.querySelector(
-                'input[name="answer"]:checked'
+            clearInterval(
+                questionInterval
             );
 
-
-        if (selectedAnswer) {
-
-            quizForm.submit();
-
         }
 
-        else {
+        /*
+            Submit current question.
 
-            /*
-             * Submit empty answer.
-             * Server will record NULL.
-             */
+            If answer exists, server saves it.
 
-            quizForm.submit();
+            If no answer exists, form.submit()
+            bypasses required validation and server
+            receives NULL.
+        */
 
-        }
+        autoSubmitCurrentQuestion();
 
         return;
-
     }
 
 
@@ -927,29 +1022,72 @@ function updateQuestionTimer() {
 
 
 /* =====================================================
+   AUTO SUBMIT CURRENT QUESTION
+===================================================== */
+
+function autoSubmitCurrentQuestion() {
+
+    if (submitted) {
+        return;
+    }
+
+    submitted = true;
+
+    if (overallInterval) {
+
+        clearInterval(
+            overallInterval
+        );
+
+    }
+
+    if (questionInterval) {
+
+        clearInterval(
+            questionInterval
+        );
+
+    }
+
+    /*
+        Native form.submit() bypasses required
+        validation and sends the current answer
+        if selected.
+    */
+
+    quizForm.submit();
+
+}
+
+
+/* =====================================================
    INITIAL DISPLAY
 ===================================================== */
 
 overallTimer.textContent =
-    formatTime(overallSeconds);
+    formatTime(
+        overallSeconds
+    );
 
 
 questionTimer.textContent =
-    formatTime(questionSeconds);
+    formatTime(
+        questionSeconds
+    );
 
 
 /* =====================================================
    START TIMERS
 ===================================================== */
 
-const overallInterval =
+overallInterval =
     setInterval(
         updateOverallTimer,
         1000
     );
 
 
-const questionInterval =
+questionInterval =
     setInterval(
         updateQuestionTimer,
         1000
@@ -957,17 +1095,68 @@ const questionInterval =
 
 
 /* =====================================================
+   ADDITIONAL ABSOLUTE DEADLINE CHECK
+===================================================== */
+
+/*
+    This protects against situations where the browser
+    countdown gets delayed/backgrounded.
+
+    IMPORTANT:
+
+    quizDeadline comes from the SERVER.
+
+    It is NOT taken from the user's computer clock
+    when the quiz starts.
+*/
+
+function checkAbsoluteDeadline() {
+
+    if (!quizDeadline) {
+        return;
+    }
+
+    const nowSeconds =
+        Date.now() / 1000;
+
+
+    if (
+        nowSeconds >= quizDeadline
+    ) {
+
+        autoSubmitQuiz();
+
+    }
+
+}
+
+
+/*
+    Check every 500ms.
+
+    This is intentionally separate from the visible
+    one-second countdown.
+*/
+
+setInterval(
+    checkAbsoluteDeadline,
+    500
+);
+
+
+/* =====================================================
    PREVENT DOUBLE SUBMISSION
 ===================================================== */
 
-let submitted = false;
-
-
 quizForm.addEventListener(
     "submit",
-    function() {
+    function(event) {
 
         if (submitted) {
+
+            /*
+                Browser normally won't submit twice.
+            */
 
             return;
 
@@ -975,19 +1164,26 @@ quizForm.addEventListener(
 
         submitted = true;
 
-        clearInterval(
-            overallInterval
-        );
+        if (overallInterval) {
 
-        clearInterval(
-            questionInterval
-        );
+            clearInterval(
+                overallInterval
+            );
+
+        }
+
+        if (questionInterval) {
+
+            clearInterval(
+                questionInterval
+            );
+
+        }
 
     }
 );
 
 </script>
-
 
 
 <script src="{{ url_for('static', filename='js/darkmode.js') }}">

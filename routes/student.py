@@ -40,13 +40,6 @@ def quiz_access_allowed():
 # ============================================================
 # ENSURE QUESTION EXPLANATIONS
 # ============================================================
-#
-# Some older versions of get_quiz_questions() may not include
-# the explanation column.
-#
-# This helper makes sure explanation is loaded from PostgreSQL.
-#
-# ============================================================
 
 def _ensure_question_explanations(questions):
 
@@ -60,7 +53,6 @@ def _ensure_question_explanations(questions):
         if not q.get("explanation"):
 
             try:
-
                 missing_ids.append(
                     int(q["question_id"])
                 )
@@ -70,11 +62,9 @@ def _ensure_question_explanations(questions):
                 TypeError,
                 ValueError
             ):
-
                 pass
 
     if not missing_ids:
-
         return questions
 
     db = get_db_connection()
@@ -109,7 +99,6 @@ def _ensure_question_explanations(questions):
         for q in questions:
 
             try:
-
                 q_id = int(
                     q["question_id"]
                 )
@@ -119,15 +108,12 @@ def _ensure_question_explanations(questions):
                 TypeError,
                 ValueError
             ):
-
                 continue
 
             if not q.get("explanation"):
 
                 q["explanation"] = (
-                    explanation_map.get(
-                        q_id
-                    )
+                    explanation_map.get(q_id)
                 )
 
     except Exception as e:
@@ -143,6 +129,282 @@ def _ensure_question_explanations(questions):
         db.close()
 
     return questions
+
+
+# ============================================================
+# CALCULATE QUIZ DURATION
+# ============================================================
+#
+# Total duration is ALWAYS:
+#
+#       total questions × time per question
+#
+# Example:
+#
+#       20 × 15 seconds = 300 seconds = 5 minutes
+#
+# We intentionally calculate this from the actual loaded
+# questions instead of trusting old duration_minutes data.
+#
+# ============================================================
+
+def _calculate_quiz_duration_seconds(
+    questions,
+    question_time_seconds
+):
+
+    try:
+
+        total_questions = len(
+            questions
+        )
+
+        question_time_seconds = int(
+            question_time_seconds
+        )
+
+        if total_questions <= 0:
+            return 0
+
+        if question_time_seconds <= 0:
+            return 0
+
+        return (
+            total_questions
+            * question_time_seconds
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+
+        return 0
+
+
+# ============================================================
+# CALCULATE EFFECTIVE DEADLINE
+# ============================================================
+#
+# The student gets:
+#
+#   min(
+#       attempt duration deadline,
+#       quiz availability end
+#   )
+#
+# Therefore the availability end ALWAYS wins if it comes
+# earlier.
+#
+# ============================================================
+
+def _calculate_effective_deadline(
+    start_timestamp,
+    total_duration_seconds,
+    available_until
+):
+
+    attempt_deadline = (
+        start_timestamp
+        + total_duration_seconds
+    )
+
+    if available_until:
+
+        try:
+
+            availability_deadline = (
+                available_until.timestamp()
+            )
+
+            return min(
+                attempt_deadline,
+                availability_deadline
+            )
+
+        except Exception:
+            pass
+
+    return attempt_deadline
+
+
+# ============================================================
+# QUIZ STATUS
+# ============================================================
+
+def _get_quiz_status(quiz):
+
+    now = time.time()
+
+    available_from = quiz.get(
+        "available_from"
+    )
+
+    available_until = quiz.get(
+        "available_until"
+    )
+
+    # --------------------------------------------------------
+    # UPCOMING
+    # --------------------------------------------------------
+
+    if available_from:
+
+        try:
+
+            if now < available_from.timestamp():
+
+                return "upcoming"
+
+        except Exception:
+            pass
+
+    # --------------------------------------------------------
+    # CLOSED
+    # --------------------------------------------------------
+
+    if available_until:
+
+        try:
+
+            if now >= available_until.timestamp():
+
+                return "closed"
+
+        except Exception:
+            pass
+
+    # --------------------------------------------------------
+    # LIVE
+    # --------------------------------------------------------
+
+    return "live"
+
+
+# ============================================================
+# QUIZ UNAVAILABLE PAGE
+# ============================================================
+
+def _quiz_unavailable_page(
+    title="Quiz Not Available",
+    message="This quiz is currently unavailable."
+):
+
+    return f"""
+    <!DOCTYPE html>
+
+    <html>
+
+    <head>
+
+        <title>{title}</title>
+
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        >
+
+        <style>
+
+            body {{
+                margin: 0;
+                padding: 20px;
+                min-height: 100vh;
+
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                font-family: Arial, sans-serif;
+
+                background:
+                    linear-gradient(
+                        135deg,
+                        #0f172a,
+                        #1e293b
+                    );
+
+                color: white;
+            }}
+
+            .card {{
+                width: 100%;
+                max-width: 450px;
+
+                padding: 35px;
+
+                text-align: center;
+
+                background: rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+
+                border: 1px solid rgba(
+                    255,
+                    255,
+                    255,
+                    0.15
+                );
+
+                border-radius: 20px;
+
+                box-shadow:
+                    0 20px 60px
+                    rgba(0,0,0,0.35);
+            }}
+
+            h1 {{
+                margin-bottom: 10px;
+            }}
+
+            p {{
+                color: #cbd5e1;
+                line-height: 1.6;
+            }}
+
+            a {{
+                display: inline-block;
+
+                margin-top: 20px;
+
+                padding: 12px 20px;
+
+                color: white;
+
+                text-decoration: none;
+
+                border-radius: 10px;
+
+                background: #2563eb;
+            }}
+
+        </style>
+
+    </head>
+
+    <body>
+
+        <div class="card">
+
+            <h1>⏰ {title}</h1>
+
+            <p>
+                {message}
+            </p>
+
+            <a href="/available_quizzes">
+                ← Back to Quizzes
+            </a>
+
+        </div>
+
+    </body>
+
+    </html>
+    """, 404
 
 
 # ============================================================
@@ -167,6 +429,17 @@ def student_dashboard():
 # ============================================================
 # AVAILABLE QUIZZES
 # ============================================================
+#
+# IMPORTANT:
+#
+# We now fetch UPCOMING + LIVE + CLOSED quizzes.
+#
+# The frontend will show their status.
+#
+# The backend /start_quiz route separately enforces the
+# actual start/end time.
+#
+# ============================================================
 
 @student.route("/available_quizzes")
 def available_quizzes():
@@ -187,25 +460,31 @@ def available_quizzes():
             SELECT
                 quiz_id,
                 title,
+                prompt,
                 total_questions,
                 duration_minutes,
                 question_time_seconds,
                 available_from,
-                available_until
+                available_until,
+                created_at
 
             FROM quizzes
 
-            WHERE
-                available_from <= NOW()
+            ORDER BY
+                CASE
+                    WHEN available_from > NOW()
+                        THEN 0
 
-                AND
+                    WHEN available_until IS NULL
+                         OR available_until > NOW()
+                        THEN 1
 
-                (
-                    available_until IS NULL
-                    OR available_until > NOW()
-                )
+                    ELSE 2
+                END,
 
-            ORDER BY quiz_id DESC
+                available_from ASC,
+
+                quiz_id DESC
             """
         )
 
@@ -215,6 +494,74 @@ def available_quizzes():
 
         cursor.close()
         db.close()
+
+    # ========================================================
+    # PREPARE DISPLAY DATA
+    # ========================================================
+
+    for quiz in quizzes:
+
+        quiz["status"] = _get_quiz_status(
+            quiz
+        )
+
+        # Calculate the real duration from questions ×
+        # per-question time.
+        try:
+
+            total_seconds = (
+                int(quiz["total_questions"] or 0)
+                *
+                int(quiz["question_time_seconds"] or 0)
+            )
+
+            quiz["calculated_duration_seconds"] = (
+                total_seconds
+            )
+
+            quiz["calculated_duration_minutes"] = (
+                (total_seconds + 59) // 60
+                if total_seconds > 0
+                else 0
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            quiz["calculated_duration_seconds"] = 0
+            quiz["calculated_duration_minutes"] = 0
+
+        # ----------------------------------------------------
+        # Display-friendly dates
+        # ----------------------------------------------------
+
+        if quiz.get("available_from"):
+
+            quiz["available_from_display"] = (
+                quiz["available_from"].strftime(
+                    "%d %b %Y, %I:%M %p"
+                )
+            )
+
+        else:
+
+            quiz["available_from_display"] = "Not scheduled"
+
+        if quiz.get("available_until"):
+
+            quiz["available_until_display"] = (
+                quiz["available_until"].strftime(
+                    "%d %b %Y, %I:%M %p"
+                )
+            )
+
+        else:
+
+            quiz["available_until_display"] = (
+                "No closing time"
+            )
 
     return render_template(
         "available_quizzes.html",
@@ -254,14 +601,6 @@ def guest_start_quiz(quiz_id):
             FROM quizzes
 
             WHERE quiz_id=%s
-
-            AND available_from <= NOW()
-
-            AND
-            (
-                available_until IS NULL
-                OR available_until > NOW()
-            )
             """,
             (quiz_id,)
         )
@@ -274,127 +613,37 @@ def guest_start_quiz(quiz_id):
         db.close()
 
     # ========================================================
-    # QUIZ NOT AVAILABLE
+    # QUIZ DOES NOT EXIST
     # ========================================================
 
     if not quiz:
 
-        return """
-        <!DOCTYPE html>
+        return _quiz_unavailable_page(
+            "Quiz Not Found",
+            "The requested quiz does not exist."
+        )
 
-        <html>
+    # ========================================================
+    # EXACT SERVER-SIDE AVAILABILITY CHECK
+    # ========================================================
 
-        <head>
+    status = _get_quiz_status(
+        quiz
+    )
 
-            <title>Quiz Not Available</title>
+    if status == "upcoming":
 
-            <meta
-                name="viewport"
-                content="width=device-width, initial-scale=1.0"
-            >
+        return _quiz_unavailable_page(
+            "Quiz Not Started",
+            "This quiz has not started yet. Please come back at the scheduled start time."
+        )
 
-            <style>
+    if status == "closed":
 
-                body {
-                    margin: 0;
-                    padding: 20px;
-                    min-height: 100vh;
-
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-
-                    font-family: Arial, sans-serif;
-
-                    background:
-                        linear-gradient(
-                            135deg,
-                            #0f172a,
-                            #1e293b
-                        );
-
-                    color: white;
-                }
-
-                .card {
-                    width: 100%;
-                    max-width: 450px;
-
-                    padding: 35px;
-
-                    text-align: center;
-
-                    background: rgba(
-                        255,
-                        255,
-                        255,
-                        0.08
-                    );
-
-                    border: 1px solid rgba(
-                        255,
-                        255,
-                        255,
-                        0.15
-                    );
-
-                    border-radius: 20px;
-
-                    box-shadow:
-                        0 20px 60px
-                        rgba(0,0,0,0.35);
-                }
-
-                h1 {
-                    margin-bottom: 10px;
-                }
-
-                p {
-                    color: #cbd5e1;
-                    line-height: 1.6;
-                }
-
-                a {
-                    display: inline-block;
-
-                    margin-top: 20px;
-
-                    padding: 12px 20px;
-
-                    color: white;
-
-                    text-decoration: none;
-
-                    border-radius: 10px;
-
-                    background: #2563eb;
-                }
-
-            </style>
-
-        </head>
-
-        <body>
-
-            <div class="card">
-
-                <h1>⏰ Quiz Not Available</h1>
-
-                <p>
-                    This quiz has expired or is
-                    currently unavailable.
-                </p>
-
-                <a href="/">
-                    ← Back to Login
-                </a>
-
-            </div>
-
-        </body>
-
-        </html>
-        """, 404
+        return _quiz_unavailable_page(
+            "Quiz Closed",
+            "This quiz has already reached its closing time."
+        )
 
     # ========================================================
     # POST
@@ -502,7 +751,9 @@ def guest_start():
         </a>
         """
 
-    quiz_id = int(quiz_id)
+    quiz_id = int(
+        quiz_id
+    )
 
     return _start_guest_quiz(
         quiz_id,
@@ -547,14 +798,6 @@ def _start_guest_quiz(
             FROM quizzes
 
             WHERE quiz_id=%s
-
-            AND available_from <= NOW()
-
-            AND
-            (
-                available_until IS NULL
-                OR available_until > NOW()
-            )
             """,
             (quiz_id,)
         )
@@ -563,13 +806,32 @@ def _start_guest_quiz(
 
         if not quiz:
 
-            return """
-            <h2>❌ Quiz not available.</h2>
+            return _quiz_unavailable_page(
+                "Quiz Not Found",
+                "The requested quiz does not exist."
+            )
 
-            <a href="/">
-                ← Back to Login
-            </a>
-            """, 404
+        # ====================================================
+        # SERVER-SIDE AVAILABILITY
+        # ====================================================
+
+        status = _get_quiz_status(
+            quiz
+        )
+
+        if status == "upcoming":
+
+            return _quiz_unavailable_page(
+                "Quiz Not Started",
+                "This quiz has not started yet."
+            )
+
+        if status == "closed":
+
+            return _quiz_unavailable_page(
+                "Quiz Closed",
+                "This quiz has already closed."
+            )
 
         # ====================================================
         # GET QUESTIONS
@@ -589,10 +851,47 @@ def _start_guest_quiz(
             </a>
             """, 404
 
-        # Make sure explanations are available
         questions = _ensure_question_explanations(
             questions
         )
+
+        # ====================================================
+        # QUESTION TIME
+        # ====================================================
+
+        try:
+
+            question_time_seconds = int(
+                quiz["question_time_seconds"] or 60
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            question_time_seconds = 60
+
+        # ====================================================
+        # TOTAL DURATION
+        # ====================================================
+
+        total_duration_seconds = (
+            _calculate_quiz_duration_seconds(
+                questions,
+                question_time_seconds
+            )
+        )
+
+        if total_duration_seconds <= 0:
+
+            return """
+            <h2>❌ Invalid quiz timer configuration.</h2>
+
+            <a href="/">
+                ← Back
+            </a>
+            """, 500
 
         # ====================================================
         # CREATE GUEST ATTEMPT
@@ -622,7 +921,9 @@ def _start_guest_quiz(
                 'in_progress'
             )
 
-            RETURNING attempt_id
+            RETURNING
+                attempt_id,
+                started_at
             """,
             (
                 quiz_id,
@@ -636,19 +937,41 @@ def _start_guest_quiz(
         db.commit()
 
         # ====================================================
+        # DATABASE START TIME
+        # ====================================================
+
+        started_at = attempt[
+            "started_at"
+        ]
+
+        start_timestamp = (
+            started_at.timestamp()
+        )
+
+        # ====================================================
+        # EFFECTIVE DEADLINE
+        # ====================================================
+
+        effective_deadline = (
+            _calculate_effective_deadline(
+                start_timestamp,
+                total_duration_seconds,
+                quiz.get("available_until")
+            )
+        )
+
+        # ====================================================
         # STORE GUEST SESSION
         # ====================================================
 
         session["guest_attempt"] = True
 
-        # Compatibility
         session["guest_mode"] = True
 
         session["guest_attempt_id"] = (
             attempt["attempt_id"]
         )
 
-        # Compatibility
         session["quiz_attempt_id"] = (
             attempt["attempt_id"]
         )
@@ -669,31 +992,28 @@ def _start_guest_quiz(
 
         session["questions"] = questions
 
-        # ====================================================
-        # START FROM QUESTION 1
-        # ====================================================
-
         session["current_question"] = 0
 
         session["answers"] = {}
 
         # ====================================================
-        # QUIZ TIMER
+        # TIMER DATA
         # ====================================================
 
         session["quiz_duration_minutes"] = (
-            quiz["duration_minutes"] or 30
+            (total_duration_seconds + 59) // 60
+        )
+
+        session["quiz_duration_seconds"] = (
+            total_duration_seconds
         )
 
         session["question_time_seconds"] = (
-            quiz["question_time_seconds"] or 60
+            question_time_seconds
         )
 
-        # ====================================================
-        # AVAILABILITY
-        # ====================================================
-
-        if quiz["available_until"]:
+        # Hard availability deadline
+        if quiz.get("available_until"):
 
             session["quiz_available_until"] = (
                 quiz["available_until"].timestamp()
@@ -703,13 +1023,20 @@ def _start_guest_quiz(
 
             session["quiz_available_until"] = None
 
-        # ====================================================
-        # START TIME
-        # ====================================================
+        # Actual attempt start
+        session["quiz_start_time"] = (
+            start_timestamp
+        )
 
-        session["quiz_start_time"] = time.time()
+        # Final effective deadline
+        session["quiz_deadline"] = (
+            effective_deadline
+        )
 
-        session["question_start_time"] = time.time()
+        # Current question timer
+        session["question_start_time"] = (
+            time.time()
+        )
 
         session.modified = True
 
@@ -718,10 +1045,14 @@ def _start_guest_quiz(
             f"Quiz={quiz_id} | "
             f"Attempt={attempt['attempt_id']} | "
             f"Name={student_name} | "
-            f"Roll={roll_number}"
+            f"Roll={roll_number} | "
+            f"Duration={total_duration_seconds}s | "
+            f"Deadline={effective_deadline}"
         )
 
-        return redirect("/quiz")
+        return redirect(
+            "/quiz"
+        )
 
     except Exception as e:
 
@@ -759,12 +1090,7 @@ def _start_guest_quiz(
 )
 def start_quiz(quiz_id):
 
-    # ========================================================
-    # LOGIN CHECK
-    # ========================================================
-
     if "student_id" not in session:
-
         return redirect("/")
 
     db = get_db_connection()
@@ -793,14 +1119,6 @@ def start_quiz(quiz_id):
             FROM quizzes
 
             WHERE quiz_id=%s
-
-            AND available_from <= NOW()
-
-            AND
-            (
-                available_until IS NULL
-                OR available_until > NOW()
-            )
             """,
             (quiz_id,)
         )
@@ -809,18 +1127,32 @@ def start_quiz(quiz_id):
 
         if not quiz:
 
-            return """
-            <h2>⏰ Quiz No Longer Available</h2>
+            return _quiz_unavailable_page(
+                "Quiz Not Found",
+                "The requested quiz does not exist."
+            )
 
-            <p>
-                This quiz has expired or is not
-                currently available.
-            </p>
+        # ====================================================
+        # EXACT SERVER-SIDE START / END CHECK
+        # ====================================================
 
-            <a href="/available_quizzes">
-                ← Back to Available Quizzes
-            </a>
-            """, 404
+        status = _get_quiz_status(
+            quiz
+        )
+
+        if status == "upcoming":
+
+            return _quiz_unavailable_page(
+                "Quiz Not Started",
+                "This quiz will become available at its scheduled start time."
+            )
+
+        if status == "closed":
+
+            return _quiz_unavailable_page(
+                "Quiz Closed",
+                "This quiz has already reached its closing time."
+            )
 
         # ====================================================
         # GET STUDENT DETAILS
@@ -871,36 +1203,64 @@ def start_quiz(quiz_id):
             </a>
             """, 404
 
-        # Make sure explanations are available
         questions = _ensure_question_explanations(
             questions
         )
 
         # ====================================================
-        # CREATE / FIND LOGIN ATTEMPT
+        # QUESTION TIME
         # ====================================================
-        #
-        # We first check whether this student already has an
-        # in-progress attempt for this quiz.
-        #
-        # This avoids creating duplicate attempts when the
-        # browser refreshes the start URL.
-        #
+
+        try:
+
+            question_time_seconds = int(
+                quiz["question_time_seconds"] or 60
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            question_time_seconds = 60
+
+        # ====================================================
+        # TOTAL DURATION
+        # ====================================================
+
+        total_duration_seconds = (
+            _calculate_quiz_duration_seconds(
+                questions,
+                question_time_seconds
+            )
+        )
+
+        if total_duration_seconds <= 0:
+
+            return """
+            <h2>❌ Invalid quiz timer configuration.</h2>
+
+            <a href="/available_quizzes">
+                ← Back to Available Quizzes
+            </a>
+            """, 500
+
+        # ====================================================
+        # FIND EXISTING IN-PROGRESS ATTEMPT
         # ====================================================
 
         cursor.execute(
             """
             SELECT
                 attempt_id,
+                started_at,
                 status
 
             FROM quiz_attempts
 
             WHERE
                 quiz_id=%s
-
                 AND student_id=%s
-
                 AND status='in_progress'
 
             ORDER BY started_at DESC
@@ -915,10 +1275,18 @@ def start_quiz(quiz_id):
 
         existing_attempt = cursor.fetchone()
 
+        # ====================================================
+        # EXISTING ATTEMPT
+        # ====================================================
+
         if existing_attempt:
 
             attempt_id = (
                 existing_attempt["attempt_id"]
+            )
+
+            started_at = (
+                existing_attempt["started_at"]
             )
 
             print(
@@ -927,11 +1295,11 @@ def start_quiz(quiz_id):
                 f"Attempt={attempt_id}"
             )
 
-        else:
+        # ====================================================
+        # NEW ATTEMPT
+        # ====================================================
 
-            # =================================================
-            # CREATE NEW ATTEMPT
-            # =================================================
+        else:
 
             cursor.execute(
                 """
@@ -957,7 +1325,9 @@ def start_quiz(quiz_id):
                     'in_progress'
                 )
 
-                RETURNING attempt_id
+                RETURNING
+                    attempt_id,
+                    started_at
                 """,
                 (
                     quiz_id,
@@ -973,6 +1343,10 @@ def start_quiz(quiz_id):
                 attempt["attempt_id"]
             )
 
+            started_at = (
+                attempt["started_at"]
+            )
+
             db.commit()
 
             print(
@@ -980,6 +1354,60 @@ def start_quiz(quiz_id):
                 f"Quiz={quiz_id} | "
                 f"Student={session['student_id']} | "
                 f"Attempt={attempt_id}"
+            )
+
+        # ====================================================
+        # IMPORTANT:
+        #
+        # Use DATABASE started_at.
+        #
+        # Do NOT reset timer to current time when an existing
+        # attempt is reopened/refreshed.
+        # ====================================================
+
+        start_timestamp = (
+            started_at.timestamp()
+        )
+
+        # ====================================================
+        # EFFECTIVE DEADLINE
+        # ====================================================
+
+        effective_deadline = (
+            _calculate_effective_deadline(
+                start_timestamp,
+                total_duration_seconds,
+                quiz.get("available_until")
+            )
+        )
+
+        # ====================================================
+        # CHECK IF EXISTING ATTEMPT HAS ALREADY EXPIRED
+        # ====================================================
+
+        if time.time() >= effective_deadline:
+
+            cursor.execute(
+                """
+                UPDATE quiz_attempts
+
+                SET
+                    submitted_at = NOW(),
+                    status = 'submitted'
+
+                WHERE attempt_id=%s
+                  AND status='in_progress'
+                """,
+                (
+                    attempt_id,
+                )
+            )
+
+            db.commit()
+
+            return _quiz_unavailable_page(
+                "Quiz Time Expired",
+                "The time allowed for this quiz attempt has already expired."
             )
 
         # ====================================================
@@ -1033,23 +1461,43 @@ def start_quiz(quiz_id):
 
         session["questions"] = questions
 
-        session["current_question"] = 0
+        # Only initialise question index/answers for a NEW
+        # attempt. Existing session data is preserved when
+        # possible.
+        if (
+            session.get("quiz_id") != quiz_id
+            or session.get("quiz_attempt_id") != attempt_id
+        ):
+            session["current_question"] = 0
+            session["answers"] = {}
 
-        session["answers"] = {}
+        # If no valid question index exists, initialise it.
+        if "current_question" not in session:
+            session["current_question"] = 0
+
+        if not isinstance(
+            session.get("answers"),
+            dict
+        ):
+            session["answers"] = {}
 
         session["quiz_duration_minutes"] = (
-            quiz["duration_minutes"] or 30
+            (total_duration_seconds + 59) // 60
+        )
+
+        session["quiz_duration_seconds"] = (
+            total_duration_seconds
         )
 
         session["question_time_seconds"] = (
-            quiz["question_time_seconds"] or 60
+            question_time_seconds
         )
 
         # ====================================================
-        # AVAILABILITY
+        # AVAILABILITY END
         # ====================================================
 
-        if quiz["available_until"]:
+        if quiz.get("available_until"):
 
             session["quiz_available_until"] = (
                 quiz["available_until"].timestamp()
@@ -1060,16 +1508,38 @@ def start_quiz(quiz_id):
             session["quiz_available_until"] = None
 
         # ====================================================
-        # START TIME
+        # START TIME FROM DATABASE
         # ====================================================
 
-        session["quiz_start_time"] = time.time()
+        session["quiz_start_time"] = (
+            start_timestamp
+        )
 
-        session["question_start_time"] = time.time()
+        session["quiz_deadline"] = (
+            effective_deadline
+        )
+
+        # ====================================================
+        # QUESTION TIMER
+        # ====================================================
+
+        # If this is a genuinely new attempt, start question 1.
+        #
+        # If the student is continuing the existing session,
+        # do not reset question_start_time.
+        if not session.get(
+            "question_start_time"
+        ):
+
+            session["question_start_time"] = (
+                time.time()
+            )
 
         session.modified = True
 
-        return redirect("/quiz")
+        return redirect(
+            "/quiz"
+        )
 
     except Exception as e:
 
@@ -1144,10 +1614,6 @@ def quiz():
         0
     )
 
-    # ========================================================
-    # SAFETY CHECK
-    # ========================================================
-
     if index < 0:
 
         index = 0
@@ -1161,83 +1627,112 @@ def quiz():
         )
 
     # ========================================================
-    # QUIZ AVAILABILITY
+    # QUESTION TIME
     # ========================================================
 
-    quiz_available_until = session.get(
-        "quiz_available_until"
+    try:
+
+        question_time_seconds = int(
+            session.get(
+                "question_time_seconds",
+                60
+            )
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+
+        question_time_seconds = 60
+
+    # ========================================================
+    # TOTAL DURATION
+    # ========================================================
+
+    total_duration_seconds = (
+        _calculate_quiz_duration_seconds(
+            questions,
+            question_time_seconds
+        )
     )
 
-    if quiz_available_until is not None:
+    if total_duration_seconds <= 0:
 
-        if time.time() >= quiz_available_until:
-
-            return redirect(
-                "/submit_quiz"
-            )
+        return """
+        <h2>❌ Invalid quiz timer.</h2>
+        """, 500
 
     # ========================================================
-    # OVERALL TIMER
-    # TOTAL TIME = TOTAL QUESTIONS × QUESTION TIME
+    # START TIME
     # ========================================================
 
     start_time = session.get(
         "quiz_start_time"
     )
 
-    question_time_seconds = session.get(
-        "question_time_seconds",
-        60
-    )
+    if not start_time:
 
-    total_questions = len(
-        questions
-    )
+        start_time = time.time()
 
-    total_duration = (
-        total_questions
-        * question_time_seconds
-    )
-
-    duration_minutes = (
-        total_duration / 60
-    )
-
-    if start_time:
-
-        elapsed_time = (
-            time.time()
-            - start_time
+        session["quiz_start_time"] = (
+            start_time
         )
 
-        if elapsed_time >= total_duration:
+    # ========================================================
+    # AVAILABILITY END
+    # ========================================================
 
-            return redirect(
-                "/submit_quiz"
+    quiz_available_until = session.get(
+        "quiz_available_until"
+    )
+
+    # ========================================================
+    # EFFECTIVE DEADLINE
+    # ========================================================
+
+    stored_deadline = session.get(
+        "quiz_deadline"
+    )
+
+    if stored_deadline:
+
+        effective_deadline = float(
+            stored_deadline
+        )
+
+    else:
+
+        effective_deadline = (
+            _calculate_effective_deadline(
+                start_time,
+                total_duration_seconds,
+                quiz_available_until
             )
-
-    # ========================================================
-    # QUESTION TIMER
-    # ========================================================
-
-    question_time_seconds = session.get(
-        "question_time_seconds",
-        60
-    )
-
-    question_start_time = session.get(
-        "question_start_time"
-    )
-
-    if not question_start_time:
-
-        question_start_time = time.time()
-
-        session["question_start_time"] = (
-            question_start_time
         )
 
-        session.modified = True
+        session["quiz_deadline"] = (
+            effective_deadline
+        )
+
+    # ========================================================
+    # SERVER-SIDE OVERALL TIME CHECK
+    # ========================================================
+
+    now = time.time()
+
+    if now >= effective_deadline:
+
+        print(
+            f"⏰ QUIZ DEADLINE REACHED | "
+            f"Quiz={session.get('quiz_id')} | "
+            f"Deadline={effective_deadline} | "
+            f"Now={now}"
+        )
+
+        return redirect(
+            "/submit_quiz"
+        )
 
     # ========================================================
     # POST ANSWER
@@ -1245,12 +1740,48 @@ def quiz():
 
     if request.method == "POST":
 
+        now = time.time()
+
+        # ----------------------------------------------------
+        # HARD DEADLINE CHECK
+        # ----------------------------------------------------
+        #
+        # If the student sends a POST after the effective
+        # deadline, do NOT accept a new answer.
+        #
+        # Existing answers remain in session/database and
+        # submit_quiz will calculate the final result.
+        #
+        # ----------------------------------------------------
+
+        if now >= effective_deadline:
+
+            print(
+                "⏰ POST RECEIVED AFTER QUIZ DEADLINE"
+            )
+
+            return redirect(
+                "/submit_quiz"
+            )
+
         # ====================================================
-        # QUESTION TIME
+        # QUESTION TIMER
         # ====================================================
 
+        question_start_time = session.get(
+            "question_start_time"
+        )
+
+        if not question_start_time:
+
+            question_start_time = now
+
+            session["question_start_time"] = (
+                question_start_time
+            )
+
         question_elapsed_time = (
-            time.time()
+            now
             - question_start_time
         )
 
@@ -1267,7 +1798,7 @@ def quiz():
             "answer"
         )
 
-        # If timer expired
+        # If question timer expired, ignore answer.
         if question_time_expired:
 
             answer = None
@@ -1429,32 +1960,57 @@ def quiz():
     question = questions[index]
 
     # ========================================================
-    # REMAINING OVERALL TIME
+    # QUESTION START TIME
     # ========================================================
 
-    remaining_seconds = total_duration
+    question_start_time = session.get(
+        "question_start_time"
+    )
 
-    if start_time:
+    if not question_start_time:
 
-        elapsed_time = (
-            time.time()
-            - start_time
+        question_start_time = time.time()
+
+        session["question_start_time"] = (
+            question_start_time
         )
 
-        remaining_seconds = max(
-            0,
-            int(
-                total_duration
-                - elapsed_time
-            )
+        session.modified = True
+
+    # ========================================================
+    # REMAINING OVERALL TIME
+    # ========================================================
+    #
+    # This is the IMPORTANT calculation:
+    #
+    # remaining =
+    #     effective_deadline - current_time
+    #
+    # effective_deadline itself is:
+    #
+    # min(
+    #     attempt_start + total duration,
+    #     quiz availability end
+    # )
+    #
+    # ========================================================
+
+    now = time.time()
+
+    remaining_seconds = max(
+        0,
+        int(
+            effective_deadline
+            - now
         )
+    )
 
     # ========================================================
     # REMAINING QUESTION TIME
     # ========================================================
 
     question_elapsed_time = (
-        time.time()
+        now
         - question_start_time
     )
 
@@ -1467,7 +2023,26 @@ def quiz():
     )
 
     # ========================================================
-    # RENDER QUIZ
+    # IMPORTANT:
+    #
+    # Question timer can NEVER go beyond the overall deadline.
+    # ========================================================
+
+    question_remaining_seconds = min(
+        question_remaining_seconds,
+        remaining_seconds
+    )
+
+    # ========================================================
+    # DURATION IN MINUTES
+    # ========================================================
+
+    duration_minutes = (
+        total_duration_seconds / 60
+    )
+
+    # ========================================================
+    # RENDER
     # ========================================================
 
     return render_template(
@@ -1499,8 +2074,20 @@ def quiz():
             duration_minutes
         ),
 
+        quiz_duration_seconds=(
+            total_duration_seconds
+        ),
+
         question_time_seconds=(
             question_time_seconds
+        ),
+
+        quiz_deadline=(
+            effective_deadline
+        ),
+
+        quiz_available_until=(
+            quiz_available_until
         ),
 
         quiz_id=session.get(
@@ -1603,9 +2190,9 @@ def submit_quiz():
 
             q_id = q["question_id"]
 
-            # ----------------------------------------------
+            # ------------------------------------------------
             # STUDENT ANSWER
-            # ----------------------------------------------
+            # ------------------------------------------------
 
             selected = answers.get(
                 str(q_id)
@@ -1617,17 +2204,17 @@ def submit_quiz():
                     selected
                 ).strip().upper()
 
-            # ----------------------------------------------
+            # ------------------------------------------------
             # CORRECT ANSWER
-            # ----------------------------------------------
+            # ------------------------------------------------
 
             correct_option = str(
                 q["correct_option"]
             ).strip().upper()
 
-            # ----------------------------------------------
+            # ------------------------------------------------
             # OPTION MAP
-            # ----------------------------------------------
+            # ------------------------------------------------
 
             option_map = {
 
@@ -1652,9 +2239,9 @@ def submit_quiz():
                 )
             }
 
-            # ----------------------------------------------
+            # ------------------------------------------------
             # STUDENT ANSWER TEXT
-            # ----------------------------------------------
+            # ------------------------------------------------
 
             selected_text = None
 
@@ -1664,25 +2251,22 @@ def submit_quiz():
                     selected
                 ]
 
-            # ----------------------------------------------
+            # ------------------------------------------------
             # CORRECT ANSWER TEXT
-            # ----------------------------------------------
+            # ------------------------------------------------
 
             correct_text = option_map.get(
                 correct_option,
                 ""
             )
 
-            # ----------------------------------------------
+            # ------------------------------------------------
             # CHECK ANSWER
-            # ----------------------------------------------
+            # ------------------------------------------------
 
             is_correct = (
-
                 selected is not None
-
                 and
-
                 selected == correct_option
             )
 
@@ -1690,9 +2274,9 @@ def submit_quiz():
 
                 score += 1
 
-            # ----------------------------------------------
+            # ------------------------------------------------
             # EXPLANATION
-            # ----------------------------------------------
+            # ------------------------------------------------
 
             explanation = q.get(
                 "explanation"
@@ -1705,9 +2289,9 @@ def submit_quiz():
                     "for this question."
                 )
 
-            # ----------------------------------------------
+            # ------------------------------------------------
             # REVIEW ITEM
-            # ----------------------------------------------
+            # ------------------------------------------------
 
             review.append({
 
@@ -1856,9 +2440,13 @@ def submit_quiz():
 
             "quiz_duration_minutes",
 
+            "quiz_duration_seconds",
+
             "question_time_seconds",
 
             "quiz_available_until",
+
+            "quiz_deadline",
 
             "quiz_id",
 

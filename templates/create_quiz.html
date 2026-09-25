@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
@@ -32,9 +31,7 @@
     padding-top: 28px;
 
     border-top: 1px solid #e8ebf2;
-
 }
-
 
 .quiz-settings-header {
 
@@ -47,9 +44,7 @@
     gap: 15px;
 
     margin-bottom: 8px;
-
 }
-
 
 .quiz-settings-header h3 {
 
@@ -60,9 +55,7 @@
     font-weight: 800;
 
     color: #172033;
-
 }
-
 
 .quiz-settings-description {
 
@@ -73,20 +66,17 @@
     font-size: 12px;
 
     line-height: 1.6;
-
 }
-
 
 .settings-grid {
 
     display: grid;
 
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns:
+        repeat(2, 1fr);
 
     gap: 16px;
-
 }
-
 
 .setting-group {
 
@@ -95,9 +85,7 @@
     flex-direction: column;
 
     gap: 8px;
-
 }
-
 
 .setting-group label {
 
@@ -106,13 +94,14 @@
     font-weight: 700;
 
     color: #374151;
-
 }
 
-
+.setting-group input,
 .setting-group select {
 
     width: 100%;
+
+    box-sizing: border-box;
 
     padding: 13px 14px;
 
@@ -132,22 +121,18 @@
 
     outline: none;
 
-    cursor: pointer;
-
     transition: 0.2s ease;
-
 }
 
-
+.setting-group input:focus,
 .setting-group select:focus {
 
     border-color: #6366f1;
 
     box-shadow:
-        0 0 0 3px rgba(99,102,241,0.10);
-
+        0 0 0 3px
+        rgba(99,102,241,0.10);
 }
-
 
 .setting-hint {
 
@@ -156,7 +141,44 @@
     font-size: 10px;
 
     line-height: 1.5;
+}
 
+
+/* =========================================================
+   AUTO DURATION BOX
+========================================================= */
+
+.auto-duration-box {
+
+    margin-top: 16px;
+
+    padding: 16px;
+
+    border-radius: 14px;
+
+    border: 1px solid #e0e4ff;
+
+    background: #f7f7ff;
+}
+
+.auto-duration-box strong {
+
+    display: block;
+
+    color: #4f46e5;
+
+    font-size: 13px;
+
+    margin-bottom: 5px;
+}
+
+.auto-duration-box span {
+
+    color: #697386;
+
+    font-size: 12px;
+
+    line-height: 1.5;
 }
 
 
@@ -169,7 +191,6 @@
     .settings-grid {
 
         grid-template-columns: 1fr;
-
     }
 
     .quiz-settings-header {
@@ -177,7 +198,6 @@
         align-items: flex-start;
 
         flex-direction: column;
-
     }
 
 }
@@ -249,17 +269,12 @@
 </nav>
 
 
-
 <!-- =====================================================
-     MAIN CONTENT
+     MAIN
 ====================================================== -->
 
 <main class="create-quiz-container">
 
-
-<!-- =====================================================
-     PAGE HEADER
-====================================================== -->
 
 <section class="create-quiz-header">
 
@@ -302,7 +317,6 @@
 </section>
 
 
-
 <!-- =====================================================
      CONTENT GRID
 ====================================================== -->
@@ -324,17 +338,14 @@
             🤖
         </div>
 
-
         <div class="ai-card-label">
             SMART GENERATION
         </div>
-
 
         <h2>
             Let AI build
             your assessment.
         </h2>
-
 
         <p>
             Describe your topic, choose the difficulty
@@ -342,8 +353,6 @@
             questions automatically.
         </p>
 
-
-        <!-- FEATURES -->
 
         <div class="ai-feature-list">
 
@@ -369,7 +378,6 @@
             </div>
 
 
-
             <div class="ai-feature">
 
                 <span class="ai-feature-icon">
@@ -389,7 +397,6 @@
                 </div>
 
             </div>
-
 
 
             <div class="ai-feature">
@@ -412,11 +419,8 @@
 
             </div>
 
-
         </div>
 
-
-        <!-- AI TIP -->
 
         <div class="ai-tip">
 
@@ -437,15 +441,13 @@
 
         </div>
 
-
     </div>
 
 </aside>
 
 
-
 <!-- =====================================================
-     RIGHT — QUIZ FORM
+     RIGHT — FORM
 ====================================================== -->
 
 <section class="quiz-form-card">
@@ -473,14 +475,13 @@
 </div>
 
 
-
 <form action="/create_quiz"
       method="POST"
       id="quizForm">
 
 
 <!-- =====================================================
-     QUIZ TITLE
+     TITLE
 ====================================================== -->
 
 <div class="create-form-group">
@@ -489,13 +490,11 @@
         Quiz title
     </label>
 
-
     <div class="create-input-wrapper">
 
         <span class="create-input-icon">
             ✦
         </span>
-
 
         <input
             type="text"
@@ -510,7 +509,6 @@
 </div>
 
 
-
 <!-- =====================================================
      TOPIC
 ====================================================== -->
@@ -521,13 +519,11 @@
         Topic / AI prompt
     </label>
 
-
     <div class="create-input-wrapper textarea-wrapper">
 
         <span class="create-input-icon textarea-icon">
             ✎
         </span>
-
 
         <textarea
             id="quizPrompt"
@@ -536,7 +532,6 @@
             required></textarea>
 
     </div>
-
 
     <small class="field-hint">
 
@@ -548,442 +543,383 @@
 </div>
 
 
-
 <!-- =====================================================
      DIFFICULTY
 ====================================================== -->
 
 <div class="difficulty-section">
 
+    <div class="difficulty-header">
 
-<div class="difficulty-header">
+        <div>
 
-    <div>
+            <span class="form-step">
+                STEP 02
+            </span>
 
-        <span class="form-step">
-            STEP 02
-        </span>
+            <h3>
+                Question distribution
+            </h3>
 
-        <h3>
-            Question distribution
-        </h3>
+        </div>
 
-    </div>
-
-
-    <span class="difficulty-info">
-        Choose your balance
-    </span>
-
-</div>
-
-
-<p class="difficulty-description">
-
-    Select how many questions AI should
-    generate at each difficulty level.
-
-</p>
-
-
-
-<div class="difficulty-grid">
-
-
-<!-- EASY -->
-
-<div class="difficulty-card easy-card">
-
-    <div class="difficulty-card-top">
-
-        <span class="difficulty-dot easy-dot"></span>
-
-        <span>
-            Easy
+        <span class="difficulty-info">
+            Choose your balance
         </span>
 
     </div>
 
 
-    <input
-        type="number"
-        name="easy"
-        id="easy"
-        value="0"
-        min="0"
-        max="50"
-        aria-label="Easy questions">
+    <p class="difficulty-description">
+
+        Select how many questions AI should
+        generate at each difficulty level.
+
+    </p>
 
 
-    <small>
-        Basic concepts
-    </small>
-
-</div>
+    <div class="difficulty-grid">
 
 
+        <!-- EASY -->
 
-<!-- MEDIUM -->
+        <div class="difficulty-card easy-card">
 
-<div class="difficulty-card medium-card">
+            <div class="difficulty-card-top">
 
-    <div class="difficulty-card-top">
+                <span class="difficulty-dot easy-dot"></span>
 
-        <span class="difficulty-dot medium-dot"></span>
+                <span>
+                    Easy
+                </span>
 
-        <span>
-            Medium
-        </span>
+            </div>
 
-    </div>
+            <input
+                type="number"
+                name="easy"
+                id="easy"
+                value="0"
+                min="0"
+                max="50"
+                aria-label="Easy questions">
 
+            <small>
+                Basic concepts
+            </small>
 
-    <input
-        type="number"
-        name="medium"
-        id="medium"
-        value="0"
-        min="0"
-        max="50"
-        aria-label="Medium questions">
-
-
-    <small>
-        Applied concepts
-    </small>
-
-</div>
+        </div>
 
 
+        <!-- MEDIUM -->
 
-<!-- HARD -->
+        <div class="difficulty-card medium-card">
 
-<div class="difficulty-card hard-card">
+            <div class="difficulty-card-top">
 
-    <div class="difficulty-card-top">
+                <span class="difficulty-dot medium-dot"></span>
 
-        <span class="difficulty-dot hard-dot"></span>
+                <span>
+                    Medium
+                </span>
 
-        <span>
-            Hard
-        </span>
+            </div>
 
-    </div>
+            <input
+                type="number"
+                name="medium"
+                id="medium"
+                value="0"
+                min="0"
+                max="50"
+                aria-label="Medium questions">
 
+            <small>
+                Applied concepts
+            </small>
 
-    <input
-        type="number"
-        name="hard"
-        id="hard"
-        value="0"
-        min="0"
-        max="50"
-        aria-label="Hard questions">
-
-
-    <small>
-        Advanced concepts
-    </small>
-
-</div>
+        </div>
 
 
-</div>
+        <!-- HARD -->
 
+        <div class="difficulty-card hard-card">
 
+            <div class="difficulty-card-top">
 
-<!-- =====================================================
-     QUIZ DURATION
-====================================================== -->
+                <span class="difficulty-dot hard-dot"></span>
 
-<div class="form-group">
+                <span>
+                    Hard
+                </span>
 
-    <label for="duration_minutes">
-        ⏱️ Quiz Duration
-    </label>
+            </div>
 
+            <input
+                type="number"
+                name="hard"
+                id="hard"
+                value="0"
+                min="0"
+                max="50"
+                aria-label="Hard questions">
 
-    <div class="input-wrapper">
+            <small>
+                Advanced concepts
+            </small>
 
-        <span class="input-icon">
-            ⏱️
-        </span>
-
-
-        <select
-            name="duration_minutes"
-            id="duration_minutes"
-            required>
-
-            <option value="10">
-                10 Minutes
-            </option>
-
-            <option value="15">
-                15 Minutes
-            </option>
-
-            <option value="20">
-                20 Minutes
-            </option>
-
-            <option value="30"
-                    selected>
-                30 Minutes
-            </option>
-
-            <option value="45">
-                45 Minutes
-            </option>
-
-            <option value="60">
-                60 Minutes
-            </option>
-
-            <option value="90">
-                90 Minutes
-            </option>
-
-        </select>
+        </div>
 
     </div>
 
-
-    <small class="input-hint">
-
-        Quiz automatically submit ho jayega
-        jab attempt time khatam hoga.
-
-    </small>
-
 </div>
-
 
 
 <!-- =====================================================
      TIME PER QUESTION
 ====================================================== -->
 
-<div class="form-group">
+<div class="quiz-settings-section">
 
-    <label for="question_time_seconds">
+    <div class="quiz-settings-header">
 
-        ⏱️ Time Per Question
+        <div>
 
-    </label>
+            <span class="form-step">
+                STEP 03
+            </span>
 
+            <h3>
+                ⏱️ Quiz Timing
+            </h3>
 
-    <div class="input-wrapper">
-
-        <span class="input-icon">
-            ⏱️
-        </span>
-
-
-        <select
-            name="question_time_seconds"
-            id="question_time_seconds"
-            required>
-
-            <option value="15">
-                15 Seconds
-            </option>
-
-            <option value="30">
-                30 Seconds
-            </option>
-
-            <option value="45">
-                45 Seconds
-            </option>
-
-            <option value="60"
-                    selected>
-                60 Seconds
-            </option>
-
-            <option value="90">
-                90 Seconds
-            </option>
-
-            <option value="120">
-                2 Minutes
-            </option>
-
-        </select>
+        </div>
 
     </div>
 
 
-    <small class="input-hint">
+    <p class="quiz-settings-description">
 
-        Question ka timer khatam hone par
-        automatically next question aayega.
+        Set the time allowed for each question.
+        Total attempt duration is automatically calculated
+        from the number of questions.
 
-    </small>
+    </p>
+
+
+    <div class="settings-grid">
+
+
+        <!-- TIME PER QUESTION -->
+
+        <div class="setting-group">
+
+            <label for="question_time_seconds">
+
+                ⏱️ Time Per Question
+
+            </label>
+
+
+            <select
+                name="question_time_seconds"
+                id="question_time_seconds"
+                required>
+
+                <option value="15">
+                    15 Seconds
+                </option>
+
+                <option value="30">
+                    30 Seconds
+                </option>
+
+                <option value="45">
+                    45 Seconds
+                </option>
+
+                <option value="60"
+                        selected>
+                    60 Seconds
+                </option>
+
+                <option value="90">
+                    90 Seconds
+                </option>
+
+                <option value="120">
+                    2 Minutes
+                </option>
+
+            </select>
+
+
+            <small class="setting-hint">
+
+                Question timer will automatically move
+                to the next question.
+
+            </small>
+
+        </div>
+
+
+        <!-- AUTO DURATION -->
+
+        <div class="setting-group">
+
+            <label>
+                ⏳ Total Attempt Duration
+            </label>
+
+
+            <div class="auto-duration-box">
+
+                <strong id="durationDisplay">
+                    0 minutes
+                </strong>
+
+                <span id="durationCalculation">
+                    Total duration will be calculated
+                    automatically.
+                </span>
+
+            </div>
+
+
+            <small class="setting-hint">
+
+                Formula:
+                Total Questions × Time Per Question
+
+            </small>
+
+        </div>
+
+    </div>
 
 </div>
 
 
-
 <!-- =====================================================
-     QUIZ AVAILABILITY
+     AVAILABILITY
 ====================================================== -->
 
 <div class="quiz-settings-section">
 
+    <div class="quiz-settings-header">
 
-<div class="quiz-settings-header">
+        <div>
 
-    <div>
+            <span class="form-step">
+                STEP 04
+            </span>
 
-        <span class="form-step">
-            STEP 03
-        </span>
+            <h3>
+                📅 Quiz Availability
+            </h3>
 
-        <h3>
-            📅 Quiz Availability
-        </h3>
+        </div>
 
     </div>
 
-</div>
+
+    <p class="quiz-settings-description">
+
+        Choose the exact date and time when students
+        can start the quiz.
+
+    </p>
 
 
-<p class="quiz-settings-description">
-
-    Decide how long this quiz should remain available
-    to students on their dashboard.
-
-</p>
+    <div class="settings-grid">
 
 
+        <!-- START -->
 
-<div class="settings-grid">
+        <div class="setting-group">
 
+            <label for="available_from">
 
-<!-- =====================================================
-     AVAILABILITY SELECT
-====================================================== -->
+                🟢 Quiz Start
 
-<div class="setting-group">
-
-    <label for="availability">
-
-        Quiz will be available for
-
-    </label>
+            </label>
 
 
-    <select
-        id="availability"
-        name="availability"
-        required>
+            <input
+                type="datetime-local"
+                id="available_from"
+                name="available_from"
+                required>
 
 
-        <option value="1_hour">
+            <small class="setting-hint">
 
-            ⏱️ 1 Hour
+                Students cannot start the quiz
+                before this exact time.
 
-        </option>
+            </small>
 
-
-        <option value="1_day"
-                selected>
-
-            📅 1 Day
-
-        </option>
+        </div>
 
 
-        <option value="1_week">
+        <!-- END -->
 
-            📅 1 Week
+        <div class="setting-group">
 
-        </option>
+            <label for="available_until">
 
+                🔴 Quiz End
 
-        <option value="1_month">
-
-            📅 1 Month
-
-        </option>
+            </label>
 
 
-        <option value="1_year">
-
-            📅 1 Year
-
-        </option>
-
-
-        <option value="never">
-
-            ♾️ Never Expire
-
-        </option>
+            <input
+                type="datetime-local"
+                id="available_until"
+                name="available_until"
+                required>
 
 
-    </select>
+            <small class="setting-hint">
+
+                At this exact time the quiz closes
+                for everyone.
+
+            </small>
+
+        </div>
+
+    </div>
 
 
-    <small class="setting-hint">
+    <!-- RULE -->
 
-        Quiz automatically disappear ho jayegi
-        students ke dashboard se after this period.
-
-    </small>
-
-</div>
-
-
-
-<!-- =====================================================
-     AVAILABILITY INFO
-====================================================== -->
-
-<div class="setting-group">
-
-    <label>
-        🔐 Availability Rule
-    </label>
-
-
-    <div
-        style="
-        padding:13px 14px;
-        border-radius:12px;
-        border:1px solid #e5e7eb;
-        background:#f8f9ff;
-        color:#697386;
-        font-size:12px;
-        line-height:1.55;
-        ">
-
-        Quiz create hote hi availability timer
-        start ho jayega.
-
-        <br><br>
-
-        Example:
+    <div class="auto-duration-box">
 
         <strong>
-            1 Day
+            🔐 Hard Closing Rule
         </strong>
 
-        select karne par quiz 24 hours ke baad
-        students ke liye unavailable ho jayegi.
+        <span>
+
+            The student's actual remaining time is always
+            the smaller of their attempt time and the
+            quiz closing time.
+
+            <br><br>
+
+            Example:
+            20 questions × 15 seconds = 5 minutes.
+
+            If a student starts at 11:58 AM and the quiz
+            closes at 12:00 PM, they get only 2 minutes.
+
+        </span>
 
     </div>
 
 </div>
-
-
-</div>
-
-
-</div>
-
 
 
 <!-- =====================================================
@@ -997,7 +933,6 @@
         <span class="total-icon">
             #
         </span>
-
 
         <div>
 
@@ -1025,10 +960,6 @@
 </div>
 
 
-</div>
-
-
-
 <!-- =====================================================
      GENERATE BUTTON
 ====================================================== -->
@@ -1037,21 +968,17 @@
     type="submit"
     class="generate-quiz-button">
 
-
     <span class="generate-icon">
         ✦
     </span>
-
 
     <span>
         Generate AI Quiz
     </span>
 
-
     <span class="generate-arrow">
         →
     </span>
-
 
 </button>
 
@@ -1066,18 +993,13 @@
 
 </form>
 
-
 </section>
 
-
 </section>
-
 
 </main>
 
-
 </div>
-
 
 
 <!-- =====================================================
@@ -1095,52 +1017,271 @@ const mediumInput =
 const hardInput =
     document.getElementById("hard");
 
+const questionTimeInput =
+    document.getElementById(
+        "question_time_seconds"
+    );
+
 const totalDisplay =
-    document.getElementById("totalQuestions");
+    document.getElementById(
+        "totalQuestions"
+    );
+
+const durationDisplay =
+    document.getElementById(
+        "durationDisplay"
+    );
+
+const durationCalculation =
+    document.getElementById(
+        "durationCalculation"
+    );
+
+const startInput =
+    document.getElementById(
+        "available_from"
+    );
+
+const endInput =
+    document.getElementById(
+        "available_until"
+    );
 
 
-function updateTotal() {
+/* =========================================================
+   FORMAT DATETIME-LOCAL
+========================================================= */
+
+function formatDateTimeLocal(date) {
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(
+            date.getMonth() + 1
+        ).padStart(2, "0");
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(2, "0");
+
+    const hours =
+        String(
+            date.getHours()
+        ).padStart(2, "0");
+
+    const minutes =
+        String(
+            date.getMinutes()
+        ).padStart(2, "0");
+
+    return (
+        year +
+        "-" +
+        month +
+        "-" +
+        day +
+        "T" +
+        hours +
+        ":" +
+        minutes
+    );
+}
+
+
+/* =========================================================
+   DEFAULT START + END
+========================================================= */
+
+function setDefaultAvailability() {
+
+    const now =
+        new Date();
+
+    // Round current time up to next minute.
+
+    now.setSeconds(0);
+    now.setMilliseconds(0);
+
+    now.setMinutes(
+        now.getMinutes() + 1
+    );
+
+    const end =
+        new Date(now);
+
+    // Default availability = 2 hours.
+
+    end.setHours(
+        end.getHours() + 2
+    );
+
+    if (!startInput.value) {
+
+        startInput.value =
+            formatDateTimeLocal(now);
+
+    }
+
+    if (!endInput.value) {
+
+        endInput.value =
+            formatDateTimeLocal(end);
+
+    }
+}
+
+
+/* =========================================================
+   UPDATE TOTAL + AUTOMATIC DURATION
+========================================================= */
+
+function updateQuizTiming() {
 
     const easy =
-        parseInt(easyInput.value) || 0;
+        Math.max(
+            0,
+            parseInt(
+                easyInput.value
+            ) || 0
+        );
 
     const medium =
-        parseInt(mediumInput.value) || 0;
+        Math.max(
+            0,
+            parseInt(
+                mediumInput.value
+            ) || 0
+        );
 
     const hard =
-        parseInt(hardInput.value) || 0;
+        Math.max(
+            0,
+            parseInt(
+                hardInput.value
+            ) || 0
+        );
 
+    const questionTime =
+        parseInt(
+            questionTimeInput.value
+        ) || 0;
 
     const total =
         easy +
         medium +
         hard;
 
+    const totalSeconds =
+        total *
+        questionTime;
+
+    const minutes =
+        Math.floor(
+            totalSeconds / 60
+        );
+
+    const seconds =
+        totalSeconds % 60;
+
 
     totalDisplay.textContent =
         total;
 
+
+    if (total <= 0) {
+
+        durationDisplay.textContent =
+            "0 minutes";
+
+        durationCalculation.textContent =
+            "Select at least one question.";
+
+        return;
+    }
+
+
+    let durationText = "";
+
+
+    if (minutes > 0) {
+
+        durationText +=
+            minutes +
+            (
+                minutes === 1
+                    ? " minute"
+                    : " minutes"
+            );
+
+    }
+
+
+    if (seconds > 0) {
+
+        if (durationText) {
+
+            durationText += " ";
+
+        }
+
+        durationText +=
+            seconds +
+            " seconds";
+    }
+
+
+    if (!durationText) {
+
+        durationText =
+            "0 seconds";
+    }
+
+
+    durationDisplay.textContent =
+        durationText;
+
+
+    durationCalculation.textContent =
+        total +
+        " questions × " +
+        questionTime +
+        " seconds = " +
+        totalSeconds +
+        " seconds";
 }
 
 
+/* =========================================================
+   EVENTS
+========================================================= */
+
 easyInput.addEventListener(
     "input",
-    updateTotal
+    updateQuizTiming
 );
-
 
 mediumInput.addEventListener(
     "input",
-    updateTotal
+    updateQuizTiming
 );
-
 
 hardInput.addEventListener(
     "input",
-    updateTotal
+    updateQuizTiming
+);
+
+questionTimeInput.addEventListener(
+    "change",
+    updateQuizTiming
 );
 
 
+/* =========================================================
+   FORM VALIDATION
+========================================================= */
 
 document
     .getElementById("quizForm")
@@ -1149,20 +1290,34 @@ document
         function(event) {
 
             const easy =
-                parseInt(easyInput.value) || 0;
+                parseInt(
+                    easyInput.value
+                ) || 0;
 
             const medium =
-                parseInt(mediumInput.value) || 0;
+                parseInt(
+                    mediumInput.value
+                ) || 0;
 
             const hard =
-                parseInt(hardInput.value) || 0;
+                parseInt(
+                    hardInput.value
+                ) || 0;
 
+            const questionTime =
+                parseInt(
+                    questionTimeInput.value
+                ) || 0;
 
             const total =
                 easy +
                 medium +
                 hard;
 
+
+            /* =============================================
+               QUESTION VALIDATION
+            ============================================= */
 
             if (total <= 0) {
 
@@ -1173,13 +1328,8 @@ document
                 );
 
                 return;
-
             }
 
-
-            // ==========================================
-            // PREVENT INVALID NEGATIVE VALUES
-            // ==========================================
 
             if (
                 easy < 0 ||
@@ -1194,14 +1344,107 @@ document
                 );
 
                 return;
+            }
 
+
+            if (questionTime <= 0) {
+
+                event.preventDefault();
+
+                alert(
+                    "Question time must be greater than 0."
+                );
+
+                return;
+            }
+
+
+            /* =============================================
+               DATE VALIDATION
+            ============================================= */
+
+            if (
+                !startInput.value ||
+                !endInput.value
+            ) {
+
+                event.preventDefault();
+
+                alert(
+                    "Please select quiz start and end time."
+                );
+
+                return;
+            }
+
+
+            const start =
+                new Date(
+                    startInput.value
+                );
+
+            const end =
+                new Date(
+                    endInput.value
+                );
+
+
+            if (
+                isNaN(start.getTime()) ||
+                isNaN(end.getTime())
+            ) {
+
+                event.preventDefault();
+
+                alert(
+                    "Invalid quiz date/time."
+                );
+
+                return;
+            }
+
+
+            if (end <= start) {
+
+                event.preventDefault();
+
+                alert(
+                    "Quiz end time must be later than start time."
+                );
+
+                return;
+            }
+
+
+            /* =============================================
+               END MUST BE IN FUTURE
+            ============================================= */
+
+            const now =
+                new Date();
+
+            if (end <= now) {
+
+                event.preventDefault();
+
+                alert(
+                    "Quiz end time must be in the future."
+                );
+
+                return;
             }
 
         }
     );
 
 
-updateTotal();
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+setDefaultAvailability();
+
+updateQuizTiming();
 
 </script>
 
