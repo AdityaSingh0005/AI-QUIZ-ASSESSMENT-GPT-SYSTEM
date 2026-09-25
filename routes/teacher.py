@@ -906,11 +906,13 @@ def create_quiz():
                     option_c,
                     option_d,
                     correct_option,
-                    difficulty
+                    difficulty,
+                    explanation
                 )
 
                 VALUES
                 (
+                    %s,
                     %s,
                     %s,
                     %s,
@@ -923,6 +925,7 @@ def create_quiz():
                 """,
                 (
                     quiz_id,
+
                     str(
                         q["question"]
                     ).strip(),
@@ -945,7 +948,11 @@ def create_quiz():
 
                     q["correct_option"],
 
-                    q["difficulty"]
+                    q["difficulty"],
+
+                    str(
+                        q["explanation"]
+                    ).strip()
                 )
             )
 

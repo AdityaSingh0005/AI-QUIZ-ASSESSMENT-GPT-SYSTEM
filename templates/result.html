@@ -16,7 +16,167 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet">
 
+<style>
 
+.question-review-section {
+    margin-top: 30px;
+}
+
+.review-header {
+    margin-bottom: 20px;
+}
+
+.review-header h2 {
+    margin: 12px 0 8px;
+    color: #252d40;
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.review-header p {
+    color: #72798a;
+    margin: 0;
+}
+
+
+.review-question-card {
+    margin-bottom: 20px;
+    padding: 24px;
+    border-radius: 18px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
+}
+
+
+.review-question-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 18px;
+}
+
+.review-question-number {
+    font-size: 13px;
+    font-weight: 800;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+
+
+.review-status {
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.review-status.correct {
+    color: #166534;
+    background: #dcfce7;
+}
+
+.review-status.incorrect {
+    color: #991b1b;
+    background: #fee2e2;
+}
+
+.review-status.unanswered {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+
+.review-question-text {
+    margin: 0 0 22px;
+    font-size: 19px;
+    line-height: 1.6;
+    color: #252d40;
+}
+
+
+.review-answer-block {
+    margin-top: 15px;
+}
+
+.review-label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 10px;
+    font-weight: 800;
+    color: #8a91a3;
+    letter-spacing: .7px;
+}
+
+
+.review-answer {
+    padding: 13px 15px;
+    border-radius: 11px;
+    background: #f8f9ff;
+    color: #374151;
+    line-height: 1.5;
+}
+
+.review-answer strong {
+    margin-right: 5px;
+}
+
+
+.review-answer.correct-answer {
+    background: #ecfdf5;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+
+.review-answer.not-answered {
+    background: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #fed7aa;
+}
+
+
+.review-explanation {
+    margin-top: 20px;
+    padding: 17px;
+    border-radius: 13px;
+    background: #f8f9ff;
+    border: 1px solid #e5e7eb;
+}
+
+.review-explanation-title {
+    margin-bottom: 7px;
+    font-weight: 800;
+    color: #374151;
+}
+
+.review-explanation p {
+    margin: 0;
+    color: #5f6675;
+    line-height: 1.65;
+}
+
+
+@media (max-width: 650px) {
+
+    .review-question-card {
+        padding: 18px;
+    }
+
+    .review-question-top {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .review-question-text {
+        font-size: 17px;
+    }
+
+}
+
+</style>
 </head>
 
 <body>
@@ -309,6 +469,157 @@
 
     </section>
 
+    <!-- =====================================================
+     QUESTION REVIEW
+====================================================== -->
+
+<section class="question-review-section">
+
+    <div class="review-header">
+
+        <div class="result-header-badge">
+            <span>✓</span>
+            QUESTION REVIEW
+        </div>
+
+        <h2>
+            Review Your Answers
+        </h2>
+
+        <p>
+            Check your answers, correct answers and
+            explanations for every question.
+        </p>
+
+    </div>
+
+
+    {% for item in review %}
+
+    <article
+        class="review-question-card
+        {% if item.is_correct %}
+            review-correct
+        {% elif item.selected_option %}
+            review-incorrect
+        {% else %}
+            review-unanswered
+        {% endif %}"
+    >
+
+        <!-- QUESTION HEADER -->
+
+        <div class="review-question-top">
+
+            <span class="review-question-number">
+                Question {{ item.question_number }}
+            </span>
+
+            {% if item.is_correct %}
+
+                <span class="review-status correct">
+                    ✓ Correct
+                </span>
+
+            {% elif item.selected_option %}
+
+                <span class="review-status incorrect">
+                    ✕ Incorrect
+                </span>
+
+            {% else %}
+
+                <span class="review-status unanswered">
+                    — Not Answered
+                </span>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- QUESTION -->
+
+        <h3 class="review-question-text">
+            {{ item.question }}
+        </h3>
+
+
+        <!-- YOUR ANSWER -->
+
+        <div class="review-answer-block">
+
+            <span class="review-label">
+                YOUR ANSWER
+            </span>
+
+            {% if item.selected_option %}
+
+                <div class="review-answer">
+
+                    <strong>
+                        {{ item.selected_option }}.
+                    </strong>
+
+                    <span>
+                        {{ item.selected_text }}
+                    </span>
+
+                </div>
+
+            {% else %}
+
+                <div class="review-answer not-answered">
+                    Not Answered
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- CORRECT ANSWER -->
+
+        <div class="review-answer-block">
+
+            <span class="review-label">
+                CORRECT ANSWER
+            </span>
+
+            <div class="review-answer correct-answer">
+
+                <strong>
+                    {{ item.correct_option }}.
+                </strong>
+
+                <span>
+                    {{ item.correct_text }}
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- EXPLANATION -->
+
+        <div class="review-explanation">
+
+            <div class="review-explanation-title">
+                💡 Why is this correct?
+            </div>
+
+            <p>
+                {{ item.explanation }}
+            </p>
+
+        </div>
+
+    </article>
+
+    {% endfor %}
+
+</section>
 
 
     <!-- MOTIVATION -->

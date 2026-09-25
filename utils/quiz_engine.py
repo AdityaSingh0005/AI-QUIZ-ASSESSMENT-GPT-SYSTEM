@@ -17,24 +17,27 @@ def get_quiz_questions(quiz_id):
             """
             SELECT
                 question_id,
-                quiz_id,
                 question,
                 option_a,
                 option_b,
                 option_c,
                 option_d,
                 correct_option,
-                difficulty
+                difficulty,
+                explanation
+
             FROM questions
+
             WHERE quiz_id=%s
+
             ORDER BY question_id
             """,
-            (quiz_id,)
+            (
+                quiz_id,
+            )
         )
 
-        questions = cursor.fetchall()
-
-        return questions
+        return cursor.fetchall()
 
     finally:
 

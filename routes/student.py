@@ -596,6 +596,7 @@ def _start_guest_quiz(
         session["question_time_seconds"] = (
             quiz["question_time_seconds"] or 60
         )
+        
 
         # ====================================================
         # AVAILABILITY
@@ -925,13 +926,27 @@ def quiz():
         "quiz_start_time"
     )
 
-    duration_minutes = session.get(
-        "quiz_duration_minutes",
-        30
+        # ========================================================
+    # OVERALL QUIZ TIMER
+    # TOTAL TIME = TOTAL QUESTIONS × QUESTION TIME
+    # ========================================================
+
+    question_time_seconds = session.get(
+        "question_time_seconds",
+        60
+    )
+
+    total_questions = len(
+        questions
     )
 
     total_duration = (
-        duration_minutes * 60
+        total_questions
+        * question_time_seconds
+    )
+
+    duration_minutes = (
+        total_duration / 60
     )
 
     if start_time:
@@ -1315,6 +1330,7 @@ def submit_quiz():
         )
 
     score = 0
+    review = []
 
     db = get_db_connection()
 
@@ -1478,14 +1494,16 @@ def submit_quiz():
         # ====================================================
 
         return render_template(
-            "result.html",
+        "result.html",
 
-            score=score,
+        score=score,
 
-            total=total,
+        total=total,
 
-            percentage=percentage
-        )
+        percentage=percentage,
+
+        review=review
+    )
 
     except Exception as e:
 

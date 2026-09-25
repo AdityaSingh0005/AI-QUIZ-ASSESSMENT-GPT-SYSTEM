@@ -127,7 +127,9 @@ JSON FORMAT:
             "option_c": "Option C",
             "option_d": "Option D",
             "correct_option": "A",
-            "difficulty": "Easy"
+            "difficulty": "Easy",
+            "explanation": "Option A is correct because it represents the fundamental concept being tested."
+
         }}
     ]
 }}
@@ -332,17 +334,16 @@ Hard: exactly {hard}
             # REQUIRED FIELDS
             # ==================================================
 
-            required_fields = [
-
-                "question",
-                "option_a",
-                "option_b",
-                "option_c",
-                "option_d",
-                "correct_option",
-                "difficulty"
-
-            ]
+                required_fields = [
+                    "question",
+                    "option_a",
+                    "option_b",
+                    "option_c",
+                    "option_d",
+                    "correct_option",
+                    "difficulty",
+                    "explanation"
+                ]
 
 
             valid = True
