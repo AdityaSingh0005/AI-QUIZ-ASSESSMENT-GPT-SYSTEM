@@ -10,309 +10,874 @@
 
     <title>Create AI Quiz | AI Quiz Assessment System</title>
 
+    <!-- Main stylesheet -->
     <link rel="stylesheet"
         href="{{ url_for('static', filename='css/style.css') }}">
 
+    <!-- Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
-    <style>
-        /* =====================================================
-           CREATE QUIZ PAGE
-           ===================================================== */
 
-        .quiz-page-wrapper {
-            max-width: 1000px;
-            margin: 0 auto;
+    <style>
+
+        /* =========================================================
+           GLOBAL PAGE
+           ========================================================= */
+
+        * {
+            box-sizing: border-box;
         }
+
+        body {
+            margin: 0;
+            font-family: "Inter", sans-serif;
+            background: #f8fafc;
+            color: #111827;
+        }
+
+
+        /* =========================================================
+           WORLD CLASS NAVBAR
+           ========================================================= */
+
+        .top-navbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+
+            width: 100%;
+
+            background: rgba(255, 255, 255, 0.94);
+
+            border-bottom: 1px solid #e5e7eb;
+
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+
+            box-shadow:
+                0 1px 3px rgba(15, 23, 42, 0.04),
+                0 8px 24px rgba(15, 23, 42, 0.03);
+        }
+
+
+        .nav-inner {
+            width: min(1180px, calc(100% - 40px));
+
+            min-height: 72px;
+
+            margin: 0 auto;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 30px;
+        }
+
+
+        /* =========================================================
+           BRAND
+           ========================================================= */
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+
+            gap: 12px;
+
+            text-decoration: none;
+
+            color: #111827;
+
+            white-space: nowrap;
+        }
+
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 12px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #6366f1 0%,
+                    #4f46e5 55%,
+                    #4338ca 100%
+                );
+
+            box-shadow:
+                0 7px 18px rgba(79, 70, 229, 0.25);
+        }
+
+
+        .brand-icon-symbol {
+            color: #ffffff;
+
+            font-size: 18px;
+            font-weight: 800;
+
+            letter-spacing: -0.5px;
+        }
+
+
+        .brand-text {
+            display: flex;
+            align-items: baseline;
+
+            gap: 6px;
+        }
+
+
+        .brand-title {
+            font-size: 17px;
+
+            font-weight: 800;
+
+            letter-spacing: -0.4px;
+
+            color: #111827;
+        }
+
+
+        .brand-divider {
+            color: #9ca3af;
+
+            font-size: 15px;
+
+            font-weight: 500;
+        }
+
+
+        .brand-subtitle {
+            font-size: 14px;
+
+            font-weight: 600;
+
+            color: #6b7280;
+        }
+
+
+        /* =========================================================
+           NAVIGATION
+           ========================================================= */
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+
+            gap: 6px;
+        }
+
+
+        .nav-link,
+        .logout-link {
+            position: relative;
+
+            display: inline-flex;
+            align-items: center;
+
+            gap: 8px;
+
+            padding: 10px 14px;
+
+            border-radius: 10px;
+
+            text-decoration: none;
+
+            font-size: 14px;
+            font-weight: 600;
+
+            transition:
+                background 0.2s ease,
+                color 0.2s ease,
+                transform 0.2s ease;
+        }
+
+
+        .nav-link {
+            color: #4b5563;
+        }
+
+
+        .nav-link:hover {
+            background: #f3f4f6;
+
+            color: #111827;
+        }
+
+
+        .nav-link.active {
+            color: #4f46e5;
+
+            background: #eef2ff;
+        }
+
+
+        .nav-link.active:hover {
+            background: #e0e7ff;
+        }
+
+
+        /* =========================================================
+           NAV ICON
+           ========================================================= */
+
+        .nav-icon {
+            width: 18px;
+            height: 18px;
+
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            flex-shrink: 0;
+        }
+
+
+        .nav-icon svg {
+            width: 17px;
+            height: 17px;
+        }
+
+
+        /* =========================================================
+           NAV SEPARATOR
+           ========================================================= */
+
+        .nav-separator {
+            width: 1px;
+            height: 24px;
+
+            margin: 0 5px;
+
+            background: #e5e7eb;
+        }
+
+
+        /* =========================================================
+           LOGOUT
+           ========================================================= */
+
+        .logout-link {
+            color: #6b7280;
+        }
+
+
+        .logout-link:hover {
+            color: #dc2626;
+
+            background: #fef2f2;
+        }
+
+
+        /* =========================================================
+           MAIN CONTAINER
+           ========================================================= */
+
+        .create-page-container {
+            width: min(1000px, calc(100% - 40px));
+
+            margin: 0 auto;
+
+            padding: 42px 0 60px;
+        }
+
+
+        /* =========================================================
+           HERO SECTION
+           ========================================================= */
+
+        .create-hero {
+            text-align: center;
+
+            margin-bottom: 28px;
+        }
+
+
+        .create-hero h1 {
+            margin: 0;
+
+            font-size: clamp(30px, 4vw, 42px);
+
+            line-height: 1.15;
+
+            font-weight: 800;
+
+            letter-spacing: -1px;
+
+            color: #111827;
+        }
+
+
+        .create-hero p {
+            max-width: 720px;
+
+            margin: 14px auto 0;
+
+            color: #6b7280;
+
+            font-size: 15px;
+
+            line-height: 1.7;
+        }
+
+
+        /* =========================================================
+           MAIN CARD
+           ========================================================= */
 
         .quiz-settings-card {
-            background: var(--card-bg, #ffffff);
-            border-radius: 18px;
-            padding: 28px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-            margin-top: 25px;
+            background: #ffffff;
+
+            border: 1px solid #e5e7eb;
+
+            border-radius: 20px;
+
+            padding: 30px;
+
+            box-shadow:
+                0 8px 30px rgba(15, 23, 42, 0.06),
+                0 2px 8px rgba(15, 23, 42, 0.03);
         }
 
-        /* =====================================================
-           SETTINGS SECTIONS
-           ===================================================== */
 
-        .settings-section {
+        /* =========================================================
+           AI INFORMATION CARD
+           ========================================================= */
+
+        .ai-info-card {
+            background:
+                linear-gradient(
+                    135deg,
+                    #eef2ff 0%,
+                    #f5f3ff 50%,
+                    #faf5ff 100%
+                );
+
+            border: 1px solid #e0e7ff;
+
+            border-radius: 18px;
+
+            padding: 24px;
+
             margin-bottom: 32px;
         }
 
-        .settings-section:last-child {
-            margin-bottom: 0;
-        }
-
-        .settings-section h3 {
-            margin: 0 0 8px;
-            font-size: 18px;
-            font-weight: 700;
-        }
-
-        .settings-description {
-            color: #6b7280;
-            font-size: 14px;
-            line-height: 1.6;
-            margin: 0 0 18px;
-        }
-
-        /* =====================================================
-           AI INFORMATION CARD
-           ===================================================== */
-
-        .ai-info-card {
-            background: linear-gradient(135deg, #eef2ff, #f5f3ff);
-            border-radius: 18px;
-            padding: 24px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(99, 102, 241, 0.12);
-        }
 
         .ai-info-card h3 {
             margin: 0 0 10px;
+
             font-size: 20px;
+
+            font-weight: 700;
+
+            color: #1e1b4b;
         }
 
-        .ai-info-card > p {
+
+        .ai-info-description {
             margin: 0;
+
             color: #4b5563;
+
+            font-size: 14px;
+
             line-height: 1.6;
         }
 
+
+        /* =========================================================
+           FEATURE LIST
+           ========================================================= */
+
         .ai-feature-list {
             list-style: none;
+
             padding: 0;
-            margin: 18px 0 0;
+
+            margin: 20px 0 0;
         }
 
+
         .ai-feature-list li {
-            margin-bottom: 11px;
-            font-size: 14px;
-            line-height: 1.5;
+            display: flex;
+
+            align-items: flex-start;
+
+            gap: 8px;
+
+            margin-bottom: 12px;
+
             color: #374151;
+
+            font-size: 14px;
+
+            line-height: 1.55;
         }
+
 
         .ai-feature-list li:last-child {
             margin-bottom: 0;
         }
 
+
+        .feature-check {
+            color: #4f46e5;
+
+            font-weight: 700;
+
+            flex-shrink: 0;
+        }
+
+
+        /* =========================================================
+           AI QUALITY CHECK
+           ========================================================= */
+
         .quality-check-info {
             margin-top: 20px;
-            padding: 15px 17px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(99, 102, 241, 0.15);
-            font-size: 13px;
-            line-height: 1.65;
+
+            padding: 16px 18px;
+
+            border-radius: 13px;
+
+            background: rgba(255, 255, 255, 0.82);
+
+            border: 1px solid rgba(99, 102, 241, 0.16);
+
             color: #4b5563;
+
+            font-size: 13px;
+
+            line-height: 1.65;
         }
 
-        .quality-check-info strong {
-            color: #4f46e5;
+
+        .quality-check-title {
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            margin-bottom: 5px;
+
+            color: #4338ca;
+
+            font-size: 14px;
+
+            font-weight: 700;
         }
 
-        /* =====================================================
-           FORM GROUPS
-           ===================================================== */
+
+        /* =========================================================
+           SETTINGS SECTION
+           ========================================================= */
+
+        .settings-section {
+            margin-bottom: 32px;
+
+            padding-bottom: 30px;
+
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+
+        .settings-section:last-child {
+            margin-bottom: 0;
+
+            padding-bottom: 0;
+
+            border-bottom: none;
+        }
+
+
+        .settings-section h3 {
+            margin: 0 0 7px;
+
+            font-size: 18px;
+
+            font-weight: 700;
+
+            color: #111827;
+        }
+
+
+        .settings-description {
+            margin: 0 0 20px;
+
+            color: #6b7280;
+
+            font-size: 13px;
+
+            line-height: 1.6;
+        }
+
+
+        /* =========================================================
+           FORM
+           ========================================================= */
 
         .form-group {
             margin-bottom: 20px;
         }
 
+
         .form-group:last-child {
             margin-bottom: 0;
         }
 
+
         .form-group label {
             display: block;
-            font-weight: 600;
+
             margin-bottom: 8px;
+
             color: #1f2937;
+
             font-size: 14px;
+
+            font-weight: 600;
         }
+
 
         .form-group input,
         .form-group select {
             width: 100%;
-            box-sizing: border-box;
-            padding: 12px 14px;
+
+            min-height: 46px;
+
+            padding: 11px 14px;
+
             border: 1px solid #d1d5db;
+
             border-radius: 10px;
-            font-size: 15px;
-            background: #ffffff;
-            color: #111827;
+
             outline: none;
-            transition: border-color 0.2s ease,
-                        box-shadow 0.2s ease;
+
+            background: #ffffff;
+
+            color: #111827;
+
+            font-family: inherit;
+
+            font-size: 14px;
+
+            transition:
+                border-color 0.2s ease,
+                box-shadow 0.2s ease,
+                background 0.2s ease;
         }
 
-        .form-group input:focus,
-        .form-group select:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
-        }
 
         .form-group input::placeholder {
             color: #9ca3af;
         }
 
-        /* =====================================================
-           DIFFICULTY
-           ===================================================== */
+
+        .form-group input:hover,
+        .form-group select:hover {
+            border-color: #a5b4fc;
+        }
+
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #6366f1;
+
+            box-shadow:
+                0 0 0 3px rgba(99, 102, 241, 0.12);
+        }
+
+
+        /* =========================================================
+           DIFFICULTY GRID
+           ========================================================= */
 
         .difficulty-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+
+            grid-template-columns:
+                repeat(3, minmax(0, 1fr));
+
             gap: 16px;
         }
 
+
         .difficulty-box {
             padding: 18px;
+
             border: 1px solid #e5e7eb;
+
             border-radius: 14px;
+
             background: #fafafa;
-            transition: 0.2s ease;
+
+            transition:
+                border-color 0.2s ease,
+                box-shadow 0.2s ease,
+                transform 0.2s ease;
         }
+
 
         .difficulty-box:hover {
             border-color: #c7d2fe;
-            background: #f9faff;
+
+            box-shadow:
+                0 5px 16px rgba(15, 23, 42, 0.05);
+
+            transform: translateY(-1px);
         }
+
 
         .difficulty-box label {
             display: block;
-            font-weight: 600;
+
             margin-bottom: 9px;
+
             color: #1f2937;
+
             font-size: 14px;
+
+            font-weight: 600;
         }
+
 
         .difficulty-box input {
             width: 100%;
-            box-sizing: border-box;
-            padding: 12px;
+
+            min-height: 44px;
+
+            padding: 10px 12px;
+
             border: 1px solid #d1d5db;
-            border-radius: 10px;
-            font-size: 16px;
+
+            border-radius: 9px;
+
             background: #ffffff;
+
+            color: #111827;
+
+            font-family: inherit;
+
+            font-size: 16px;
+
             outline: none;
         }
 
+
         .difficulty-box input:focus {
             border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+
+            box-shadow:
+                0 0 0 3px rgba(99, 102, 241, 0.12);
         }
 
-        /* =====================================================
+
+        /* =========================================================
            TOTAL QUESTIONS
-           ===================================================== */
+           ========================================================= */
 
         .total-questions-box {
             margin-top: 18px;
-            padding: 18px;
+
+            padding: 20px;
+
             border-radius: 14px;
+
             background: #eef2ff;
-            text-align: center;
+
             border: 1px solid #e0e7ff;
+
+            text-align: center;
         }
 
+
         .total-questions-number {
-            font-size: 30px;
+            font-size: 32px;
+
             line-height: 1.2;
+
             font-weight: 800;
+
             color: #4f46e5;
         }
 
+
         .total-questions-label {
             margin-top: 4px;
+
             color: #6b7280;
+
             font-size: 13px;
         }
 
-        /* =====================================================
-           TIMING / AVAILABILITY
-           ===================================================== */
+
+        /* =========================================================
+           TWO COLUMN GRIDS
+           ========================================================= */
 
         .timing-grid,
         .availability-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+
             gap: 18px;
         }
 
+
+        /* =========================================================
+           DURATION
+           ========================================================= */
+
         .duration-preview {
-            padding: 13px 14px;
+            min-height: 46px;
+
+            display: flex;
+
+            align-items: center;
+
+            padding: 11px 14px;
+
             background: #f3f4f6;
-            border-radius: 10px;
-            min-height: 20px;
-            font-weight: 600;
-            color: #374151;
+
             border: 1px solid #e5e7eb;
+
+            border-radius: 10px;
+
+            color: #374151;
+
+            font-size: 14px;
+
+            font-weight: 600;
         }
+
+
+        /* =========================================================
+           AVAILABILITY NOTE
+           ========================================================= */
 
         .availability-note {
-            padding: 14px 16px;
-            background: #fff7ed;
-            border: 1px solid #fed7aa;
-            color: #9a3412;
-            border-radius: 12px;
-            font-size: 13px;
-            line-height: 1.55;
             margin-top: 14px;
+
+            padding: 14px 16px;
+
+            background: #fff7ed;
+
+            border: 1px solid #fed7aa;
+
+            border-radius: 12px;
+
+            color: #9a3412;
+
+            font-size: 13px;
+
+            line-height: 1.55;
         }
 
-        /* =====================================================
+
+        /* =========================================================
            GENERATE BUTTON
-           ===================================================== */
+           ========================================================= */
 
         .generate-button {
             width: 100%;
+
+            min-height: 52px;
+
             border: none;
-            cursor: pointer;
-            padding: 15px 20px;
+
             border-radius: 12px;
-            font-size: 16px;
-            font-weight: 700;
+
+            padding: 14px 20px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #6366f1,
+                    #4f46e5
+                );
+
             color: #ffffff;
-            background: #4f46e5;
-            transition: transform 0.2s ease,
-                        box-shadow 0.2s ease,
-                        background 0.2s ease;
+
+            cursor: pointer;
+
+            font-family: inherit;
+
+            font-size: 15px;
+
+            font-weight: 700;
+
+            box-shadow:
+                0 8px 18px rgba(79, 70, 229, 0.20);
+
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease,
+                opacity 0.2s ease;
         }
 
+
         .generate-button:hover:not(:disabled) {
-            background: #4338ca;
-            transform: translateY(-1px);
-            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.22);
+            transform: translateY(-2px);
+
+            box-shadow:
+                0 12px 25px rgba(79, 70, 229, 0.27);
         }
+
 
         .generate-button:active:not(:disabled) {
             transform: translateY(0);
         }
 
+
         .generate-button:disabled {
             opacity: 0.7;
+
             cursor: not-allowed;
+
             transform: none;
+
+            box-shadow: none;
         }
+
+
+        /* =========================================================
+           BUTTON SPINNER
+           ========================================================= */
 
         .button-spinner {
             display: inline-block;
+
             width: 15px;
             height: 15px;
-            border: 2px solid rgba(255, 255, 255, 0.45);
-            border-top-color: #ffffff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            vertical-align: -2px;
+
             margin-right: 8px;
+
+            border: 2px solid rgba(255, 255, 255, 0.4);
+
+            border-top-color: #ffffff;
+
+            border-radius: 50%;
+
+            animation: spin 0.8s linear infinite;
+
+            vertical-align: -2px;
         }
+
 
         @keyframes spin {
             to {
@@ -320,138 +885,535 @@
             }
         }
 
-        /* =====================================================
-           RESPONSIVE
-           ===================================================== */
+
+        /* =========================================================
+           RESPONSIVE - TABLET
+           ========================================================= */
 
         @media (max-width: 768px) {
-            .quiz-settings-card {
-                padding: 20px;
-                border-radius: 15px;
+
+            .nav-inner {
+                width: calc(100% - 28px);
+
+                min-height: 66px;
             }
 
-            .difficulty-grid,
+
+            .brand-subtitle,
+            .brand-divider {
+                display: none;
+            }
+
+
+            .brand-title {
+                font-size: 15px;
+            }
+
+
+            .brand-icon {
+                width: 37px;
+                height: 37px;
+
+                border-radius: 10px;
+            }
+
+
+            .nav-link,
+            .logout-link {
+                padding: 9px 10px;
+            }
+
+
+            .create-page-container {
+                width: calc(100% - 28px);
+
+                padding-top: 30px;
+            }
+
+
+            .quiz-settings-card {
+                padding: 22px;
+            }
+
+
+            .difficulty-grid {
+                grid-template-columns: 1fr;
+            }
+
+
             .timing-grid,
             .availability-grid {
                 grid-template-columns: 1fr;
             }
-
-            .ai-info-card {
-                padding: 20px;
-            }
         }
+
+
+        /* =========================================================
+           RESPONSIVE - MOBILE
+           ========================================================= */
 
         @media (max-width: 480px) {
+
+            .nav-inner {
+                width: calc(100% - 16px);
+
+                gap: 8px;
+            }
+
+
+            .brand {
+                gap: 8px;
+            }
+
+
+            .brand-title {
+                font-size: 14px;
+            }
+
+
+            .brand-icon {
+                width: 34px;
+                height: 34px;
+            }
+
+
+            .nav-actions {
+                gap: 2px;
+            }
+
+
+            .nav-link,
+            .logout-link {
+                padding: 8px;
+            }
+
+
+            .nav-link span:last-child,
+            .logout-link span:last-child {
+                display: none;
+            }
+
+
+            .nav-separator {
+                margin: 0 2px;
+            }
+
+
+            .create-page-container {
+                width: calc(100% - 20px);
+
+                padding-top: 24px;
+            }
+
+
+            .create-hero h1 {
+                font-size: 29px;
+            }
+
+
+            .create-hero p {
+                font-size: 14px;
+            }
+
+
             .quiz-settings-card {
                 padding: 16px;
+
+                border-radius: 16px;
             }
+
 
             .ai-info-card {
-                padding: 17px;
+                padding: 18px;
+
+                border-radius: 15px;
             }
 
-            .settings-section h3 {
-                font-size: 17px;
+
+            .settings-section {
+                margin-bottom: 26px;
+
+                padding-bottom: 26px;
             }
         }
+
     </style>
+
 </head>
+
 
 <body>
 
-    <!-- =====================================================
-         NAVBAR
-         ===================================================== -->
 
-    <nav class="navbar">
-        <div class="navbar-brand">
-            <a href="/teacher_dashboard">
-                AI Quiz / Assessment System
+    <!-- =========================================================
+         NAVIGATION
+         ========================================================= -->
+
+    <nav class="top-navbar">
+
+        <div class="nav-inner">
+
+
+            <!-- BRAND -->
+
+            <a
+                href="/teacher_dashboard"
+                class="brand"
+            >
+
+                <span class="brand-icon">
+
+                    <span class="brand-icon-symbol">
+                        Q
+                    </span>
+
+                </span>
+
+
+                <span class="brand-text">
+
+                    <span class="brand-title">
+                        AI Quiz
+                    </span>
+
+                    <span class="brand-divider">
+                        /
+                    </span>
+
+                    <span class="brand-subtitle">
+                        Assessment System
+                    </span>
+
+                </span>
+
             </a>
+
+
+            <!-- NAVIGATION -->
+
+            <div class="nav-actions">
+
+
+                <!-- DASHBOARD -->
+
+                <a
+                    href="/teacher_dashboard"
+                    class="nav-link active"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+
+                            <rect
+                                x="3"
+                                y="3"
+                                width="7"
+                                height="7"
+                                rx="1"
+                            />
+
+                            <rect
+                                x="14"
+                                y="3"
+                                width="7"
+                                height="7"
+                                rx="1"
+                            />
+
+                            <rect
+                                x="3"
+                                y="14"
+                                width="7"
+                                height="7"
+                                rx="1"
+                            />
+
+                            <rect
+                                x="14"
+                                y="14"
+                                width="7"
+                                height="7"
+                                rx="1"
+                            />
+
+                        </svg>
+
+                    </span>
+
+
+                    <span>
+                        Dashboard
+                    </span>
+
+                </a>
+
+
+                <span class="nav-separator"></span>
+
+
+                <!-- LOGOUT -->
+
+                <a
+                    href="/logout"
+                    class="logout-link"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+
+                            <path
+                                d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
+                            />
+
+                            <polyline
+                                points="16 17 21 12 16 7"
+                            />
+
+                            <line
+                                x1="21"
+                                y1="12"
+                                x2="9"
+                                y2="12"
+                            />
+
+                        </svg>
+
+                    </span>
+
+
+                    <span>
+                        Logout
+                    </span>
+
+                </a>
+
+            </div>
+
         </div>
 
-        <div class="navbar-links">
-            <a href="/teacher_dashboard">Dashboard</a>
-            <a href="/logout">Logout</a>
-        </div>
     </nav>
 
 
-    <!-- =====================================================
-         MAIN
-         ===================================================== -->
+    <!-- =========================================================
+         MAIN CONTENT
+         ========================================================= -->
 
-    <main class="container">
+    <main class="create-page-container">
 
-        <div class="quiz-page-wrapper">
 
-            <section class="hero-section">
+        <!-- HERO -->
 
-                <h1>Create a New Quiz</h1>
+        <section class="create-hero">
 
-                <p>
-                    Generate a complete AI-powered quiz with
-                    controlled difficulty levels and automatic
-                    AI difficulty verification.
+            <h1>
+                Create a New Quiz
+            </h1>
+
+            <p>
+                Generate a complete AI-powered quiz with
+                controlled difficulty levels and automatic
+                AI difficulty verification.
+            </p>
+
+        </section>
+
+
+        <!-- =====================================================
+             QUIZ SETTINGS CARD
+             ===================================================== -->
+
+        <div class="quiz-settings-card">
+
+
+            <!-- =================================================
+                 AI QUIZ GENERATOR
+                 ================================================= -->
+
+            <div class="ai-info-card">
+
+
+                <h3>
+                    🤖 AI Quiz Generator
+                </h3>
+
+
+                <p class="ai-info-description">
+                    Configure your quiz and let the AI generate
+                    questions automatically.
                 </p>
 
-            </section>
+
+                <!-- FEATURES -->
+
+                <ul class="ai-feature-list">
 
 
-            <div class="quiz-settings-card">
+                    <li>
 
-                <!-- =================================================
-                     AI INFORMATION
-                     ================================================= -->
+                        <span class="feature-check">
+                            ✓
+                        </span>
 
-                <div class="ai-info-card">
-
-                    <h3>🤖 AI Quiz Generator</h3>
-
-                    <p>
-                        Configure your quiz and let the AI generate
-                        questions automatically.
-                    </p>
-
-                    <ul class="ai-feature-list">
-
-                        <li>
-                            ✅
-                            <strong>Automatic Generation</strong>
+                        <span>
+                            <strong>
+                                Automatic Generation
+                            </strong>
                             — Questions are generated according
                             to your selected topic.
-                        </li>
+                        </span>
 
-                        <li>
-                            ✅
-                            <strong>Difficulty Control</strong>
+                    </li>
+
+
+                    <li>
+
+                        <span class="feature-check">
+                            ✓
+                        </span>
+
+                        <span>
+                            <strong>
+                                Difficulty Control
+                            </strong>
                             — Choose the exact number of Easy,
                             Medium and Hard questions.
-                        </li>
+                        </span>
 
-                        <li>
-                            ✅
-                            <strong>Instant Assessment</strong>
+                    </li>
+
+
+                    <li>
+
+                        <span class="feature-check">
+                            ✓
+                        </span>
+
+                        <span>
+                            <strong>
+                                Instant Assessment
+                            </strong>
                             — Students receive their quiz
                             immediately when it becomes live.
-                        </li>
+                        </span>
 
-                    </ul>
+                    </li>
 
 
-                    <div class="quality-check-info">
+                </ul>
 
-                        <strong>
-                            🧠 AI Difficulty Quality Check
-                        </strong>
 
-                        <br>
+                <!-- AI QUALITY CHECK -->
 
+                <div class="quality-check-info">
+
+                    <div class="quality-check-title">
+
+                        <span>
+                            🧠
+                        </span>
+
+                        <span>
+                            AI Difficulty Quality Check
+                        </span>
+
+                    </div>
+
+
+                    <div>
                         After generating the quiz, the AI
                         independently evaluates the difficulty
                         of every question and checks whether the
                         generated difficulty matches the actual
                         difficulty.
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 FORM
+                 ================================================= -->
+
+            <form
+                action="/create_quiz"
+                method="POST"
+                id="quizForm"
+            >
+
+
+                <!-- =================================================
+                     QUIZ INFORMATION
+                     ================================================= -->
+
+                <div class="settings-section">
+
+
+                    <h3>
+                        Quiz Information
+                    </h3>
+
+
+                    <p class="settings-description">
+                        Give your quiz a title and specify the
+                        topic from which questions should be
+                        generated.
+                    </p>
+
+
+                    <!-- TITLE -->
+
+                    <div class="form-group">
+
+                        <label for="title">
+                            Quiz Title
+                        </label>
+
+                        <input
+                            type="text"
+                            id="title"
+                            name="title"
+                            placeholder="e.g. Data Structures Mid-Term"
+                            required
+                            maxlength="200"
+                        >
+
+                    </div>
+
+
+                    <!-- TOPIC -->
+
+                    <div class="form-group">
+
+                        <label for="prompt">
+                            Topic / Subject
+                        </label>
+
+                        <input
+                            type="text"
+                            id="prompt"
+                            name="prompt"
+                            placeholder="e.g. Stack, Queue and Linked List"
+                            required
+                            maxlength="500"
+                        >
 
                     </div>
 
@@ -459,332 +1421,314 @@
 
 
                 <!-- =================================================
-                     FORM
+                     DIFFICULTY DISTRIBUTION
                      ================================================= -->
 
-                <form
-                    action="/create_quiz"
-                    method="POST"
-                    id="quizForm"
-                >
-
-                    <!-- =================================================
-                         QUIZ INFORMATION
-                         ================================================= -->
-
-                    <div class="settings-section">
-
-                        <h3>Quiz Information</h3>
-
-                        <p class="settings-description">
-                            Give your quiz a title and specify
-                            the topic from which questions should
-                            be generated.
-                        </p>
+                <div class="settings-section">
 
 
-                        <div class="form-group">
+                    <h3>
+                        Difficulty Distribution
+                    </h3>
 
-                            <label for="title">
-                                Quiz Title
+
+                    <p class="settings-description">
+                        Select how many questions should be
+                        generated at each difficulty level.
+                    </p>
+
+
+                    <div class="difficulty-grid">
+
+
+                        <!-- EASY -->
+
+                        <div class="difficulty-box">
+
+                            <label for="easy">
+                                🟢 Easy Questions
                             </label>
 
                             <input
-                                type="text"
-                                id="title"
-                                name="title"
-                                placeholder="e.g. Data Structures Mid-Term"
-                                required
-                                maxlength="200"
+                                type="number"
+                                name="easy"
+                                id="easy"
+                                value="0"
+                                min="0"
+                                max="50"
+                                step="1"
                             >
 
                         </div>
 
 
-                        <div class="form-group">
+                        <!-- MEDIUM -->
 
-                            <label for="prompt">
-                                Topic / Subject
+                        <div class="difficulty-box">
+
+                            <label for="medium">
+                                🟡 Medium Questions
                             </label>
 
                             <input
-                                type="text"
-                                id="prompt"
-                                name="prompt"
-                                placeholder="e.g. Stack, Queue and Linked List"
-                                required
-                                maxlength="500"
+                                type="number"
+                                name="medium"
+                                id="medium"
+                                value="0"
+                                min="0"
+                                max="50"
+                                step="1"
                             >
 
                         </div>
+
+
+                        <!-- HARD -->
+
+                        <div class="difficulty-box">
+
+                            <label for="hard">
+                                🔴 Hard Questions
+                            </label>
+
+                            <input
+                                type="number"
+                                name="hard"
+                                id="hard"
+                                value="0"
+                                min="0"
+                                max="50"
+                                step="1"
+                            >
+
+                        </div>
+
 
                     </div>
 
 
-                    <!-- =================================================
-                         DIFFICULTY
-                         ================================================= -->
+                    <!-- TOTAL -->
 
-                    <div class="settings-section">
+                    <div class="total-questions-box">
 
-                        <h3>Difficulty Distribution</h3>
+                        <div
+                            class="total-questions-number"
+                            id="totalQuestions"
+                        >
+                            0
+                        </div>
 
-                        <p class="settings-description">
-                            Select how many questions should be
-                            generated at each difficulty level.
-                        </p>
+                        <div class="total-questions-label">
+                            Total Questions
+                        </div>
+
+                    </div>
+
+                </div>
 
 
-                        <div class="difficulty-grid">
+                <!-- =================================================
+                     TIMING
+                     ================================================= -->
 
-                            <div class="difficulty-box">
+                <div class="settings-section">
 
-                                <label for="easy">
-                                    🟢 Easy Questions
-                                </label>
 
-                                <input
-                                    type="number"
-                                    name="easy"
-                                    id="easy"
-                                    value="0"
-                                    min="0"
-                                    max="50"
-                                    step="1"
+                    <h3>
+                        Quiz Timing
+                    </h3>
+
+
+                    <p class="settings-description">
+                        Select the time allowed per question.
+                        Total quiz duration is calculated
+                        automatically.
+                    </p>
+
+
+                    <div class="timing-grid">
+
+
+                        <!-- TIME PER QUESTION -->
+
+                        <div class="form-group">
+
+                            <label for="question_time_seconds">
+                                Time Per Question
+                            </label>
+
+                            <select
+                                name="question_time_seconds"
+                                id="question_time_seconds"
+                                required
+                            >
+
+                                <option value="15">
+                                    15 seconds
+                                </option>
+
+                                <option value="30">
+                                    30 seconds
+                                </option>
+
+                                <option value="45">
+                                    45 seconds
+                                </option>
+
+                                <option
+                                    value="60"
+                                    selected
                                 >
+                                    60 seconds
+                                </option>
 
-                            </div>
+                                <option value="90">
+                                    90 seconds
+                                </option>
 
+                                <option value="120">
+                                    120 seconds
+                                </option>
 
-                            <div class="difficulty-box">
-
-                                <label for="medium">
-                                    🟡 Medium Questions
-                                </label>
-
-                                <input
-                                    type="number"
-                                    name="medium"
-                                    id="medium"
-                                    value="0"
-                                    min="0"
-                                    max="50"
-                                    step="1"
-                                >
-
-                            </div>
-
-
-                            <div class="difficulty-box">
-
-                                <label for="hard">
-                                    🔴 Hard Questions
-                                </label>
-
-                                <input
-                                    type="number"
-                                    name="hard"
-                                    id="hard"
-                                    value="0"
-                                    min="0"
-                                    max="50"
-                                    step="1"
-                                >
-
-                            </div>
+                            </select>
 
                         </div>
 
 
-                        <div class="total-questions-box">
+                        <!-- CALCULATED DURATION -->
+
+                        <div class="form-group">
+
+                            <label>
+                                Calculated Duration
+                            </label>
 
                             <div
-                                class="total-questions-number"
-                                id="totalQuestions"
+                                class="duration-preview"
+                                id="durationPreview"
                             >
-                                0
-                            </div>
-
-                            <div class="total-questions-label">
-                                Total Questions
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <!-- =================================================
-                         TIMING
-                         ================================================= -->
-
-                    <div class="settings-section">
-
-                        <h3>Quiz Timing</h3>
-
-                        <p class="settings-description">
-                            Select the time allowed per question.
-                            Total quiz duration is calculated
-                            automatically.
-                        </p>
-
-
-                        <div class="timing-grid">
-
-                            <div class="form-group">
-
-                                <label for="question_time_seconds">
-                                    Time Per Question
-                                </label>
-
-                                <select
-                                    name="question_time_seconds"
-                                    id="question_time_seconds"
-                                    required
-                                >
-
-                                    <option value="15">
-                                        15 seconds
-                                    </option>
-
-                                    <option value="30">
-                                        30 seconds
-                                    </option>
-
-                                    <option value="45">
-                                        45 seconds
-                                    </option>
-
-                                    <option value="60" selected>
-                                        60 seconds
-                                    </option>
-
-                                    <option value="90">
-                                        90 seconds
-                                    </option>
-
-                                    <option value="120">
-                                        120 seconds
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <div class="form-group">
-
-                                <label>
-                                    Calculated Duration
-                                </label>
-
-                                <div
-                                    class="duration-preview"
-                                    id="durationPreview"
-                                >
-                                    0 minutes
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <!-- =================================================
-                         AVAILABILITY
-                         ================================================= -->
-
-                    <div class="settings-section">
-
-                        <h3>Quiz Availability</h3>
-
-                        <p class="settings-description">
-                            Set when students can access the quiz.
-                        </p>
-
-
-                        <div class="availability-grid">
-
-                            <div class="form-group">
-
-                                <label for="available_from">
-                                    Available From
-                                </label>
-
-                                <input
-                                    type="datetime-local"
-                                    name="available_from"
-                                    id="available_from"
-                                    required
-                                >
-
-                            </div>
-
-
-                            <div class="form-group">
-
-                                <label for="available_until">
-                                    Available Until
-                                </label>
-
-                                <input
-                                    type="datetime-local"
-                                    name="available_until"
-                                    id="available_until"
-                                    required
-                                >
-
+                                0 minutes
                             </div>
 
                         </div>
 
 
-                        <div class="availability-note">
+                    </div>
 
-                            🔒
-                            <strong>Closing rule:</strong>
+                </div>
 
-                            Once the availability period ends,
-                            students will not be able to start
-                            the quiz.
+
+                <!-- =================================================
+                     AVAILABILITY
+                     ================================================= -->
+
+                <div class="settings-section">
+
+
+                    <h3>
+                        Quiz Availability
+                    </h3>
+
+
+                    <p class="settings-description">
+                        Set when students can access the quiz.
+                    </p>
+
+
+                    <div class="availability-grid">
+
+
+                        <!-- FROM -->
+
+                        <div class="form-group">
+
+                            <label for="available_from">
+                                Available From
+                            </label>
+
+                            <input
+                                type="datetime-local"
+                                name="available_from"
+                                id="available_from"
+                                required
+                            >
 
                         </div>
 
+
+                        <!-- UNTIL -->
+
+                        <div class="form-group">
+
+                            <label for="available_until">
+                                Available Until
+                            </label>
+
+                            <input
+                                type="datetime-local"
+                                name="available_until"
+                                id="available_until"
+                                required
+                            >
+
+                        </div>
+
+
                     </div>
 
 
-                    <!-- =================================================
-                         SUBMIT
-                         ================================================= -->
+                    <div class="availability-note">
 
-                    <div class="settings-section">
+                        🔒
+                        <strong>
+                            Closing rule:
+                        </strong>
 
-                        <button
-                            type="submit"
-                            class="generate-button"
-                            id="generateButton"
-                        >
-                            Generate AI Quiz
-                        </button>
+                        Once the availability period ends,
+                        students will not be able to start
+                        the quiz.
 
                     </div>
 
-                </form>
+                </div>
 
-            </div>
+
+                <!-- =================================================
+                     SUBMIT
+                     ================================================= -->
+
+                <div class="settings-section">
+
+
+                    <button
+                        type="submit"
+                        class="generate-button"
+                        id="generateButton"
+                    >
+                        Generate AI Quiz
+                    </button>
+
+
+                </div>
+
+
+            </form>
 
         </div>
 
     </main>
 
 
-    <!-- =====================================================
+    <!-- =========================================================
          JAVASCRIPT
-         ===================================================== -->
+         ========================================================= -->
 
     <script>
+
+
+        /* =========================================================
+           ELEMENTS
+           ========================================================= */
 
         const easyInput =
             document.getElementById("easy");
@@ -796,30 +1740,44 @@
             document.getElementById("hard");
 
         const timeInput =
-            document.getElementById("question_time_seconds");
+            document.getElementById(
+                "question_time_seconds"
+            );
 
         const totalQuestionsElement =
-            document.getElementById("totalQuestions");
+            document.getElementById(
+                "totalQuestions"
+            );
 
         const durationPreview =
-            document.getElementById("durationPreview");
+            document.getElementById(
+                "durationPreview"
+            );
 
         const availableFrom =
-            document.getElementById("available_from");
+            document.getElementById(
+                "available_from"
+            );
 
         const availableUntil =
-            document.getElementById("available_until");
+            document.getElementById(
+                "available_until"
+            );
 
         const quizForm =
-            document.getElementById("quizForm");
+            document.getElementById(
+                "quizForm"
+            );
 
         const generateButton =
-            document.getElementById("generateButton");
+            document.getElementById(
+                "generateButton"
+            );
 
 
-        /* =====================================================
+        /* =========================================================
            FORMAT DATETIME LOCAL
-           ===================================================== */
+           ========================================================= */
 
         function formatDateTimeLocal(date) {
 
@@ -842,13 +1800,16 @@
                 String(date.getMinutes())
                     .padStart(2, "0");
 
-            return `${year}-${month}-${day}T${hours}:${minutes}`;
+            return (
+                `${year}-${month}-${day}` +
+                `T${hours}:${minutes}`
+            );
         }
 
 
-        /* =====================================================
+        /* =========================================================
            DEFAULT AVAILABILITY
-           ===================================================== */
+           ========================================================= */
 
         function setDefaultAvailability() {
 
@@ -860,11 +1821,14 @@
                 now.getMinutes() + 1
             );
 
-            const end = new Date(now);
+
+            const end =
+                new Date(now);
 
             end.setHours(
                 end.getHours() + 2
             );
+
 
             availableFrom.value =
                 formatDateTimeLocal(now);
@@ -874,26 +1838,36 @@
         }
 
 
-        /* =====================================================
-           UPDATE TIMING
-           ===================================================== */
+        /* =========================================================
+           UPDATE QUIZ TIMING
+           ========================================================= */
 
         function updateQuizTiming() {
 
             const easy =
-                parseInt(easyInput.value) || 0;
+                parseInt(
+                    easyInput.value
+                ) || 0;
 
             const medium =
-                parseInt(mediumInput.value) || 0;
+                parseInt(
+                    mediumInput.value
+                ) || 0;
 
             const hard =
-                parseInt(hardInput.value) || 0;
+                parseInt(
+                    hardInput.value
+                ) || 0;
 
             const seconds =
-                parseInt(timeInput.value) || 0;
+                parseInt(
+                    timeInput.value
+                ) || 0;
+
 
             const total =
                 easy + medium + hard;
+
 
             totalQuestionsElement.textContent =
                 total;
@@ -901,6 +1875,7 @@
 
             const totalSeconds =
                 total * seconds;
+
 
             if (totalSeconds <= 0) {
 
@@ -912,10 +1887,16 @@
 
 
             const minutes =
-                Math.ceil(totalSeconds / 60);
+                Math.ceil(
+                    totalSeconds / 60
+                );
+
 
             const hours =
-                Math.floor(minutes / 60);
+                Math.floor(
+                    minutes / 60
+                );
+
 
             const remainingMinutes =
                 minutes % 60;
@@ -933,21 +1914,20 @@
 
                     durationPreview.textContent =
                         `${hours} hour${hours > 1 ? "s" : ""}`;
-
                 }
 
             } else {
 
                 durationPreview.textContent =
                     `${minutes} minute${minutes > 1 ? "s" : ""}`;
-
             }
+
         }
 
 
-        /* =====================================================
+        /* =========================================================
            INPUT EVENTS
-           ===================================================== */
+           ========================================================= */
 
         [
             easyInput,
@@ -955,7 +1935,7 @@
             hardInput,
             timeInput
 
-        ].forEach(element => {
+        ].forEach(function(element) {
 
             element.addEventListener(
                 "input",
@@ -970,26 +1950,36 @@
         });
 
 
-        /* =====================================================
+        /* =========================================================
            FORM SUBMIT VALIDATION
-           ===================================================== */
+           ========================================================= */
 
         quizForm.addEventListener(
             "submit",
-            function (event) {
+            function(event) {
+
 
                 const easy =
-                    parseInt(easyInput.value) || 0;
+                    parseInt(
+                        easyInput.value
+                    ) || 0;
 
                 const medium =
-                    parseInt(mediumInput.value) || 0;
+                    parseInt(
+                        mediumInput.value
+                    ) || 0;
 
                 const hard =
-                    parseInt(hardInput.value) || 0;
+                    parseInt(
+                        hardInput.value
+                    ) || 0;
+
 
                 const total =
                     easy + medium + hard;
 
+
+                /* No questions */
 
                 if (total <= 0) {
 
@@ -1002,6 +1992,22 @@
                     return;
                 }
 
+
+                /* Maximum questions */
+
+                if (total > 150) {
+
+                    event.preventDefault();
+
+                    alert(
+                        "Maximum 150 questions are allowed."
+                    );
+
+                    return;
+                }
+
+
+                /* Negative values */
 
                 if (
                     easy < 0 ||
@@ -1018,6 +2024,8 @@
                     return;
                 }
 
+
+                /* Time */
 
                 const questionTime =
                     parseInt(
@@ -1037,6 +2045,8 @@
                 }
 
 
+                /* Availability */
+
                 const startValue =
                     availableFrom.value;
 
@@ -1044,7 +2054,10 @@
                     availableUntil.value;
 
 
-                if (!startValue || !endValue) {
+                if (
+                    !startValue ||
+                    !endValue
+                ) {
 
                     event.preventDefault();
 
@@ -1066,9 +2079,15 @@
                     new Date();
 
 
+                /* Invalid dates */
+
                 if (
-                    Number.isNaN(startDate.getTime()) ||
-                    Number.isNaN(endDate.getTime())
+                    Number.isNaN(
+                        startDate.getTime()
+                    ) ||
+                    Number.isNaN(
+                        endDate.getTime()
+                    )
                 ) {
 
                     event.preventDefault();
@@ -1081,7 +2100,11 @@
                 }
 
 
-                if (endDate <= startDate) {
+                /* End before start */
+
+                if (
+                    endDate <= startDate
+                ) {
 
                     event.preventDefault();
 
@@ -1093,7 +2116,11 @@
                 }
 
 
-                if (endDate <= now) {
+                /* End already passed */
+
+                if (
+                    endDate <= now
+                ) {
 
                     event.preventDefault();
 
@@ -1105,9 +2132,13 @@
                 }
 
 
-                /* Prevent accidental double submission */
+                /* =================================================
+                   PREVENT DOUBLE SUBMISSION
+                   ================================================= */
 
-                generateButton.disabled = true;
+                generateButton.disabled =
+                    true;
+
 
                 generateButton.innerHTML =
                     '<span class="button-spinner"></span>' +
@@ -1117,13 +2148,14 @@
         );
 
 
-        /* =====================================================
+        /* =========================================================
            INITIALIZE
-           ===================================================== */
+           ========================================================= */
 
         setDefaultAvailability();
 
         updateQuizTiming();
+
 
     </script>
 
