@@ -1,19 +1,17 @@
 import json
 import os
+import re
 from ollama import Client
 
 
 # ============================================================
-# OLLAMA CLOUD CLIENT
+# OLLAMA CONFIGURATION
 # ============================================================
 
 OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
 
 if not OLLAMA_API_KEY:
-    raise Exception(
-        "OLLAMA_API_KEY environment variable is not set"
-    )
-
+    raise Exception("OLLAMA_API_KEY environment variable is not set")
 
 client = Client(
     host="https://ollama.com",
@@ -22,913 +20,919 @@ client = Client(
     }
 )
 
+GENERATION_MODEL = "gpt-oss:20b"
+
+MAX_GENERATION_ATTEMPTS = 3
+MAX_EVALUATION_ATTEMPTS = 3
+
 
 # ============================================================
-# GENERATE QUESTIONS
+# DIFFICULTY HELPERS
 # ============================================================
 
-def generate_questions(topic, easy, medium, hard):
+def normalize_difficulty(value):
+    """
+    Normalize difficulty values to:
+    Easy / Medium / Hard
+    """
+    if value is None:
+        return ""
 
-    # ========================================================
-    # TOTAL
-    # ========================================================
+    value = str(value).strip().lower()
 
-    total = easy + medium + hard
+    if value == "easy":
+        return "Easy"
 
-    if total <= 0:
-        raise Exception(
-            "Total questions must be greater than 0"
+    if value == "medium":
+        return "Medium"
+
+    if value == "hard":
+        return "Hard"
+
+    return ""
+
+
+# ============================================================
+# JSON CLEANING
+# ============================================================
+
+def clean_json_content(content):
+    """
+    Clean AI response before JSON parsing.
+    Handles markdown code blocks and extra text.
+    """
+
+    if not content:
+        return ""
+
+    content = str(content).strip()
+
+    # Remove markdown code fences
+    content = re.sub(r"^```json\s*", "", content, flags=re.IGNORECASE)
+    content = re.sub(r"^```\s*", "", content)
+    content = re.sub(r"\s*```$", "", content)
+
+    # Try to extract JSON array
+    start = content.find("[")
+    end = content.rfind("]")
+
+    if start != -1 and end != -1 and end > start:
+        content = content[start:end + 1]
+
+    return content.strip()
+
+
+# ============================================================
+# BASIC QUESTION VALIDATION
+# ============================================================
+
+def validate_basic_question_structure(questions, total):
+    """
+    Validate basic structure of generated questions.
+    """
+
+    if not isinstance(questions, list):
+        return False
+
+    if len(questions) != total:
+        return False
+
+    required_fields = [
+        "question",
+        "option_a",
+        "option_b",
+        "option_c",
+        "option_d",
+        "correct_option",
+        "difficulty",
+        "explanation"
+    ]
+
+    seen_questions = set()
+
+    for question in questions:
+
+        if not isinstance(question, dict):
+            return False
+
+        # Required fields
+        for field in required_fields:
+            if field not in question:
+                return False
+
+            value = question.get(field)
+
+            if value is None:
+                return False
+
+            if not str(value).strip():
+                return False
+
+        # Question duplicate check
+        question_text = str(question["question"]).strip().lower()
+
+        if question_text in seen_questions:
+            return False
+
+        seen_questions.add(question_text)
+
+        # Correct option
+        correct_option = str(
+            question["correct_option"]
+        ).strip().upper()
+
+        if correct_option not in ["A", "B", "C", "D"]:
+            return False
+
+        question["correct_option"] = correct_option
+
+        # Difficulty
+        difficulty = normalize_difficulty(
+            question.get("difficulty")
         )
 
+        if not difficulty:
+            return False
 
-    print("\n")
-    print("=" * 70)
-    print("🤖 OLLAMA CLOUD QUIZ GENERATION")
-    print("=" * 70)
+        question["difficulty"] = difficulty
 
-    print("📌 Topic:", topic)
-    print("📌 Easy:", easy)
-    print("📌 Medium:", medium)
-    print("📌 Hard:", hard)
-    print("📌 Total:", total)
+        # Options should not be duplicates
+        options = [
+            str(question["option_a"]).strip().lower(),
+            str(question["option_b"]).strip().lower(),
+            str(question["option_c"]).strip().lower(),
+            str(question["option_d"]).strip().lower()
+        ]
 
-    print("=" * 70)
+        if len(set(options)) != 4:
+            return False
+
+    return True
 
 
-    # ========================================================
-    # GENERATION PROMPT
-    # ========================================================
+# ============================================================
+# TRIM EXTRA QUESTIONS
+# ============================================================
+
+def trim_extra_questions(
+    questions,
+    easy,
+    medium,
+    hard
+):
+    """
+    Keep only the requested number of questions
+    for each difficulty.
+    """
+
+    buckets = {
+        "Easy": [],
+        "Medium": [],
+        "Hard": []
+    }
+
+    for question in questions:
+        difficulty = normalize_difficulty(
+            question.get("difficulty")
+        )
+
+        if difficulty in buckets:
+            buckets[difficulty].append(question)
+
+    selected = (
+        buckets["Easy"][:easy]
+        + buckets["Medium"][:medium]
+        + buckets["Hard"][:hard]
+    )
+
+    return selected
+
+
+# ============================================================
+# CHECK GENERATED DISTRIBUTION
+# ============================================================
+
+def check_difficulty_distribution(
+    questions,
+    easy,
+    medium,
+    hard
+):
+    """
+    Verify generated difficulty distribution exactly.
+    """
+
+    counts = {
+        "Easy": 0,
+        "Medium": 0,
+        "Hard": 0
+    }
+
+    for question in questions:
+        difficulty = normalize_difficulty(
+            question.get("difficulty")
+        )
+
+        if difficulty not in counts:
+            return False
+
+        counts[difficulty] += 1
+
+    return (
+        counts["Easy"] == easy
+        and
+        counts["Medium"] == medium
+        and
+        counts["Hard"] == hard
+    )
+
+
+# ============================================================
+# AI DIFFICULTY EVALUATION
+# ============================================================
+
+def evaluate_question_difficulties(topic, questions):
+    """
+    Independently evaluate the actual difficulty of every question.
+
+    IMPORTANT:
+    The evaluator is NOT shown the original/generated
+    difficulty label. This prevents simple confirmation bias.
+
+    Returns:
+        [
+            {
+                "index": 1,
+                "difficulty": "Easy",
+                "confidence": 0.95,
+                "reason": "..."
+            }
+        ]
+
+    Returns None if evaluation completely fails.
+    """
+
+    if not questions:
+        return []
+
+    evaluation_questions = []
+
+    for index, question in enumerate(questions, start=1):
+
+        evaluation_questions.append({
+            "index": index,
+            "question": question.get("question"),
+            "option_a": question.get("option_a"),
+            "option_b": question.get("option_b"),
+            "option_c": question.get("option_c"),
+            "option_d": question.get("option_d"),
+            "correct_option": question.get("correct_option"),
+            "explanation": question.get("explanation")
+        })
 
     prompt = f"""
-Generate exactly {total} multiple-choice questions about:
+You are an expert educational assessment reviewer.
 
+Topic:
 {topic}
 
-DIFFICULTY DISTRIBUTION:
+Your task is to independently determine the ACTUAL difficulty
+of every question below.
 
-Easy: {easy}
-Medium: {medium}
-Hard: {hard}
+IMPORTANT:
+- Do NOT use any original/generated difficulty label.
+- Judge only the question itself.
+- Consider conceptual depth, reasoning required, ambiguity,
+  number of steps, prerequisite knowledge and expected learner level.
+- Use exactly one of:
+  Easy
+  Medium
+  Hard
+- Confidence must be between 0 and 1.
+- Give a short reason.
+- Return ONLY valid JSON.
+- Do not use markdown.
 
-IMPORTANT RULES:
+Required JSON format:
 
-1. Return ONLY valid JSON.
-2. Do not write markdown.
-3. Do not use ```json.
-4. Do not write explanations outside JSON.
-5. Generate EXACTLY {total} questions.
-6. The difficulty distribution MUST be EXACTLY:
+[
+  {{
+    "index": 1,
+    "difficulty": "Easy",
+    "confidence": 0.95,
+    "reason": "Short reason"
+  }}
+]
 
-Easy = {easy}
-Medium = {medium}
-Hard = {hard}
+Questions:
 
-7. Every question MUST contain exactly these fields:
-
-question
-option_a
-option_b
-option_c
-option_d
-correct_option
-difficulty
-explanation
-
-8. correct_option MUST be exactly one of:
-
-A
-B
-C
-D
-
-9. difficulty MUST be exactly one of:
-
-Easy
-Medium
-Hard
-
-10. Every question must have four different options.
-11. Exactly one option must be correct.
-12. Questions must be relevant to the requested topic.
-13. Easy questions should test basic concepts.
-14. Medium questions should test understanding and application.
-15. Hard questions should test deeper understanding and reasoning.
-16. Do not duplicate questions.
-17. Do not create empty fields.
-18. Keep the explanation concise and relevant.
-19. Do not generate extra questions.
-
-JSON FORMAT:
-
-{{
-    "questions": [
-        {{
-            "question": "Question text?",
-            "option_a": "Option A",
-            "option_b": "Option B",
-            "option_c": "Option C",
-            "option_d": "Option D",
-            "correct_option": "A",
-            "difficulty": "Easy",
-            "explanation": "Option A is correct because it represents the fundamental concept being tested."
-        }}
-    ]
-}}
-
-REMEMBER:
-
-Generate exactly {total} questions.
-
-Easy: exactly {easy}
-Medium: exactly {medium}
-Hard: exactly {hard}
+{json.dumps(evaluation_questions, ensure_ascii=False, indent=2)}
 """
 
-
-    # ========================================================
-    # RETRY
-    # ========================================================
-
-    max_attempts = 3
-
-
-    for attempt in range(1, max_attempts + 1):
-
-        print("\n")
-        print("=" * 70)
-
-        print(
-            f"🤖 GENERATING COMPLETE QUIZ "
-            f"- ATTEMPT {attempt}/{max_attempts}"
-        )
-
-        print("=" * 70)
-
+    for attempt in range(MAX_EVALUATION_ATTEMPTS):
 
         try:
 
-            # ==================================================
-            # OLLAMA REQUEST
-            # ==================================================
-
             response = client.chat(
-
-                model="gpt-oss:20b",
-
+                model=GENERATION_MODEL,
                 messages=[
                     {
                         "role": "user",
                         "content": prompt
                     }
-                ],
-
-                options={
-                    "temperature": 0.1
-                },
-
-                format="json"
+                ]
             )
-
-
-            # ==================================================
-            # GET CONTENT
-            # ==================================================
 
             content = response["message"]["content"]
 
+            cleaned = clean_json_content(content)
 
-            if not content:
+            evaluations = json.loads(cleaned)
 
-                print(
-                    "❌ Ollama returned empty response."
+            if not isinstance(evaluations, list):
+                raise ValueError("Evaluation response is not a list")
+
+            if len(evaluations) != len(questions):
+                raise ValueError(
+                    "Evaluation count does not match question count"
                 )
 
-                continue
+            validated = []
 
-
-            content = content.strip()
-
-
-            print("\n")
-            print("=" * 70)
-            print("========== AI RESPONSE ==========")
-            print("=" * 70)
-
-            print(content)
-
-            print("=" * 70)
-
-
-            # ==================================================
-            # REMOVE MARKDOWN IF PRESENT
-            # ==================================================
-
-            if content.startswith("```json"):
-
-                content = content[
-                    len("```json"):
-                ]
-
-
-            if content.startswith("```"):
-
-                content = content[
-                    len("```"):
-                ]
-
-
-            if content.endswith("```"):
-
-                content = content[
-                    :-3
-                ]
-
-
-            content = content.strip()
-
-
-            # ==================================================
-            # PARSE JSON
-            # ==================================================
-
-            try:
-
-                data = json.loads(content)
-
-            except json.JSONDecodeError as e:
-
-                print(
-                    "❌ Invalid JSON:",
-                    e
-                )
-
-                continue
-
-
-            # ==================================================
-            # CHECK OBJECT
-            # ==================================================
-
-            if not isinstance(data, dict):
-
-                print(
-                    "❌ AI response is not a JSON object."
-                )
-
-                continue
-
-
-            # ==================================================
-            # CHECK QUESTIONS KEY
-            # ==================================================
-
-            if "questions" not in data:
-
-                print(
-                    "❌ 'questions' key missing."
-                )
-
-                continue
-
-
-            questions = data["questions"]
-
-
-            # ==================================================
-            # CHECK LIST
-            # ==================================================
-
-            if not isinstance(
-                questions,
-                list
-            ):
-
-                print(
-                    "❌ 'questions' is not a list."
-                )
-
-                continue
-
-
-            # ==================================================
-            # REQUIRED FIELDS
-            # ========================================================
-
-            required_fields = [
-                "question",
-                "option_a",
-                "option_b",
-                "option_c",
-                "option_d",
-                "correct_option",
-                "difficulty",
-                "explanation"
-            ]
-
-
-            # ==================================================
-            # HANDLE EXTRA QUESTIONS
-            # ==================================================
-
-            if len(questions) > total:
-
-                print(
-                    f"⚠️ AI generated extra questions."
-                )
-
-                print(
-                    f"Expected: {total}"
-                )
-
-                print(
-                    f"Received: {len(questions)}"
-                )
-
-                print(
-                    "🔧 Attempting to safely remove extra questions "
-                    "while preserving difficulty distribution..."
-                )
-
-
-                # ----------------------------------------------
-                # SEPARATE QUESTIONS BY DIFFICULTY
-                # ----------------------------------------------
-
-                easy_questions = []
-
-                medium_questions = []
-
-                hard_questions = []
-
-
-                for q in questions:
-
-                    if not isinstance(q, dict):
-
-                        continue
-
-
-                    difficulty = str(
-                        q.get("difficulty", "")
-                    ).strip().capitalize()
-
-
-                    if difficulty == "Easy":
-
-                        easy_questions.append(q)
-
-
-                    elif difficulty == "Medium":
-
-                        medium_questions.append(q)
-
-
-                    elif difficulty == "Hard":
-
-                        hard_questions.append(q)
-
-
-                # ----------------------------------------------
-                # CHECK WHETHER EACH DIFFICULTY HAS ENOUGH
-                # QUESTIONS
-                # ----------------------------------------------
-
-                if (
-                    len(easy_questions) >= easy
-                    and
-                    len(medium_questions) >= medium
-                    and
-                    len(hard_questions) >= hard
-                ):
-
-                    # ------------------------------------------
-                    # SELECT EXACT REQUIRED NUMBER
-                    # ------------------------------------------
-
-                    selected_easy = easy_questions[:easy]
-
-                    selected_medium = medium_questions[:medium]
-
-                    selected_hard = hard_questions[:hard]
-
-
-                    # ------------------------------------------
-                    # COMBINE
-                    # ------------------------------------------
-
-                    questions = (
-                        selected_easy
-                        + selected_medium
-                        + selected_hard
-                    )
-
-
-                    print(
-                        "✅ Extra questions removed successfully."
-                    )
-
-                    print(
-                        f"✅ Easy selected: {len(selected_easy)}"
-                    )
-
-                    print(
-                        f"✅ Medium selected: {len(selected_medium)}"
-                    )
-
-                    print(
-                        f"✅ Hard selected: {len(selected_hard)}"
-                    )
-
-                    print(
-                        f"✅ Final question count: {len(questions)}"
-                    )
-
-
-                else:
-
-                    print(
-                        "❌ Cannot safely remove extra questions."
-                    )
-
-                    print(
-                        "❌ Difficulty distribution is insufficient."
-                    )
-
-                    print(
-                        f"Available Easy: {len(easy_questions)} "
-                        f"(Required: {easy})"
-                    )
-
-                    print(
-                        f"Available Medium: {len(medium_questions)} "
-                        f"(Required: {medium})"
-                    )
-
-                    print(
-                        f"Available Hard: {len(hard_questions)} "
-                        f"(Required: {hard})"
-                    )
-
-                    continue
-
-
-            # ==================================================
-            # CHECK TOTAL COUNT AFTER NORMALIZATION
-            # ==================================================
-
-            if len(questions) != total:
-
-                print(
-                    "❌ Question count mismatch."
-                )
-
-                print(
-                    f"Expected: {total}"
-                )
-
-                print(
-                    f"Received: {len(questions)}"
-                )
-
-                continue
-
-
-            # ==================================================
-            # VALIDATION
-            # ==================================================
-
-            valid = True
-
-
-            # ==================================================
-            # TRACK DUPLICATE QUESTIONS
-            # ==================================================
-
-            question_texts = set()
-
-
-            # ==================================================
-            # VALIDATE QUESTIONS
-            # ==================================================
-
-            for index, q in enumerate(
-                questions,
+            for expected_index, evaluation in enumerate(
+                evaluations,
                 start=1
             ):
 
-                print(
-                    f"\n🔍 Validating Question {index}"
+                if not isinstance(evaluation, dict):
+                    raise ValueError("Invalid evaluation object")
+
+                index = evaluation.get("index")
+
+                difficulty = normalize_difficulty(
+                    evaluation.get("difficulty")
                 )
 
+                confidence = evaluation.get("confidence")
 
-                # ----------------------------------------------
-                # OBJECT CHECK
-                # ----------------------------------------------
-
-                if not isinstance(
-                    q,
-                    dict
-                ):
-
-                    print(
-                        f"❌ Question {index} "
-                        f"is not an object."
-                    )
-
-                    valid = False
-                    break
-
-
-                # ----------------------------------------------
-                # REQUIRED FIELD CHECK
-                # ----------------------------------------------
-
-                for field in required_fields:
-
-                    if field not in q:
-
-                        print(
-                            f"❌ Question {index} "
-                            f"missing field: {field}"
-                        )
-
-                        valid = False
-                        break
-
-
-                    if q[field] is None:
-
-                        print(
-                            f"❌ Question {index} "
-                            f"has empty field: {field}"
-                        )
-
-                        valid = False
-                        break
-
-
-                    if str(
-                        q[field]
-                    ).strip() == "":
-
-                        print(
-                            f"❌ Question {index} "
-                            f"has blank field: {field}"
-                        )
-
-                        valid = False
-                        break
-
-
-                if not valid:
-
-                    break
-
-
-                # ----------------------------------------------
-                # NORMALIZE QUESTION TEXT
-                # ----------------------------------------------
-
-                q["question"] = str(
-                    q["question"]
+                reason = str(
+                    evaluation.get("reason", "")
                 ).strip()
 
-
-                # ----------------------------------------------
-                # DUPLICATE QUESTION CHECK
-                # ----------------------------------------------
-
-                question_key = q[
-                    "question"
-                ].lower()
-
-
-                if question_key in question_texts:
-
-                    print(
-                        f"❌ Question {index} "
-                        f"is a duplicate question."
+                if index != expected_index:
+                    raise ValueError(
+                        "Evaluation indexes are incorrect"
                     )
 
-                    valid = False
-                    break
-
-
-                question_texts.add(
-                    question_key
-                )
-
-
-                # ----------------------------------------------
-                # NORMALIZE CORRECT OPTION
-                # ----------------------------------------------
-
-                q["correct_option"] = str(
-                    q["correct_option"]
-                ).strip().upper()
-
-
-                if q["correct_option"] not in [
-
-                    "A",
-                    "B",
-                    "C",
-                    "D"
-
-                ]:
-
-                    print(
-                        f"❌ Question {index} "
-                        f"has invalid correct option:"
-                        f" {q['correct_option']}"
+                if not difficulty:
+                    raise ValueError(
+                        "Invalid evaluated difficulty"
                     )
 
-                    valid = False
-                    break
-
-
-                # ----------------------------------------------
-                # NORMALIZE DIFFICULTY
-                # ----------------------------------------------
-
-                q["difficulty"] = str(
-                    q["difficulty"]
-                ).strip().capitalize()
-
-
-                if q["difficulty"] not in [
-
-                    "Easy",
-                    "Medium",
-                    "Hard"
-
-                ]:
-
-                    print(
-                        f"❌ Question {index} "
-                        f"has invalid difficulty:"
-                        f" {q['difficulty']}"
+                try:
+                    confidence = float(confidence)
+                except (TypeError, ValueError):
+                    raise ValueError(
+                        "Invalid confidence value"
                     )
 
-                    valid = False
-                    break
-
-
-                # ----------------------------------------------
-                # NORMALIZE OPTIONS
-                # ----------------------------------------------
-
-                q["option_a"] = str(
-                    q["option_a"]
-                ).strip()
-
-                q["option_b"] = str(
-                    q["option_b"]
-                ).strip()
-
-                q["option_c"] = str(
-                    q["option_c"]
-                ).strip()
-
-                q["option_d"] = str(
-                    q["option_d"]
-                ).strip()
-
-
-                # ----------------------------------------------
-                # CHECK OPTIONS ARE DIFFERENT
-                # ----------------------------------------------
-
-                options = [
-
-                    q["option_a"],
-
-                    q["option_b"],
-
-                    q["option_c"],
-
-                    q["option_d"]
-
-                ]
-
-
-                if len(
-                    set(
-                        option.lower()
-                        for option in options
-                    )
-                ) != 4:
-
-                    print(
-                        f"❌ Question {index} "
-                        f"contains duplicate options."
-                    )
-
-                    valid = False
-                    break
-
-
-                # ----------------------------------------------
-                # NORMALIZE EXPLANATION
-                # ----------------------------------------------
-
-                q["explanation"] = str(
-                    q["explanation"]
-                ).strip()
-
-
-            # ==================================================
-            # INVALID QUESTION DATA
-            # ==================================================
-
-            if not valid:
-
-                print(
-                    "❌ Question validation failed."
+                # Keep confidence inside valid range
+                confidence = max(
+                    0.0,
+                    min(1.0, confidence)
                 )
 
-                continue
+                if not reason:
+                    reason = "AI difficulty assessment completed."
 
+                validated.append({
+                    "index": expected_index,
+                    "difficulty": difficulty,
+                    "confidence": round(confidence, 2),
+                    "reason": reason
+                })
 
-            # ==================================================
-            # DIFFICULTY COUNT
-            # ==================================================
+            return validated
 
-            generated_easy = sum(
-
-                1
-
-                for q in questions
-
-                if q["difficulty"] == "Easy"
-
-            )
-
-
-            generated_medium = sum(
-
-                1
-
-                for q in questions
-
-                if q["difficulty"] == "Medium"
-
-            )
-
-
-            generated_hard = sum(
-
-                1
-
-                for q in questions
-
-                if q["difficulty"] == "Hard"
-
-            )
-
-
-            print("\n")
-            print("=" * 70)
-            print("📊 DIFFICULTY VALIDATION")
-            print("=" * 70)
+        except Exception as error:
 
             print(
-                f"Requested Easy:   {easy}"
+                f"[AI DIFFICULTY EVALUATION] "
+                f"Attempt {attempt + 1} failed: {error}"
             )
 
-            print(
-                f"Generated Easy:   {generated_easy}"
-            )
-
-            print()
-
-            print(
-                f"Requested Medium: {medium}"
-            )
-
-            print(
-                f"Generated Medium: {generated_medium}"
-            )
-
-            print()
-
-            print(
-                f"Requested Hard:   {hard}"
-            )
-
-            print(
-                f"Generated Hard:   {generated_hard}"
-            )
-
-            print("=" * 70)
-
-
-            # ==================================================
-            # EXACT DISTRIBUTION CHECK
-            # ==================================================
-
-            if generated_easy != easy:
-
-                print(
-                    "❌ Easy distribution mismatch."
-                )
-
-                continue
-
-
-            if generated_medium != medium:
-
-                print(
-                    "❌ Medium distribution mismatch."
-                )
-
-                continue
-
-
-            if generated_hard != hard:
-
-                print(
-                    "❌ Hard distribution mismatch."
-                )
-
-                continue
-
-
-            # ==================================================
-            # FINAL COUNT CHECK
-            # ==================================================
-
-            if len(questions) != total:
-
-                print(
-                    "❌ Final question count is incorrect."
-                )
-
-                continue
-
-
-            # ==================================================
-            # FINAL SUCCESS
-            # ==================================================
-
-            print("\n")
-            print("=" * 70)
-            print("🎉 QUIZ GENERATION SUCCESSFUL")
-            print("=" * 70)
-
-            print(
-                f"✅ Easy: {generated_easy}"
-            )
-
-            print(
-                f"✅ Medium: {generated_medium}"
-            )
-
-            print(
-                f"✅ Hard: {generated_hard}"
-            )
-
-            print(
-                f"✅ Total: {len(questions)}"
-            )
-
-            print("=" * 70)
-
-
-            return questions
-
-
-        # ======================================================
-        # EXCEPTION
-        # ======================================================
-
-        except Exception as e:
-
-            print("\n")
-            print("=" * 70)
-
-            print(
-                "❌ OLLAMA GENERATION ERROR"
-            )
-
-            print(
-                "Error type:",
-                type(e).__name__
-            )
-
-            print(
-                "Error:",
-                str(e)
-            )
-
-            print("=" * 70)
-
-
-    # ========================================================
-    # ALL RETRIES FAILED
-    # ========================================================
-
-    raise Exception(
-        "AI failed to generate a valid quiz "
-        f"after {max_attempts} attempts."
+    print(
+        "[AI DIFFICULTY EVALUATION] "
+        "All evaluation attempts failed."
     )
+
+    return None
+
+
+# ============================================================
+# VALIDATE ACTUAL DIFFICULTY
+# ============================================================
+
+def validate_actual_difficulty(
+    questions,
+    evaluations
+):
+    """
+    Compare generated difficulty with independently
+    evaluated difficulty.
+    """
+
+    if not evaluations:
+        return [], []
+
+    passed = []
+    failed = []
+
+    evaluation_map = {
+        item["index"]: item
+        for item in evaluations
+    }
+
+    for index, question in enumerate(
+        questions,
+        start=1
+    ):
+
+        evaluation = evaluation_map.get(index)
+
+        if not evaluation:
+            failed.append({
+                "index": index,
+                "question": question,
+                "evaluation": None
+            })
+            continue
+
+        generated_difficulty = normalize_difficulty(
+            question.get("difficulty")
+        )
+
+        evaluated_difficulty = normalize_difficulty(
+            evaluation.get("difficulty")
+        )
+
+        if generated_difficulty == evaluated_difficulty:
+
+            passed.append(index)
+
+        else:
+
+            failed.append({
+                "index": index,
+                "question": question,
+                "evaluation": evaluation
+            })
+
+    return passed, failed
+
+
+# ============================================================
+# REPLACEMENT QUESTION GENERATION
+# ============================================================
+
+def generate_replacement_questions(
+    topic,
+    difficulty,
+    count
+):
+    """
+    Generate replacement questions for questions whose
+    generated difficulty does not match AI evaluation.
+    """
+
+    if count <= 0:
+        return []
+
+    prompt = f"""
+Generate exactly {count} multiple-choice questions.
+
+Topic:
+{topic}
+
+Required difficulty:
+{difficulty}
+
+IMPORTANT:
+Every generated question MUST genuinely match the
+required difficulty level.
+
+Difficulty definitions:
+
+Easy:
+- Basic concepts
+- Direct recall or simple understanding
+- Very little reasoning
+
+Medium:
+- Requires understanding and application
+- May require multiple reasoning steps
+- Not merely direct recall
+
+Hard:
+- Requires deeper reasoning
+- Multiple concepts or non-trivial analysis
+- Suitable for advanced learners
+
+Return ONLY valid JSON.
+
+Format:
+
+[
+  {{
+    "question": "...",
+    "option_a": "...",
+    "option_b": "...",
+    "option_c": "...",
+    "option_d": "...",
+    "correct_option": "A",
+    "difficulty": "{difficulty}",
+    "explanation": "..."
+  }}
+]
+"""
+
+    for attempt in range(MAX_GENERATION_ATTEMPTS):
+
+        try:
+
+            response = client.chat(
+                model=GENERATION_MODEL,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            )
+
+            content = response["message"]["content"]
+
+            cleaned = clean_json_content(content)
+
+            replacements = json.loads(cleaned)
+
+            if not isinstance(replacements, list):
+                raise ValueError(
+                    "Replacement response is not a list"
+                )
+
+            if len(replacements) != count:
+                raise ValueError(
+                    "Replacement count mismatch"
+                )
+
+            if not validate_basic_question_structure(
+                replacements,
+                count
+            ):
+                raise ValueError(
+                    "Invalid replacement question structure"
+                )
+
+            # Force/verify required difficulty
+            for question in replacements:
+
+                if normalize_difficulty(
+                    question.get("difficulty")
+                ) != difficulty:
+                    raise ValueError(
+                        "Replacement has incorrect difficulty"
+                    )
+
+            return replacements
+
+        except Exception as error:
+
+            print(
+                f"[AI REPLACEMENT] "
+                f"{difficulty} attempt "
+                f"{attempt + 1} failed: {error}"
+            )
+
+    return []
+
+
+# ============================================================
+# MAIN QUESTION GENERATOR
+# ============================================================
+
+def generate_questions(
+    topic,
+    easy,
+    medium,
+    hard
+):
+    """
+    Generate questions with requested difficulty distribution.
+
+    Returns:
+        questions, final_evaluations
+
+    Example:
+        questions, evaluations = generate_questions(...)
+    """
+
+    easy = int(easy)
+    medium = int(medium)
+    hard = int(hard)
+
+    total = easy + medium + hard
+
+    if total <= 0:
+        raise ValueError(
+            "At least one question is required."
+        )
+
+    prompt = f"""
+Generate exactly {total} multiple-choice questions.
+
+Topic:
+{topic}
+
+Required difficulty distribution:
+
+Easy: {easy}
+Medium: {medium}
+Hard: {hard}
+
+IMPORTANT:
+- Generate EXACTLY the requested number of questions.
+- Each question must have exactly four options.
+- Only one option should be correct.
+- Do not create duplicate questions.
+- Do not create duplicate options within a question.
+- Difficulty must be exactly one of:
+  Easy, Medium, Hard.
+- Difficulty labels must match the actual difficulty.
+
+Difficulty definitions:
+
+Easy:
+Basic concepts, direct recall, simple understanding.
+
+Medium:
+Application of concepts, moderate reasoning, multiple steps.
+
+Hard:
+Advanced reasoning, deeper conceptual understanding,
+multiple concepts or non-trivial analysis.
+
+Return ONLY valid JSON.
+
+Format:
+
+[
+  {{
+    "question": "...",
+    "option_a": "...",
+    "option_b": "...",
+    "option_c": "...",
+    "option_d": "...",
+    "correct_option": "A",
+    "difficulty": "Easy",
+    "explanation": "..."
+  }}
+]
+"""
+
+    questions = None
+
+    # --------------------------------------------------------
+    # INITIAL GENERATION
+    # --------------------------------------------------------
+
+    for attempt in range(MAX_GENERATION_ATTEMPTS):
+
+        try:
+
+            response = client.chat(
+                model=GENERATION_MODEL,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            )
+
+            content = response["message"]["content"]
+
+            cleaned = clean_json_content(content)
+
+            generated = json.loads(cleaned)
+
+            if not validate_basic_question_structure(
+                generated,
+                total
+            ):
+                raise ValueError(
+                    "Generated question structure is invalid"
+                )
+
+            # Trim if AI somehow produced extra questions
+            generated = trim_extra_questions(
+                generated,
+                easy,
+                medium,
+                hard
+            )
+
+            if len(generated) != total:
+                raise ValueError(
+                    "Could not obtain requested number "
+                    "of questions."
+                )
+
+            if not check_difficulty_distribution(
+                generated,
+                easy,
+                medium,
+                hard
+            ):
+                raise ValueError(
+                    "Difficulty distribution mismatch"
+                )
+
+            questions = generated
+            break
+
+        except Exception as error:
+
+            print(
+                f"[AI GENERATION] "
+                f"Attempt {attempt + 1} failed: {error}"
+            )
+
+    if questions is None:
+
+        raise Exception(
+            "AI failed to generate valid questions "
+            "after multiple attempts."
+        )
+
+    # --------------------------------------------------------
+    # FIRST AI DIFFICULTY EVALUATION
+    # --------------------------------------------------------
+
+    evaluations = evaluate_question_difficulties(
+        topic,
+        questions
+    )
+
+    # --------------------------------------------------------
+    # IF EVALUATION FAILS
+    # --------------------------------------------------------
+
+    if evaluations is None:
+
+        print(
+            "[AI DIFFICULTY EVALUATION] "
+            "Evaluation unavailable. "
+            "Returning generated questions."
+        )
+
+        return questions, []
+
+    # --------------------------------------------------------
+    # FIND DIFFICULTY MISMATCHES
+    # --------------------------------------------------------
+
+    passed, failed = validate_actual_difficulty(
+        questions,
+        evaluations
+    )
+
+    print(
+        f"[AI DIFFICULTY CHECK] "
+        f"Passed: {len(passed)}, "
+        f"Failed: {len(failed)}"
+    )
+
+    # --------------------------------------------------------
+    # REPLACE MISMATCHED QUESTIONS
+    # --------------------------------------------------------
+
+    if failed:
+
+        replacement_by_difficulty = {
+            "Easy": [],
+            "Medium": [],
+            "Hard": []
+        }
+
+        for item in failed:
+
+            generated_difficulty = normalize_difficulty(
+                item["question"].get("difficulty")
+            )
+
+            if generated_difficulty in replacement_by_difficulty:
+
+                replacement_by_difficulty[
+                    generated_difficulty
+                ].append(item["index"])
+
+        replacement_questions = {}
+
+        for difficulty, indexes in (
+            replacement_by_difficulty.items()
+        ):
+
+            count = len(indexes)
+
+            if count <= 0:
+                continue
+
+            replacements = generate_replacement_questions(
+                topic,
+                difficulty,
+                count
+            )
+
+            if len(replacements) != count:
+
+                raise Exception(
+                    f"Failed to generate replacement "
+                    f"questions for {difficulty}."
+                )
+
+            for index, replacement in zip(
+                indexes,
+                replacements
+            ):
+
+                replacement_questions[index] = replacement
+
+        # Apply replacements
+        for index, replacement in replacement_questions.items():
+
+            questions[index - 1] = replacement
+
+        # ----------------------------------------------------
+        # FINAL VALIDATION AFTER REPLACEMENTS
+        # ----------------------------------------------------
+
+        if not validate_basic_question_structure(
+            questions,
+            total
+        ):
+            raise Exception(
+                "Questions became invalid after replacement."
+            )
+
+        if not check_difficulty_distribution(
+            questions,
+            easy,
+            medium,
+            hard
+        ):
+            raise Exception(
+                "Difficulty distribution changed "
+                "after replacement."
+            )
+
+        # ----------------------------------------------------
+        # FINAL AI EVALUATION
+        # ----------------------------------------------------
+
+        final_evaluations = evaluate_question_difficulties(
+            topic,
+            questions
+        )
+
+        if final_evaluations is None:
+
+            print(
+                "[AI DIFFICULTY EVALUATION] "
+                "Final evaluation failed."
+            )
+
+            return questions, []
+
+        final_passed, final_failed = (
+            validate_actual_difficulty(
+                questions,
+                final_evaluations
+            )
+        )
+
+        print(
+            f"[AI FINAL DIFFICULTY CHECK] "
+            f"Passed: {len(final_passed)}, "
+            f"Failed: {len(final_failed)}"
+        )
+
+        # IMPORTANT:
+        # Return FINAL evaluations, not stale first evaluations.
+        return questions, final_evaluations
+
+    # --------------------------------------------------------
+    # NO MISMATCHES
+    # --------------------------------------------------------
+
+    return questions, evaluations

@@ -1,661 +1,586 @@
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
 
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
 
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-<title>
-    Available Quizzes | AI Quiz Assessment System
-</title>
+    <meta
+        name="description"
+        content="View available quizzes in the AI Quiz Assessment System."
+    >
 
-<link rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}">
+    <title>
+        Available Quizzes | AI Quiz Assessment System
+    </title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet">
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
 
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
 
-<style>
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
 
-/* =========================================================
-   STATUS
-========================================================= */
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
 
-.quiz-status {
 
-    display: inline-flex;
+    <style>
 
-    align-items: center;
+        .quiz-status {
 
-    gap: 7px;
+            display: inline-flex;
 
-    padding: 7px 11px;
+            align-items: center;
 
-    border-radius: 999px;
+            gap: 6px;
 
-    font-size: 10px;
+            padding: 6px 12px;
 
-    font-weight: 800;
+            border-radius: 999px;
 
-    letter-spacing: 0.5px;
+            font-size: 12px;
 
-    text-transform: uppercase;
-}
+            font-weight: 700;
 
-.quiz-status i {
+        }
 
-    width: 7px;
 
-    height: 7px;
+        .quiz-status.upcoming {
 
-    border-radius: 50%;
+            background: #fff7ed;
 
-    display: inline-block;
-}
+            color: #c2410c;
 
+        }
 
-/* UPCOMING */
 
-.quiz-status.upcoming {
+        .quiz-status.live {
 
-    background: #fff7ed;
+            background: #ecfdf5;
 
-    color: #c2410c;
-}
+            color: #047857;
 
-.quiz-status.upcoming i {
+        }
 
-    background: #f97316;
-}
 
+        .quiz-status.closed {
 
-/* LIVE */
+            background: #f3f4f6;
 
-.quiz-status.live {
+            color: #6b7280;
 
-    background: #ecfdf5;
+        }
 
-    color: #047857;
-}
 
-.quiz-status.live i {
+        .quiz-availability-info {
 
-    background: #10b981;
-}
+            display: grid;
 
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
 
-/* CLOSED */
+            gap: 12px;
 
-.quiz-status.closed {
+            margin-top: 18px;
 
-    background: #f3f4f6;
+        }
 
-    color: #6b7280;
-}
 
-.quiz-status.closed i {
+        .availability-item {
 
-    background: #9ca3af;
-}
+            padding: 12px;
 
+            border-radius: 10px;
 
-/* =========================================================
-   AVAILABILITY INFO
-========================================================= */
+            background: #f8fafc;
 
-.quiz-availability-info {
+            border: 1px solid #e5e7eb;
 
-    margin-top: 14px;
+        }
 
-    padding: 12px 13px;
 
-    border-radius: 11px;
+        .availability-label {
 
-    background: #f8f9ff;
+            display: block;
 
-    border: 1px solid #e8ebf5;
-}
+            font-size: 11px;
 
-.quiz-availability-info small {
+            font-weight: 700;
 
-    display: block;
+            text-transform: uppercase;
 
-    color: #9299aa;
+            letter-spacing: 0.04em;
 
-    font-size: 9px;
+            color: #6b7280;
 
-    font-weight: 800;
+            margin-bottom: 5px;
 
-    letter-spacing: 0.5px;
+        }
 
-    margin-bottom: 4px;
-}
 
-.quiz-availability-info strong {
+        .availability-value {
 
-    color: #374151;
+            font-size: 13px;
 
-    font-size: 11px;
+            color: #111827;
 
-    line-height: 1.5;
-}
+            font-weight: 600;
 
+        }
 
-/* =========================================================
-   DISABLED BUTTON
-========================================================= */
 
-.start-quiz-button.disabled {
+        .quiz-meta {
 
-    opacity: 0.55;
+            display: flex;
 
-    cursor: not-allowed;
+            flex-wrap: wrap;
 
-    pointer-events: none;
+            gap: 10px;
 
-    filter: grayscale(0.5);
-}
+            margin-top: 15px;
 
+        }
 
-/* =========================================================
-   LIVE BUTTON
-========================================================= */
 
-.start-quiz-button.live-button {
+        .quiz-meta-item {
 
-    cursor: pointer;
-}
+            padding: 7px 10px;
 
+            border-radius: 8px;
 
-/* =========================================================
-   RESPONSIVE
-========================================================= */
+            background: #f3f4f6;
 
-@media (max-width: 650px) {
+            color: #4b5563;
 
-    .quiz-availability-info {
+            font-size: 12px;
 
-        font-size: 11px;
-    }
+            font-weight: 600;
 
-}
+        }
 
-</style>
+
+        .start-quiz-button.disabled {
+
+            pointer-events: none;
+
+            opacity: 0.55;
+
+            cursor: not-allowed;
+
+        }
+
+
+        .start-quiz-button.live-button {
+
+            font-weight: 700;
+
+        }
+
+
+        .quiz-count-badge {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            min-width: 30px;
+
+            height: 30px;
+
+            padding: 0 10px;
+
+            border-radius: 999px;
+
+            background: #eef2ff;
+
+            color: #4f46e5;
+
+            font-size: 13px;
+
+            font-weight: 800;
+
+        }
+
+
+        .empty-state {
+
+            text-align: center;
+
+            padding: 55px 25px;
+
+        }
+
+
+        .empty-state-icon {
+
+            font-size: 45px;
+
+            margin-bottom: 15px;
+
+        }
+
+
+        .quick-tip {
+
+            margin-top: 28px;
+
+            padding: 18px 20px;
+
+            border-radius: 14px;
+
+            background: #eef2ff;
+
+            color: #3730a3;
+
+            font-size: 14px;
+
+            line-height: 1.6;
+
+        }
+
+
+        @media (max-width: 700px) {
+
+            .quiz-availability-info {
+
+                grid-template-columns: 1fr;
+
+            }
+
+        }
+
+    </style>
 
 </head>
 
 
 <body>
 
-<div class="dashboard-page available-quizzes-page">
 
+    <!-- NAVBAR -->
 
-<!-- =====================================================
-     NAVBAR
-====================================================== -->
+    <nav class="navbar">
 
-<nav class="top-navbar">
+        <div class="navbar-brand">
 
-    <div class="student-navbar-brand">
-
-        <span class="student-brand-icon">
-            🧠
-        </span>
-
-        <div>
-
-            <strong>
-                AI Quiz
-            </strong>
-
-            <small>
-                Assessment System
-            </small>
-
-        </div>
-
-    </div>
-
-
-    <div class="navbar-actions">
-
-        <a href="/student_dashboard"
-           class="student-nav-link">
-
-            <span>
-                ⌂
-            </span>
-
-            Dashboard
-
-        </a>
-
-
-        <a href="/logout"
-           class="student-logout-link">
-
-            <span>
-                ↪
-            </span>
-
-            Logout
-
-        </a>
-
-    </div>
-
-</nav>
-
-
-<!-- =====================================================
-     MAIN
-====================================================== -->
-
-<main class="available-quizzes-container">
-
-
-<!-- =====================================================
-     HERO
-====================================================== -->
-
-<section class="available-quizzes-hero">
-
-    <div class="available-hero-content">
-
-        <div class="available-page-badge">
-
-            <span>
-                ✦
-            </span>
-
-            ASSESSMENT LIBRARY
+            <a href="/student_dashboard">
+                AI Quiz / Assessment System
+            </a>
 
         </div>
 
 
-        <h1>
-            Available Quizzes
-        </h1>
-
-
-        <p>
-            Choose an assessment, challenge your knowledge
-            and discover how much you've learned.
-        </p>
-
-    </div>
-
-
-    <div class="available-hero-icon">
-        📚
-    </div>
-
-</section>
-
-
-<!-- =====================================================
-     SECTION HEADER
-====================================================== -->
-
-<div class="quiz-library-heading">
-
-    <div>
-
-        <span>
-            READY WHEN YOU ARE
-        </span>
-
-        <h2>
-            Choose your assessment
-        </h2>
-
-    </div>
-
-
-    <div class="quiz-count-badge">
-
-        <span>
-            {{ quizzes|length }}
-        </span>
-
-        <small>
-            Quiz{% if quizzes|length != 1 %}zes{% endif %}
-        </small>
-
-    </div>
-
-</div>
-
-
-<!-- =====================================================
-     QUIZ GRID
-====================================================== -->
-
-<section class="premium-quiz-grid">
-
-
-{% for quiz in quizzes %}
-
-
-<article class="premium-quiz-card">
-
-
-<!-- =====================================================
-     CARD TOP
-====================================================== -->
-
-<div class="premium-quiz-card-top">
-
-    <div class="premium-quiz-icon">
-        📝
-    </div>
-
-
-    {% if quiz.status == "upcoming" %}
-
-        <span class="quiz-status upcoming">
-
-            <i></i>
-
-            Upcoming
-
-        </span>
-
-
-    {% elif quiz.status == "live" %}
-
-        <span class="quiz-status live">
-
-            <i></i>
-
-            Live
-
-        </span>
-
-
-    {% else %}
-
-        <span class="quiz-status closed">
-
-            <i></i>
-
-            Closed
-
-        </span>
-
-    {% endif %}
-
-</div>
-
-
-<!-- =====================================================
-     CONTENT
-====================================================== -->
-
-<div class="premium-quiz-content">
-
-    <span class="premium-quiz-label">
-        ASSESSMENT
-    </span>
-
-
-    <h2>
-        {{ quiz.title }}
-    </h2>
-
-
-    <p>
-        Test your understanding and
-        challenge yourself with this assessment.
-    </p>
-
-</div>
-
-
-<!-- =====================================================
-     META
-====================================================== -->
-
-<div class="premium-quiz-meta">
-
-
-    <div>
-
-        <span class="meta-icon">
-            ▦
-        </span>
-
-        <div>
-
-            <small>
-                QUESTIONS
-            </small>
-
-            <strong>
-                {{ quiz.total_questions }}
-            </strong>
+        <div class="navbar-links">
+
+            <a href="/student_dashboard">
+                Dashboard
+            </a>
+
+            <a href="/logout">
+                Logout
+            </a>
 
         </div>
 
-    </div>
+    </nav>
 
 
-    <div>
+    <!-- MAIN -->
 
-        <span class="meta-icon">
-            ◷
-        </span>
+    <main class="container">
 
-        <div>
 
-            <small>
-                TIME / QUESTION
-            </small>
+        <!-- HERO -->
 
-            <strong>
-                {{ quiz.question_time_seconds }} sec
-            </strong>
+        <section class="hero-section">
 
-        </div>
+            <div
+                style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:space-between;
+                    gap:15px;
+                    flex-wrap:wrap;
+                "
+            >
 
-    </div>
+                <div>
 
-</div>
+                    <h1>
+                        Available Quizzes
+                    </h1>
 
+                    <p>
+                        View quizzes assigned to you and
+                        start them when they are live.
+                    </p>
 
-<!-- =====================================================
-     AVAILABILITY
-====================================================== -->
+                </div>
 
-<div class="quiz-availability-info">
 
+                <div class="quiz-count-badge">
 
-    {% if quiz.status == "upcoming" %}
+                    {{ quizzes|length }}
 
-        <small>
-            STARTS AT
-        </small>
+                    {% if quizzes|length == 1 %}
+                        Quiz
+                    {% else %}
+                        Quizzes
+                    {% endif %}
 
-        <strong>
-            {{ quiz.start_display }}
-        </strong>
+                </div>
 
+            </div>
 
-    {% elif quiz.status == "live" %}
+        </section>
 
-        <small>
-            AVAILABLE UNTIL
-        </small>
 
-        <strong>
-            {{ quiz.end_display }}
-        </strong>
+        <!-- QUIZ LIST -->
 
+        <section class="quiz-list">
 
-    {% else %}
 
-        <small>
-            QUIZ CLOSED
-        </small>
+            {% for quiz in quizzes %}
 
-        <strong>
-            This assessment is no longer available.
-        </strong>
+                <article class="premium-quiz-card">
 
-    {% endif %}
 
+                    <!-- STATUS -->
 
-</div>
+                    <div
+                        style="
+                            display:flex;
+                            align-items:center;
+                            justify-content:space-between;
+                            gap:12px;
+                            flex-wrap:wrap;
+                        "
+                    >
 
+                        {% if quiz.status == "upcoming" %}
 
-<!-- =====================================================
-     START BUTTON
-====================================================== -->
+                            <span
+                                class="quiz-status upcoming"
+                            >
+                                ⏳ Upcoming
+                            </span>
 
-{% if quiz.status == "live" %}
+                        {% elif quiz.status == "live" %}
 
-    <a
-        href="/start_quiz/{{ quiz.quiz_id }}"
-        class="start-quiz-button live-button">
+                            <span
+                                class="quiz-status live"
+                            >
+                                🟢 Live Now
+                            </span>
 
-        <span>
-            Start Quiz
-        </span>
+                        {% else %}
 
-        <strong>
-            →
-        </strong>
+                            <span
+                                class="quiz-status closed"
+                            >
+                                🔒 Closed
+                            </span>
 
-    </a>
+                        {% endif %}
 
+                    </div>
 
-{% elif quiz.status == "upcoming" %}
 
-    <a
-        href="#"
-        class="start-quiz-button disabled"
-        onclick="return false;">
+                    <!-- TITLE -->
 
-        <span>
-            Not Started
-        </span>
+                    <div class="quiz-card-content">
 
-        <strong>
-            🔒
-        </strong>
+                        <h2>
+                            {{ quiz.title }}
+                        </h2>
 
-    </a>
 
+                        <!-- META -->
 
-{% else %}
+                        <div class="quiz-meta">
 
-    <a
-        href="#"
-        class="start-quiz-button disabled"
-        onclick="return false;">
+                            <span class="quiz-meta-item">
+                                📝
+                                {{ quiz.total_questions }}
+                                Questions
+                            </span>
 
-        <span>
-            Closed
-        </span>
 
-        <strong>
-            🔒
-        </strong>
+                            <span class="quiz-meta-item">
+                                ⏱️
+                                {{ quiz.question_time_seconds }}
+                                sec/question
+                            </span>
 
-    </a>
+                        </div>
 
-{% endif %}
 
+                        <!-- AVAILABILITY -->
 
-</article>
+                        <div
+                            class="quiz-availability-info"
+                        >
 
+                            <div class="availability-item">
 
-{% else %}
+                                <span
+                                    class="availability-label"
+                                >
+                                    Available From
+                                </span>
 
+                                <span
+                                    class="availability-value"
+                                >
+                                    {{ quiz.start_display }}
+                                </span>
 
-<!-- =====================================================
-     EMPTY
-====================================================== -->
+                            </div>
 
-<div class="quiz-empty-state">
 
-    <div class="empty-state-icon">
-        📭
-    </div>
+                            <div class="availability-item">
 
+                                <span
+                                    class="availability-label"
+                                >
+                                    Available Until
+                                </span>
 
-    <span>
-        NO ASSESSMENTS AVAILABLE
-    </span>
+                                <span
+                                    class="availability-value"
+                                >
+                                    {{ quiz.end_display }}
+                                </span>
 
+                            </div>
 
-    <h2>
-        No quizzes available right now
-    </h2>
+                        </div>
 
 
-    <p>
-        New assessments will appear here when
-        they are published by your teacher.
-    </p>
+                        <!-- ACTION -->
 
+                        <div
+                            style="
+                                margin-top:22px;
+                            "
+                        >
 
-    <a href="/student_dashboard">
-        ← Back to Dashboard
-    </a>
+                            {% if quiz.status == "live" %}
 
-</div>
+                                <a
+                                    href="/start_quiz/{{ quiz.quiz_id }}"
+                                    class="start-quiz-button live-button"
+                                >
+                                    Start Quiz →
+                                </a>
 
 
-{% endfor %}
+                            {% elif quiz.status == "upcoming" %}
 
+                                <a
+                                    href="#"
+                                    class="start-quiz-button disabled"
+                                    onclick="return false;"
+                                    aria-disabled="true"
+                                >
+                                    Not Started 🔒
+                                </a>
 
-</section>
 
+                            {% else %}
 
-<!-- =====================================================
-     TIP
-====================================================== -->
+                                <a
+                                    href="#"
+                                    class="start-quiz-button disabled"
+                                    onclick="return false;"
+                                    aria-disabled="true"
+                                >
+                                    Closed 🔒
+                                </a>
 
-<section class="quiz-library-tip">
+                            {% endif %}
 
-    <div class="tip-icon">
-        ✦
-    </div>
+                        </div>
 
+                    </div>
 
-    <div>
+                </article>
 
-        <span>
-            QUICK TIP
-        </span>
 
-        <h3>
-            Take your time and read every question carefully.
-        </h3>
+            {% else %}
 
-        <p>
-            Your goal isn't just to finish the quiz —
-            it's to learn something from every attempt.
-        </p>
 
-    </div>
+                <!-- EMPTY STATE -->
 
-</section>
+                <div class="empty-state">
 
+                    <div class="empty-state-icon">
+                        📚
+                    </div>
 
-</main>
+                    <h2>
+                        No Quizzes Available
+                    </h2>
 
-</div>
+                    <p>
+                        There are currently no quizzes
+                        available for you.
+                    </p>
 
+                </div>
 
-<script src="{{ url_for('static', filename='js/darkmode.js') }}">
-</script>
+
+            {% endfor %}
+
+
+            <!-- QUICK TIP -->
+
+            {% if quizzes %}
+
+                <div class="quick-tip">
+
+                    💡 <strong>Quick Tip:</strong>
+
+                    If a quiz is marked as
+                    <strong>Live Now</strong>, you can start
+                    it immediately. Upcoming quizzes will
+                    automatically become available when their
+                    scheduled start time is reached.
+
+                </div>
+
+            {% endif %}
+
+
+        </section>
+
+    </main>
+
+
+    <!-- DARK MODE -->
+
+    <script
+        src="{{ url_for('static', filename='js/darkmode.js') }}"
+    ></script>
 
 
 </body>

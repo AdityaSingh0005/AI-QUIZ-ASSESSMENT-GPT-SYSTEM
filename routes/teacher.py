@@ -10,11 +10,18 @@ from flask import (
 from database import get_db_connection
 
 from utils.qr_generator import generate_qr
-from utils.ai_generator import generate_questions
+
+from utils.ai_generator import (
+    generate_questions
+)
 
 from psycopg2.extras import RealDictCursor
 
-from datetime import datetime, timedelta, timezone
+from datetime import (
+    datetime,
+    timedelta,
+    timezone
+)
 
 
 teacher = Blueprint("teacher", __name__)
@@ -142,16 +149,6 @@ def error_page(
 
 # ============================================================
 # HELPER: CALCULATE QUIZ DURATION
-#
-# Total duration =
-# Number of questions × time per question
-#
-# Example:
-# 20 × 15 seconds = 300 seconds = 5 minutes
-#
-# duration_minutes is stored as CEILING minutes because the
-# database currently has duration_minutes rather than a
-# duration_seconds column.
 # ============================================================
 
 def calculate_duration_minutes(
@@ -173,21 +170,6 @@ def calculate_duration_minutes(
 
 # ============================================================
 # HELPER: CONVERT FORM DATETIME FROM IST TO UTC
-#
-# HTML datetime-local does not contain timezone information.
-#
-# Our application treats teacher-entered date/time as IST.
-#
-# Example:
-#
-# 27-09-2026 10:00 IST
-#
-# becomes:
-#
-# 27-09-2026 04:30 UTC
-#
-# PostgreSQL TIMESTAMPTZ will then store the timezone-aware
-# value correctly.
 # ============================================================
 
 def parse_ist_datetime(
@@ -217,7 +199,6 @@ def parse_ist_datetime(
             "Invalid date/time format."
         )
 
-    # India Standard Time
     ist = timezone(
         timedelta(
             hours=5,
@@ -238,16 +219,6 @@ def parse_ist_datetime(
 
 # ============================================================
 # HELPER: QUIZ STATUS
-#
-# upcoming:
-#     now < available_from
-#
-# live:
-#     available_from <= now
-#     and available_until is NULL or now < available_until
-#
-# closed:
-#     now >= available_until
 # ============================================================
 
 def get_quiz_status(
@@ -310,6 +281,390 @@ def get_quiz_status(
         return "closed"
 
     return "live"
+
+
+# ============================================================
+# HELPER: BUILD AI DIFFICULTY QUALITY SUMMARY
+# ============================================================
+
+def build_difficulty_quality_summary(
+    questions,
+    evaluations,
+    requested_easy=0,
+    requested_medium=0,
+    requested_hard=0
+):
+    """
+    Convert raw AI evaluations into a template-friendly
+    summary.
+
+    No database column is required.
+
+    The summary contains:
+
+    - requested difficulty counts
+    - AI verified counts
+    - overall match
+    - passed / failed
+    - average confidence
+    - question-wise comparison
+    """
+
+    if not evaluations:
+
+        return {
+            "enabled": False,
+
+            "evaluation_available": False,
+
+            "overall_match": False,
+
+            "passed_count": 0,
+
+            "failed_count": 0,
+
+            "total": len(questions or []),
+
+            "average_confidence": 0,
+
+            "requested": {
+                "Easy": int(requested_easy or 0),
+                "Medium": int(requested_medium or 0),
+                "Hard": int(requested_hard or 0)
+            },
+
+            "verified": {
+                "Easy": 0,
+                "Medium": 0,
+                "Hard": 0
+            },
+
+            "questions": []
+        }
+
+    evaluation_map = {}
+
+    for item in evaluations:
+
+        try:
+
+            index = int(
+                item.get("index")
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            continue
+
+        evaluation_map[index] = item
+
+    verified = {
+        "Easy": 0,
+        "Medium": 0,
+        "Hard": 0
+    }
+
+    question_items = []
+
+    confidence_values = []
+
+    passed_count = 0
+
+    failed_count = 0
+
+    for index, question in enumerate(
+        questions or [],
+        start=1
+    ):
+
+        evaluation = (
+            evaluation_map.get(index)
+        )
+
+        generated_difficulty = str(
+            question.get(
+                "difficulty",
+                ""
+            )
+        ).strip()
+
+        evaluated_difficulty = ""
+
+        confidence = 0
+
+        reason = ""
+
+        match = False
+
+        if evaluation:
+
+            evaluated_difficulty = str(
+                evaluation.get(
+                    "difficulty",
+                    ""
+                )
+            ).strip()
+
+            try:
+
+                confidence = float(
+                    evaluation.get(
+                        "confidence",
+                        0
+                    )
+                )
+
+            except (
+                TypeError,
+                ValueError
+            ):
+
+                confidence = 0
+
+            confidence = max(
+                0,
+                min(
+                    1,
+                    confidence
+                )
+            )
+
+            reason = str(
+                evaluation.get(
+                    "reason",
+                    ""
+                ) or ""
+            ).strip()
+
+            if evaluated_difficulty in verified:
+
+                verified[
+                    evaluated_difficulty
+                ] += 1
+
+            confidence_values.append(
+                confidence
+            )
+
+            match = (
+                generated_difficulty
+                ==
+                evaluated_difficulty
+            )
+
+        if match:
+
+            passed_count += 1
+
+        else:
+
+            failed_count += 1
+
+        question_items.append({
+
+            "index":
+                index,
+
+            "question":
+                question.get(
+                    "question",
+                    ""
+                ),
+
+            "generated_difficulty":
+                generated_difficulty,
+
+            "evaluated_difficulty":
+                evaluated_difficulty,
+
+            "match":
+                match,
+
+            "confidence":
+                round(
+                    confidence,
+                    2
+                ),
+
+            "confidence_percent":
+                round(
+                    confidence * 100,
+                    1
+                ),
+
+            "reason":
+                reason
+        })
+
+    total = len(question_items)
+
+    average_confidence = (
+        sum(confidence_values)
+        /
+        len(confidence_values)
+        if confidence_values
+        else 0
+    )
+
+    # If an evaluation exists for every question and all match,
+    # overall quality check passes.
+    overall_match = (
+        total > 0
+        and
+        len(evaluations) == total
+        and
+        passed_count == total
+    )
+
+    return {
+
+        "enabled":
+            True,
+
+        "evaluation_available":
+            True,
+
+        "overall_match":
+            overall_match,
+
+        "passed_count":
+            passed_count,
+
+        "failed_count":
+            failed_count,
+
+        "total":
+            total,
+
+        "average_confidence":
+            round(
+                average_confidence * 100,
+                1
+            ),
+
+        "requested": {
+
+            "Easy":
+                int(requested_easy or 0),
+
+            "Medium":
+                int(requested_medium or 0),
+
+            "Hard":
+                int(requested_hard or 0)
+        },
+
+        "verified":
+            verified,
+
+        "questions":
+            question_items
+    }
+
+
+# ============================================================
+# HELPER: COMPACT SESSION DATA
+# ============================================================
+
+def build_compact_evaluation_data(
+    evaluations
+):
+    """
+    Flask's default session is stored in a signed cookie.
+
+    Therefore we keep only compact evaluation information.
+
+    Question text is NOT stored here because it is already
+    available from the database.
+
+    This avoids unnecessary session-cookie growth.
+    """
+
+    compact = []
+
+    for item in evaluations or []:
+
+        try:
+
+            index = int(
+                item.get("index")
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            continue
+
+        difficulty = str(
+            item.get(
+                "difficulty",
+                ""
+            )
+        ).strip()
+
+        try:
+
+            confidence = float(
+                item.get(
+                    "confidence",
+                    0
+                )
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            confidence = 0
+
+        confidence = max(
+            0,
+            min(
+                1,
+                confidence
+            )
+        )
+
+        reason = str(
+            item.get(
+                "reason",
+                ""
+            ) or ""
+        ).strip()
+
+        # Keep reason short so session does not become huge.
+        if len(reason) > 160:
+
+            reason = (
+                reason[:157]
+                + "..."
+            )
+
+        compact.append({
+
+            "index":
+                index,
+
+            "difficulty":
+                difficulty,
+
+            "confidence":
+                round(
+                    confidence,
+                    2
+                ),
+
+            "reason":
+                reason
+        })
+
+    return compact
 
 
 # ============================================================
@@ -389,8 +744,6 @@ def teacher_dashboard():
 
         # ====================================================
         # AVERAGE SCORE
-        #
-        # Registered + guest attempts
         # ====================================================
 
         cursor.execute(
@@ -494,10 +847,6 @@ def teacher_dashboard():
 
         quizzes = cursor.fetchall()
 
-        # ====================================================
-        # ADD STATUS TO RECENT QUIZZES
-        # ====================================================
-
         for quiz in quizzes:
 
             quiz["status"] = get_quiz_status(
@@ -505,7 +854,6 @@ def teacher_dashboard():
                 quiz.get("available_until")
             )
 
-            # Dynamic duration information
             quiz["calculated_duration_minutes"] = (
                 calculate_duration_minutes(
                     quiz.get("total_questions") or 0,
@@ -515,10 +863,6 @@ def teacher_dashboard():
 
         # ====================================================
         # ACTIVE / LIVE QUIZZES
-        #
-        # IMPORTANT:
-        # The quiz is live only inside its exact availability
-        # window.
         # ====================================================
 
         cursor.execute(
@@ -661,10 +1005,6 @@ def create_quiz():
 
     # ========================================================
     # COUNTS + QUESTION TIMER
-    #
-    # duration_minutes is NOT accepted from the form anymore.
-    #
-    # It is calculated automatically.
     # ========================================================
 
     try:
@@ -753,16 +1093,6 @@ def create_quiz():
 
     # ========================================================
     # AUTOMATIC TOTAL DURATION
-    #
-    # Example:
-    #
-    # 20 questions
-    # ×
-    # 15 seconds
-    # =
-    # 300 seconds
-    # =
-    # 5 minutes
     # ========================================================
 
     total_duration_seconds = (
@@ -798,14 +1128,7 @@ def create_quiz():
     )
 
     # ========================================================
-    # EXACT QUIZ AVAILABILITY
-    #
-    # Teacher enters:
-    #
-    # available_from
-    # available_until
-    #
-    # datetime-local values are treated as IST.
+    # AVAILABILITY
     # ========================================================
 
     available_from_raw = request.form.get(
@@ -851,22 +1174,11 @@ def create_quiz():
             str(e)
         )
 
-    # ========================================================
-    # START MUST BE BEFORE END
-    # ========================================================
-
     if available_until <= available_from:
 
         return error_page(
             "Quiz end time must be later than quiz start time."
         )
-
-    # ========================================================
-    # START CANNOT BE IN THE PAST
-    #
-    # Small tolerance of 30 seconds is allowed because the
-    # teacher may submit exactly around the selected minute.
-    # ========================================================
 
     now_utc = datetime.now(
         timezone.utc
@@ -881,10 +1193,6 @@ def create_quiz():
             "Quiz start time cannot be in the past."
         )
 
-    # ========================================================
-    # DEBUG AVAILABILITY
-    # ========================================================
-
     print(
         "📅 AVAILABLE FROM (UTC):",
         available_from
@@ -897,6 +1205,12 @@ def create_quiz():
 
     # ========================================================
     # AI GENERATION
+    #
+    # IMPORTANT:
+    #
+    # generate_questions() now returns:
+    #
+    # questions, evaluations
     # ========================================================
 
     print(
@@ -907,7 +1221,7 @@ def create_quiz():
 
         start_time = datetime.now()
 
-        questions = generate_questions(
+        questions, evaluations = generate_questions(
             prompt,
             easy,
             medium,
@@ -929,6 +1243,13 @@ def create_quiz():
             "📦 Questions generated:",
             len(questions)
             if questions
+            else 0
+        )
+
+        print(
+            "🧠 AI evaluations:",
+            len(evaluations)
+            if evaluations
             else 0
         )
 
@@ -1057,15 +1378,6 @@ def create_quiz():
                 "AI returned invalid correct option."
             )
 
-        # ====================================================
-        # EXPLANATION
-        #
-        # Explanation was added to the questions table.
-        #
-        # If AI somehow does not return one, store empty text
-        # instead of crashing the entire quiz.
-        # ====================================================
-
         q["explanation"] = str(
             q.get(
                 "explanation",
@@ -1075,7 +1387,7 @@ def create_quiz():
         ).strip()
 
     # ========================================================
-    # DIFFICULTY CHECK
+    # DIFFICULTY DISTRIBUTION CHECK
     # ========================================================
 
     generated_easy = sum(
@@ -1116,6 +1428,63 @@ def create_quiz():
             f"AI generated {generated_hard} Hard "
             f"questions instead of {hard}."
         )
+
+    # ========================================================
+    # BUILD QUALITY SUMMARY
+    #
+    # This happens BEFORE database insertion so we can verify
+    # that evaluation data is valid.
+    # ========================================================
+
+    difficulty_quality = (
+        build_difficulty_quality_summary(
+            questions=questions,
+            evaluations=evaluations,
+            requested_easy=easy,
+            requested_medium=medium,
+            requested_hard=hard
+        )
+    )
+
+    print(
+        "🧠 AI QUALITY CHECK:"
+    )
+
+    print(
+        "   Evaluation available:",
+        difficulty_quality[
+            "evaluation_available"
+        ]
+    )
+
+    print(
+        "   Passed:",
+        difficulty_quality[
+            "passed_count"
+        ]
+    )
+
+    print(
+        "   Failed:",
+        difficulty_quality[
+            "failed_count"
+        ]
+    )
+
+    print(
+        "   Average confidence:",
+        difficulty_quality[
+            "average_confidence"
+        ],
+        "%"
+    )
+
+    print(
+        "   Overall match:",
+        difficulty_quality[
+            "overall_match"
+        ]
+    )
 
     # ========================================================
     # DATABASE
@@ -1307,6 +1676,48 @@ def create_quiz():
             f"📅 End: {available_until}"
         )
 
+        # ====================================================
+        # SAVE COMPACT AI EVALUATION IN SESSION
+        #
+        # No DB schema change required.
+        # ====================================================
+
+        if evaluations:
+
+            session[
+                "difficulty_evaluation"
+            ] = {
+
+                "quiz_id":
+                    quiz_id,
+
+                "evaluation":
+                    build_compact_evaluation_data(
+                        evaluations
+                    ),
+
+                "requested": {
+
+                    "Easy":
+                        easy,
+
+                    "Medium":
+                        medium,
+
+                    "Hard":
+                        hard
+                }
+            }
+
+        else:
+
+            session.pop(
+                "difficulty_evaluation",
+                None
+            )
+
+        session.modified = True
+
         return redirect(
             f"/quiz_generated/{quiz_id}"
         )
@@ -1456,6 +1867,85 @@ def quiz_generated(quiz_id):
         questions = cursor.fetchall()
 
         # ====================================================
+        # AI DIFFICULTY QUALITY CHECK
+        #
+        # Evaluation was generated during quiz creation.
+        # We retrieve its compact copy from the session.
+        # ====================================================
+
+        stored_evaluation = (
+            session.get(
+                "difficulty_evaluation"
+            )
+        )
+
+        evaluations = []
+
+        requested_easy = 0
+        requested_medium = 0
+        requested_hard = 0
+
+        if (
+            stored_evaluation
+            and
+            int(
+                stored_evaluation.get(
+                    "quiz_id",
+                    -1
+                )
+            ) == int(quiz_id)
+        ):
+
+            evaluations = (
+                stored_evaluation.get(
+                    "evaluation",
+                    []
+                )
+            )
+
+            requested = (
+                stored_evaluation.get(
+                    "requested",
+                    {}
+                )
+            )
+
+            requested_easy = int(
+                requested.get(
+                    "Easy",
+                    0
+                )
+            )
+
+            requested_medium = int(
+                requested.get(
+                    "Medium",
+                    0
+                )
+            )
+
+            requested_hard = int(
+                requested.get(
+                    "Hard",
+                    0
+                )
+            )
+
+        # ====================================================
+        # BUILD TEMPLATE SUMMARY
+        # ====================================================
+
+        difficulty_quality = (
+            build_difficulty_quality_summary(
+                questions=questions,
+                evaluations=evaluations,
+                requested_easy=requested_easy,
+                requested_medium=requested_medium,
+                requested_hard=requested_hard
+            )
+        )
+
+        # ====================================================
         # LIVE PARTICIPANTS
         # ====================================================
 
@@ -1484,6 +1974,10 @@ def quiz_generated(quiz_id):
             live_stats["total_students"] or 0
         )
 
+        # ====================================================
+        # TEMPLATE
+        # ====================================================
+
         return render_template(
             "quiz_generated.html",
 
@@ -1492,7 +1986,10 @@ def quiz_generated(quiz_id):
             questions=questions,
 
             live_total_students=
-                live_total_students
+                live_total_students,
+
+            difficulty_quality=
+                difficulty_quality
         )
 
     finally:
@@ -1604,10 +2101,6 @@ def add_questions(quiz_id):
         "Medium"
     ).strip()
 
-    # ========================================================
-    # OPTIONAL EXPLANATION
-    # ========================================================
-
     explanation = request.form.get(
         "explanation",
         ""
@@ -1708,13 +2201,7 @@ def add_questions(quiz_id):
         )
 
         # ====================================================
-        # UPDATE QUESTION COUNT
-        #
-        # AND AUTOMATIC DURATION
-        #
-        # New duration:
-        #
-        # actual question count × existing question time
+        # UPDATE QUESTION COUNT + DURATION
         # ====================================================
 
         cursor.execute(
@@ -1875,17 +2362,9 @@ def view_results():
 
         attempts = cursor.fetchall()
 
-        # ====================================================
-        # FORMAT RESULTS
-        # ====================================================
-
         results = []
 
         for attempt in attempts:
-
-            # =================================================
-            # STUDENT NAME
-            # =================================================
 
             if (
                 attempt.get("attempt_mode") == "guest"
@@ -1904,10 +2383,6 @@ def view_results():
                     or "Student"
                 )
 
-            # =================================================
-            # ROLL NUMBER
-            # =================================================
-
             if (
                 attempt.get("attempt_mode") == "guest"
             ):
@@ -1925,19 +2400,11 @@ def view_results():
                     or "N/A"
                 )
 
-            # =================================================
-            # SCORE
-            # =================================================
-
             score = (
                 attempt.get("result_score")
                 if attempt.get("result_score") is not None
                 else attempt.get("attempt_score")
             )
-
-            # =================================================
-            # PERCENTAGE
-            # =================================================
 
             percentage = (
                 attempt.get("result_percentage")
@@ -1945,19 +2412,11 @@ def view_results():
                 else attempt.get("attempt_percentage")
             )
 
-            # =================================================
-            # SUBMITTED TIME
-            # =================================================
-
             submitted_at = (
                 attempt.get("result_submitted_at")
                 if attempt.get("result_submitted_at") is not None
                 else attempt.get("attempt_submitted_at")
             )
-
-            # =================================================
-            # ATTEMPT TYPE
-            # =================================================
 
             if (
                 attempt.get("attempt_mode") == "guest"
@@ -1968,10 +2427,6 @@ def view_results():
             else:
 
                 attempt_type = "Registered"
-
-            # =================================================
-            # CLEAN RESULT
-            # =================================================
 
             results.append({
 
@@ -2006,10 +2461,6 @@ def view_results():
                     submitted_at
 
             })
-
-        # ====================================================
-        # DEBUG
-        # ====================================================
 
         print("=" * 70)
 
@@ -2194,10 +2645,6 @@ def generate_qr_page():
         cursor.close()
         db.close()
 
-    # ========================================================
-    # STATUS
-    # ========================================================
-
     for quiz in quizzes:
 
         quiz["status"] = get_quiz_status(
@@ -2263,10 +2710,6 @@ def manage_quizzes():
         cursor.close()
         db.close()
 
-    # ========================================================
-    # ADD STATUS + CALCULATED DURATION
-    # ========================================================
-
     for quiz in quizzes:
 
         quiz["status"] = get_quiz_status(
@@ -2315,10 +2758,6 @@ def delete_quiz(quiz_id):
 
     try:
 
-        # ====================================================
-        # VERIFY OWNERSHIP
-        # ====================================================
-
         cursor.execute(
             """
             SELECT
@@ -2344,10 +2783,6 @@ def delete_quiz(quiz_id):
                 "/manage_quizzes"
             )
 
-        # ====================================================
-        # ANSWERS
-        # ====================================================
-
         cursor.execute(
             """
             DELETE FROM student_answers
@@ -2358,10 +2793,6 @@ def delete_quiz(quiz_id):
                 quiz_id,
             )
         )
-
-        # ====================================================
-        # ATTEMPTS
-        # ====================================================
 
         cursor.execute(
             """
@@ -2374,10 +2805,6 @@ def delete_quiz(quiz_id):
             )
         )
 
-        # ====================================================
-        # RESULTS
-        # ====================================================
-
         cursor.execute(
             """
             DELETE FROM results
@@ -2389,10 +2816,6 @@ def delete_quiz(quiz_id):
             )
         )
 
-        # ====================================================
-        # QUESTIONS
-        # ====================================================
-
         cursor.execute(
             """
             DELETE FROM questions
@@ -2403,10 +2826,6 @@ def delete_quiz(quiz_id):
                 quiz_id,
             )
         )
-
-        # ====================================================
-        # QUIZ
-        # ====================================================
 
         cursor.execute(
             """
@@ -2465,7 +2884,7 @@ def test_ai():
 
         start = datetime.now()
 
-        questions = generate_questions(
+        questions, evaluations = generate_questions(
             "Database Management System",
             1,
             1,
@@ -2474,8 +2893,20 @@ def test_ai():
 
         end = datetime.now()
 
+        quality = (
+            build_difficulty_quality_summary(
+                questions=questions,
+                evaluations=evaluations,
+                requested_easy=1,
+                requested_medium=1,
+                requested_hard=1
+            )
+        )
+
         return {
-            "status": "success",
+
+            "status":
+                "success",
 
             "count":
                 len(questions),
@@ -2486,7 +2917,10 @@ def test_ai():
                 ).total_seconds(),
 
             "questions":
-                questions
+                questions,
+
+            "difficulty_quality":
+                quality
         }
 
     except Exception as e:
@@ -2497,13 +2931,16 @@ def test_ai():
         )
 
         return {
-            "status": "error",
+
+            "status":
+                "error",
 
             "error_type":
                 type(e).__name__,
 
             "error":
                 str(e)
+
         }, 500
 
 
@@ -2557,10 +2994,6 @@ def teacher_quizzes():
 
         quizzes = cursor.fetchall()
 
-        # ====================================================
-        # CONVERT TO DICT + ADD STATUS
-        # ====================================================
-
         quizzes = [
             dict(q)
             for q in quizzes
@@ -2584,7 +3017,8 @@ def teacher_quizzes():
 
         return jsonify({
 
-            "success": True,
+            "success":
+                True,
 
             "quizzes":
                 quizzes
@@ -2600,7 +3034,8 @@ def teacher_quizzes():
 
         return jsonify({
 
-            "success": False,
+            "success":
+                False,
 
             "error":
                 str(e)
@@ -2767,10 +3202,6 @@ def quiz_progress(quiz_id):
 
         progress = cursor.fetchall()
 
-        # ====================================================
-        # FORMAT
-        # ====================================================
-
         question_progress = []
 
         total_answer_events = 0
@@ -2854,7 +3285,8 @@ def quiz_progress(quiz_id):
 
         return jsonify({
 
-            "success": True,
+            "success":
+                True,
 
             "quiz_id":
                 quiz_id,
@@ -2890,7 +3322,8 @@ def quiz_progress(quiz_id):
 
         return jsonify({
 
-            "success": False,
+            "success":
+                False,
 
             "error":
                 str(e)
