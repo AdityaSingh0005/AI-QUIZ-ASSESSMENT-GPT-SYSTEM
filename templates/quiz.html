@@ -1,1195 +1,819 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
-<meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
-
-<title>
-    Attempt Quiz | AI Quiz Assessment System
-</title>
-
-<link rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}">
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet">
-
-<style>
-
-/* =========================================================
-   QUIZ TIMER
-========================================================= */
-
-.quiz-timer-area {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 18px;
-
-    margin-top: 20px;
-
-    padding: 16px 18px;
-
-    border-radius: 16px;
-
-    background: #f8f9ff;
-
-    border: 1px solid #e8eaf5;
-}
-
-
-/* Overall timer */
-
-.overall-timer {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 10px;
-}
-
-
-.timer-icon {
-
-    width: 42px;
-
-    height: 42px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    border-radius: 12px;
-
-    background: #eef2ff;
-
-    font-size: 20px;
-}
-
-
-.timer-info {
-
-    display: flex;
-
-    flex-direction: column;
-
-    gap: 3px;
-}
-
-
-.timer-label {
-
-    color: #8a91a3;
-
-    font-size: 9px;
-
-    font-weight: 700;
-
-    text-transform: uppercase;
-
-    letter-spacing: .6px;
-}
-
-
-.overall-time {
-
-    color: #252d40;
-
-    font-size: 18px;
-
-    font-weight: 800;
-}
-
-
-/* Question timer */
-
-.question-timer {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 9px;
-
-    padding: 9px 13px;
-
-    border-radius: 12px;
-
-    background: #ffffff;
-
-    border: 1px solid #e4e6ef;
-}
-
-
-.question-timer-icon {
-
-    font-size: 16px;
-}
-
-
-.question-time {
-
-    min-width: 45px;
-
-    color: #4f46e5;
-
-    font-size: 16px;
-
-    font-weight: 800;
-
-    text-align: center;
-}
-
-
-/* Timer warning */
-
-.timer-warning {
-
-    background: #fff7ed;
-
-    border-color: #fed7aa;
-}
-
-
-.timer-warning .question-time {
-
-    color: #ea580c;
-}
-
-
-.timer-danger {
-
-    background: #fef2f2;
-
-    border-color: #fecaca;
-
-    animation: timerPulse 1s infinite;
-}
-
-
-.timer-danger .question-time {
-
-    color: #dc2626;
-}
-
-
-.timer-danger .timer-label {
-
-    color: #dc2626;
-}
-
-
-@keyframes timerPulse {
-
-    50% {
-
-        transform: scale(1.02);
-
-    }
-
-}
-
-
-/* =========================================================
-   HARD DEADLINE NOTICE
-========================================================= */
-
-.deadline-notice {
-
-    margin-top: 12px;
-
-    padding: 10px 14px;
-
-    border-radius: 10px;
-
-    background: #fff7ed;
-
-    border: 1px solid #fed7aa;
-
-    color: #9a3412;
-
-    font-size: 12px;
-
-    font-weight: 600;
-
-    text-align: center;
-}
-
-
-/* =========================================================
-   MOBILE
-========================================================= */
-
-@media (max-width: 650px) {
-
-    .quiz-timer-area {
-
-        flex-direction: column;
-
-        align-items: stretch;
-
-        gap: 12px;
-
-    }
-
-    .overall-timer {
-
-        justify-content: space-between;
-
-    }
-
-    .question-timer {
-
-        justify-content: center;
-
-    }
-
-    .overall-time {
-
-        font-size: 17px;
-
-    }
-
-}
-
-
-/* =========================================================
-   VERY SMALL MOBILE
-========================================================= */
-
-@media (max-width: 400px) {
-
-    .quiz-timer-area {
-
-        padding: 13px;
-
-    }
-
-    .timer-icon {
-
-        width: 38px;
-
-        height: 38px;
-
-        font-size: 17px;
-
-    }
-
-    .overall-time {
-
-        font-size: 16px;
-
-    }
-
-    .question-time {
-
-        font-size: 15px;
-
-    }
-
-}
-
-</style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Attempt Quiz | AI Quiz Assessment System</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
+
+    <style>
+        /* =====================================================
+           QUIZ TIMER
+        ===================================================== */
+
+        .quiz-timer-area {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-top: 20px;
+            padding: 16px 18px;
+            border-radius: 16px;
+            background: #f8f9ff;
+            border: 1px solid #e8eaf5;
+        }
+
+        .overall-timer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .timer-icon {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: #eef2ff;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .timer-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .timer-label {
+            color: #8a91a3;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+        }
+
+        .overall-time {
+            color: #252d40;
+            font-size: 18px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .question-timer {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 9px 13px;
+            border-radius: 12px;
+            background: #ffffff;
+            border: 1px solid #e4e6ef;
+        }
+
+        .question-timer-icon {
+            font-size: 16px;
+        }
+
+        .question-time {
+            min-width: 45px;
+            color: #4f46e5;
+            font-size: 16px;
+            font-weight: 800;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .timer-warning {
+            background: #fff7ed;
+            border-color: #fed7aa;
+        }
+
+        .timer-warning .question-time {
+            color: #ea580c;
+        }
+
+        .timer-danger {
+            background: #fef2f2;
+            border-color: #fecaca;
+            animation: timerPulse 1s infinite;
+        }
+
+        .timer-danger .question-time,
+        .timer-danger .timer-label {
+            color: #dc2626;
+        }
+
+        @keyframes timerPulse {
+            50% {
+                transform: scale(1.02);
+            }
+        }
+
+        .deadline-notice {
+            margin-top: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #9a3412;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        /* =====================================================
+           QUESTION OPTIONS
+        ===================================================== */
+
+        .attempt-option {
+            cursor: pointer;
+        }
+
+        .attempt-option input[type="radio"] {
+            cursor: pointer;
+        }
+
+        .attempt-option:focus-within {
+            outline: 2px solid #6366f1;
+            outline-offset: 3px;
+        }
+
+        .attempt-option-text {
+            overflow-wrap: anywhere;
+        }
+
+        .attempt-option.selected {
+            border-color: #6366f1;
+            background: #f5f5ff;
+        }
+
+        .next-question-btn:disabled {
+            opacity: .65;
+            cursor: not-allowed;
+        }
+
+        .quiz-error-message {
+            display: none;
+            margin-top: 14px;
+            padding: 12px 14px;
+            border: 1px solid #fecaca;
+            border-radius: 10px;
+            background: #fef2f2;
+            color: #b91c1c;
+            font-size: 13px;
+        }
+
+        .quiz-error-message.visible {
+            display: block;
+        }
+
+        /* =====================================================
+           MOBILE
+        ===================================================== */
+
+        @media (max-width: 650px) {
+            .quiz-timer-area {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .overall-timer {
+                justify-content: space-between;
+            }
+
+            .question-timer {
+                justify-content: center;
+            }
+
+            .overall-time {
+                font-size: 17px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .quiz-timer-area {
+                padding: 13px;
+            }
+
+            .timer-icon {
+                width: 38px;
+                height: 38px;
+                font-size: 17px;
+            }
+
+            .overall-time {
+                font-size: 16px;
+            }
+
+            .question-time {
+                font-size: 15px;
+            }
+        }
+    </style>
 </head>
-
 
 <body class="attempt-page">
 
-
 <div class="dashboard-page">
 
+    <!-- NAVBAR -->
+    <nav class="top-navbar quiz-top-navbar">
 
-<!-- =====================================================
-     NAVBAR
-====================================================== -->
-
-<nav class="top-navbar quiz-top-navbar">
-
-
-    <div class="attempt-brand">
-
-        <div class="attempt-brand-icon">
-            🧠
-        </div>
-
-        <div>
-
-            <strong>
-                AI Quiz
-            </strong>
-
-            <span>
-                Assessment System
-            </span>
-
-        </div>
-
-    </div>
-
-
-    <div class="attempt-status">
-
-        <span class="status-dot"></span>
-
-        Quiz in Progress
-
-    </div>
-
-
-    <div class="attempt-nav-actions">
-
-        <a href="/student_dashboard">
-            🏠 Dashboard
-        </a>
-
-        <a href="/logout">
-            🚪 Logout
-        </a>
-
-    </div>
-
-
-</nav>
-
-
-<!-- =====================================================
-     MAIN
-====================================================== -->
-
-<main class="attempt-container">
-
-
-    <!-- =================================================
-         TOP PROGRESS HEADER
-    ================================================== -->
-
-    <section class="attempt-progress-card">
-
-
-        <div class="attempt-progress-top">
-
+        <div class="attempt-brand">
+            <div class="attempt-brand-icon">🧠</div>
 
             <div>
-
-                <span class="attempt-eyebrow">
-                    CURRENT QUESTION
-                </span>
-
-
-                <h1>
-
-                    Question {{ number }}
-
-                    <span>
-                        / {{ total }}
-                    </span>
-
-                </h1>
-
+                <strong>AI Quiz</strong>
+                <span>Assessment System</span>
             </div>
-
-
-            <div class="question-counter">
-
-                {{ number }} of {{ total }}
-
-            </div>
-
-
         </div>
 
-
-        <!-- PROGRESS BAR -->
-
-        <div class="progress-track">
-
-            <div
-                class="progress-fill"
-                style="width: {{ (number / total) * 100 }}%">
-
-            </div>
-
+        <div class="attempt-status">
+            <span class="status-dot"></span>
+            Quiz in Progress
         </div>
 
+        <div class="attempt-nav-actions">
+            <a href="{{ url_for('student.student_dashboard') }}">
+                🏠 Dashboard
+            </a>
 
-        <div class="progress-caption">
-
-            <span>
-                Progress
-            </span>
-
-            <strong>
-                {{ ((number / total) * 100)|round|int }}%
-            </strong>
-
+            <a href="/logout">
+                🚪 Logout
+            </a>
         </div>
 
+    </nav>
 
-        <!-- =================================================
-             TIMER AREA
-        ================================================== -->
+    <!-- MAIN -->
+    <main class="attempt-container">
 
-        <div class="quiz-timer-area">
+        {% if unavailable %}
 
+            <section class="attempt-question-card">
+                <h2>Quiz Unavailable</h2>
 
-            <!-- OVERALL QUIZ TIMER -->
+                <p>
+                    {{ unavailable_message }}
+                </p>
 
-            <div class="overall-timer">
+                <a href="{{ url_for('student.available_quizzes') }}">
+                    Back to Available Quizzes
+                </a>
+            </section>
 
+        {% else %}
 
-                <div class="timer-icon">
-                    ⏱️
-                </div>
+            <!-- PROGRESS HEADER -->
+            <section class="attempt-progress-card">
 
+                <div class="attempt-progress-top">
 
-                <div class="timer-info">
+                    <div>
+                        <span class="attempt-eyebrow">
+                            CURRENT QUESTION
+                        </span>
 
-                    <span class="timer-label">
-                        Quiz Time Remaining
-                    </span>
+                        <h1>
+                            Question {{ number }}
+                            <span>/ {{ total }}</span>
+                        </h1>
+                    </div>
 
-
-                    <span
-                        id="overallTimer"
-                        class="overall-time">
-
-                        --:--
-
-                    </span>
+                    <div class="question-counter">
+                        {{ number }} of {{ total }}
+                    </div>
 
                 </div>
 
-
-            </div>
-
-
-            <!-- QUESTION TIMER -->
-
-            <div
-                id="questionTimerBox"
-                class="question-timer">
-
-
-                <span class="question-timer-icon">
-                    ⏳
-                </span>
-
-
-                <span class="timer-label">
-                    Question Time
-                </span>
-
-
-                <strong
-                    id="questionTimer"
-                    class="question-time">
-
-                    --:--
-
-                </strong>
-
-
-            </div>
-
-
-        </div>
-
-
-        <!-- HARD DEADLINE -->
-
-        {% if quiz_available_until %}
-
-        <div class="deadline-notice">
-
-            ⏰ This quiz will close automatically at the scheduled
-            closing time.
-
-        </div>
-
-        {% endif %}
-
-
-    </section>
-
-
-    <!-- =================================================
-         QUESTION CARD
-    ================================================== -->
-
-    <section class="attempt-question-card">
-
-
-        <div class="question-badge">
-
-            <span>
-                ✦
-            </span>
-
-            QUESTION {{ number }}
-
-        </div>
-
-
-        <h2 class="attempt-question-text">
-
-            {{ question.question }}
-
-        </h2>
-
-
-        <p class="select-hint">
-
-            Select one answer from the options below.
-
-        </p>
-
-
-        <!-- =================================================
-             OPTIONS
-        ================================================== -->
-
-        <form
-            method="POST"
-            class="attempt-form"
-            id="quizForm">
-
-
-            <div class="attempt-options">
-
-
-                <!-- OPTION A -->
-
-                <label class="attempt-option">
-
-                    <input
-                        type="radio"
-                        name="answer"
-                        value="A"
-                        required>
-
-                    <span class="attempt-option-letter">
-                        A
-                    </span>
-
-                    <span class="attempt-option-text">
-                        {{ question.option_a }}
-                    </span>
-
-                    <span class="attempt-option-check">
-                        ✓
-                    </span>
-
-                </label>
-
-
-                <!-- OPTION B -->
-
-                <label class="attempt-option">
-
-                    <input
-                        type="radio"
-                        name="answer"
-                        value="B">
-
-                    <span class="attempt-option-letter">
-                        B
-                    </span>
-
-                    <span class="attempt-option-text">
-                        {{ question.option_b }}
-                    </span>
-
-                    <span class="attempt-option-check">
-                        ✓
-                    </span>
-
-                </label>
-
-
-                <!-- OPTION C -->
-
-                <label class="attempt-option">
-
-                    <input
-                        type="radio"
-                        name="answer"
-                        value="C">
-
-                    <span class="attempt-option-letter">
-                        C
-                    </span>
-
-                    <span class="attempt-option-text">
-                        {{ question.option_c }}
-                    </span>
-
-                    <span class="attempt-option-check">
-                        ✓
-                    </span>
-
-                </label>
-
-
-                <!-- OPTION D -->
-
-                <label class="attempt-option">
-
-                    <input
-                        type="radio"
-                        name="answer"
-                        value="D">
-
-                    <span class="attempt-option-letter">
-                        D
-                    </span>
-
-                    <span class="attempt-option-text">
-                        {{ question.option_d }}
-                    </span>
-
-                    <span class="attempt-option-check">
-                        ✓
-                    </span>
-
-                </label>
-
-
-            </div>
-
-
-            <!-- =================================================
-                 SUBMIT / NEXT
-            ================================================== -->
-
-            <div class="attempt-footer">
-
-
-                <div class="answer-security">
-
-                    <span>
-                        🔒
-                    </span>
-
-                    <p>
-                        Your answer is securely recorded.
-                    </p>
+                <div class="progress-track"
+                     role="progressbar"
+                     aria-label="Quiz progress"
+                     aria-valuemin="0"
+                     aria-valuemax="100"
+                     aria-valuenow="{{ ((number / total) * 100)|round|int }}">
+
+                    <div class="progress-fill"
+                         style="width: {{ ((number / total) * 100)|round(2) }}%;">
+                    </div>
 
                 </div>
 
+                <div class="progress-caption">
+                    <span>Progress</span>
 
-                <button
-                    type="submit"
-                    class="next-question-btn"
-                    id="nextButton">
+                    <strong>
+                        {{ ((number / total) * 100)|round|int }}%
+                    </strong>
+                </div>
 
+                <!-- TIMERS -->
+                <div class="quiz-timer-area">
 
-                    {% if number == total %}
+                    <div class="overall-timer">
 
-                        <span>
-                            Submit Quiz
+                        <div class="timer-icon">⏱️</div>
+
+                        <div class="timer-info">
+
+                            <span class="timer-label">
+                                Quiz Time Remaining
+                            </span>
+
+                            <span id="overallTimer"
+                                  class="overall-time"
+                                  aria-live="off">
+                                --:--
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                    {% if question_time_seconds|default(0)|int > 0 %}
+
+                    <div id="questionTimerBox"
+                         class="question-timer">
+
+                        <span class="question-timer-icon">⏳</span>
+
+                        <span class="timer-label">
+                            Question Time
                         </span>
 
-                        <span class="btn-icon">
-                            🚀
-                        </span>
+                        <strong id="questionTimer"
+                                class="question-time">
+                            --:--
+                        </strong>
 
-                    {% else %}
-
-                        <span>
-                            Next Question
-                        </span>
-
-                        <span class="btn-icon">
-                            →
-                        </span>
+                    </div>
 
                     {% endif %}
 
+                </div>
 
-                </button>
+                {% if quiz_available_until %}
 
+                <div class="deadline-notice">
+                    ⏰ This quiz will close automatically at its scheduled closing time.
+                </div>
 
+                {% endif %}
+
+            </section>
+
+            <!-- QUESTION CARD -->
+            <section class="attempt-question-card">
+
+                <div class="question-badge">
+                    <span>✦</span>
+                    QUESTION {{ number }}
+                </div>
+
+                <h2 class="attempt-question-text">
+                    {{ question.question }}
+                </h2>
+
+                <p class="select-hint">
+                    Select one answer from the options below.
+                </p>
+
+                <!-- QUIZ FORM -->
+                <form method="POST"
+                      class="attempt-form"
+                      id="quizForm"
+                      autocomplete="off">
+
+                    <!-- IMPORTANT: identifies the question being submitted -->
+                    <input type="hidden"
+                           name="question_id"
+                           value="{{ question.question_id }}">
+
+                    <div class="attempt-options">
+
+                        <label class="attempt-option">
+
+                            <input type="radio"
+                                   name="answer"
+                                   value="A"
+                                   {% if selected_answer == 'A' %}checked{% endif %}>
+
+                            <span class="attempt-option-letter">A</span>
+
+                            <span class="attempt-option-text">
+                                {{ question.option_a }}
+                            </span>
+
+                            <span class="attempt-option-check">✓</span>
+
+                        </label>
+
+                        <label class="attempt-option">
+
+                            <input type="radio"
+                                   name="answer"
+                                   value="B"
+                                   {% if selected_answer == 'B' %}checked{% endif %}>
+
+                            <span class="attempt-option-letter">B</span>
+
+                            <span class="attempt-option-text">
+                                {{ question.option_b }}
+                            </span>
+
+                            <span class="attempt-option-check">✓</span>
+
+                        </label>
+
+                        <label class="attempt-option">
+
+                            <input type="radio"
+                                   name="answer"
+                                   value="C"
+                                   {% if selected_answer == 'C' %}checked{% endif %}>
+
+                            <span class="attempt-option-letter">C</span>
+
+                            <span class="attempt-option-text">
+                                {{ question.option_c }}
+                            </span>
+
+                            <span class="attempt-option-check">✓</span>
+
+                        </label>
+
+                        <label class="attempt-option">
+
+                            <input type="radio"
+                                   name="answer"
+                                   value="D"
+                                   {% if selected_answer == 'D' %}checked{% endif %}>
+
+                            <span class="attempt-option-letter">D</span>
+
+                            <span class="attempt-option-text">
+                                {{ question.option_d }}
+                            </span>
+
+                            <span class="attempt-option-check">✓</span>
+
+                        </label>
+
+                    </div>
+
+                    <div id="quizError"
+                         class="quiz-error-message"
+                         role="alert">
+                        Please select an answer before continuing.
+                    </div>
+
+                    <!-- FOOTER -->
+                    <div class="attempt-footer">
+
+                        <div class="answer-security">
+                            <span>🔒</span>
+
+                            <p>
+                                Your answer is securely recorded.
+                            </p>
+                        </div>
+
+                        <button type="submit"
+                                class="next-question-btn"
+                                id="nextButton">
+
+                            {% if number == total %}
+                                <span>Submit Quiz</span>
+                                <span class="btn-icon">🚀</span>
+                            {% else %}
+                                <span>Next Question</span>
+                                <span class="btn-icon">→</span>
+                            {% endif %}
+
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </section>
+
+            <!-- HELPER -->
+            <div class="attempt-helper">
+                <span>💡</span>
+
+                <p>
+                    Choose your answer carefully before continuing.
+                    You won't be able to return to a previous question.
+                </p>
             </div>
 
+        {% endif %}
 
-        </form>
-
-
-    </section>
-
-
-    <!-- =================================================
-         HELPER MESSAGE
-    ================================================== -->
-
-    <div class="attempt-helper">
-
-        <span>
-            💡
-        </span>
-
-        <p>
-
-            Choose the answer carefully before continuing.
-            You won't be able to change your answer after
-            moving ahead.
-
-        </p>
-
-    </div>
-
-
-</main>
-
+    </main>
 
 </div>
 
-
-<!-- =====================================================
-     TIMER JAVASCRIPT
-====================================================== -->
+{% if not unavailable %}
 
 <script>
+(() => {
+    "use strict";
 
-const quizForm =
-    document.getElementById("quizForm");
+    const quizForm = document.getElementById("quizForm");
+    const overallTimer = document.getElementById("overallTimer");
+    const questionTimer = document.getElementById("questionTimer");
+    const questionTimerBox = document.getElementById("questionTimerBox");
+    const nextButton = document.getElementById("nextButton");
+    const errorMessage = document.getElementById("quizError");
 
+    if (!quizForm || !overallTimer || !nextButton) {
+        return;
+    }
 
-const overallTimer =
-    document.getElementById("overallTimer");
-
-
-const questionTimer =
-    document.getElementById("questionTimer");
-
-
-const questionTimerBox =
-    document.getElementById("questionTimerBox");
-
-
-/* =====================================================
-   TIMER VALUES FROM FLASK
-===================================================== */
-
-/*
-    These values are calculated by the server.
-
-    overallSeconds is already capped by:
-
-        min(
-            total attempt time,
-            quiz availability end
-        )
-*/
-
-let overallSeconds =
-    Number("{{ remaining_seconds }}");
-
-
-let questionSeconds =
-    Number("{{ question_remaining_seconds }}");
-
-
-/*
-    Absolute server-side effective deadline.
-
-    This is only used as an additional browser-side
-    safety mechanism.
-*/
-
-const quizDeadline =
-    Number("{{ quiz_deadline }}");
-
-
-/* =====================================================
-   FORMAT TIME
-===================================================== */
-
-function formatTime(seconds) {
-
-    seconds = Math.max(
+    /*
+     * Values are calculated by Flask.
+     * Server-side validation remains authoritative.
+     */
+    let overallSeconds = Math.max(
         0,
-        Math.floor(seconds)
+        Number({{ remaining_seconds|default(0)|int }})
     );
 
-    const minutes =
-        Math.floor(seconds / 60);
-
-    const secs =
-        seconds % 60;
-
-    return (
-        String(minutes).padStart(2, "0")
-        +
-        ":"
-        +
-        String(secs).padStart(2, "0")
+    let questionSeconds = Math.max(
+        0,
+        Number({{ question_remaining_seconds|default(0)|int }})
     );
-}
 
-
-/* =====================================================
-   TIMER STATE
-===================================================== */
-
-let submitted = false;
-
-let overallInterval = null;
-
-let questionInterval = null;
-
-
-/* =====================================================
-   AUTO SUBMIT
-===================================================== */
-
-function autoSubmitQuiz() {
-
-    if (submitted) {
-        return;
-    }
-
-    submitted = true;
-
-    if (overallInterval) {
-
-        clearInterval(
-            overallInterval
-        );
-
-    }
-
-    if (questionInterval) {
-
-        clearInterval(
-            questionInterval
-        );
-
-    }
+    const hasQuestionTimer = Boolean(questionTimerBox);
 
     /*
-        form.submit() intentionally bypasses HTML5
-        "required" validation.
+     * Epoch seconds supplied by Flask.
+     */
+    const quizDeadline = Number(
+        {{ quiz_deadline|default(0)|int }}
+    );
 
-        This is necessary because a timer expiry must
-        submit even when the student did not select
-        an answer.
-    */
-
-    quizForm.submit();
-}
-
-
-/* =====================================================
-   UPDATE OVERALL TIMER
-===================================================== */
-
-function updateOverallTimer() {
+    let submitted = false;
+    let overallInterval = null;
+    let questionInterval = null;
+    let deadlineInterval = null;
 
     /*
-        Browser countdown.
+     * Use elapsed browser time for smoother countdowns.
+     * The server independently checks the actual deadline.
+     */
+    let lastTick = Date.now();
 
-        overallSeconds is the server-calculated amount.
-    */
+    function formatTime(seconds) {
+        seconds = Math.max(0, Math.floor(seconds));
 
-    overallTimer.textContent =
-        formatTime(
-            overallSeconds
+        const minutes = Math.floor(seconds / 60);
+        const secondsPart = seconds % 60;
+
+        return (
+            String(minutes).padStart(2, "0") +
+            ":" +
+            String(secondsPart).padStart(2, "0")
         );
-
-
-    /*
-        Warning
-    */
-
-    if (overallSeconds <= 60) {
-
-        overallTimer.style.color =
-            "#dc2626";
-
     }
 
-
-    /*
-        FINAL SECOND
-    */
-
-    if (overallSeconds <= 0) {
-
-        autoSubmitQuiz();
-
-        return;
-    }
-
-
-    overallSeconds--;
-
-}
-
-
-/* =====================================================
-   UPDATE QUESTION TIMER
-===================================================== */
-
-function updateQuestionTimer() {
-
-    questionTimer.textContent =
-        formatTime(
-            questionSeconds
-        );
-
-
-    /*
-        Warning
-    */
-
-    if (
-        questionSeconds <= 10
-        &&
-        questionSeconds > 5
-    ) {
-
-        questionTimerBox.classList.add(
-            "timer-warning"
-        );
-
-    }
-
-
-    /*
-        Danger
-    */
-
-    if (questionSeconds <= 5) {
-
-        questionTimerBox.classList.remove(
-            "timer-warning"
-        );
-
-        questionTimerBox.classList.add(
-            "timer-danger"
-        );
-
-    }
-
-
-    /*
-        Timer finished
-    */
-
-    if (questionSeconds <= 0) {
-
-        if (questionInterval) {
-
-            clearInterval(
-                questionInterval
-            );
-
+    function stopTimers() {
+        if (overallInterval !== null) {
+            clearInterval(overallInterval);
+            overallInterval = null;
         }
 
-        /*
-            Submit current question.
+        if (questionInterval !== null) {
+            clearInterval(questionInterval);
+            questionInterval = null;
+        }
 
-            If answer exists, server saves it.
-
-            If no answer exists, form.submit()
-            bypasses required validation and server
-            receives NULL.
-        */
-
-        autoSubmitCurrentQuestion();
-
-        return;
-    }
-
-
-    questionSeconds--;
-
-}
-
-
-/* =====================================================
-   AUTO SUBMIT CURRENT QUESTION
-===================================================== */
-
-function autoSubmitCurrentQuestion() {
-
-    if (submitted) {
-        return;
-    }
-
-    submitted = true;
-
-    if (overallInterval) {
-
-        clearInterval(
-            overallInterval
-        );
-
-    }
-
-    if (questionInterval) {
-
-        clearInterval(
-            questionInterval
-        );
-
+        if (deadlineInterval !== null) {
+            clearInterval(deadlineInterval);
+            deadlineInterval = null;
+        }
     }
 
     /*
-        Native form.submit() bypasses required
-        validation and sends the current answer
-        if selected.
-    */
-
-    quizForm.submit();
-
-}
-
-
-/* =====================================================
-   INITIAL DISPLAY
-===================================================== */
-
-overallTimer.textContent =
-    formatTime(
-        overallSeconds
-    );
-
-
-questionTimer.textContent =
-    formatTime(
-        questionSeconds
-    );
-
-
-/* =====================================================
-   START TIMERS
-===================================================== */
-
-overallInterval =
-    setInterval(
-        updateOverallTimer,
-        1000
-    );
-
-
-questionInterval =
-    setInterval(
-        updateQuestionTimer,
-        1000
-    );
-
-
-/* =====================================================
-   ADDITIONAL ABSOLUTE DEADLINE CHECK
-===================================================== */
-
-/*
-    This protects against situations where the browser
-    countdown gets delayed/backgrounded.
-
-    IMPORTANT:
-
-    quizDeadline comes from the SERVER.
-
-    It is NOT taken from the user's computer clock
-    when the quiz starts.
-*/
-
-function checkAbsoluteDeadline() {
-
-    if (!quizDeadline) {
-        return;
-    }
-
-    const nowSeconds =
-        Date.now() / 1000;
-
-
-    if (
-        nowSeconds >= quizDeadline
-    ) {
-
-        autoSubmitQuiz();
-
-    }
-
-}
-
-
-/*
-    Check every 500ms.
-
-    This is intentionally separate from the visible
-    one-second countdown.
-*/
-
-setInterval(
-    checkAbsoluteDeadline,
-    500
-);
-
-
-/* =====================================================
-   PREVENT DOUBLE SUBMISSION
-===================================================== */
-
-quizForm.addEventListener(
-    "submit",
-    function(event) {
-
+     * All timer-triggered submissions go through one function.
+     * This prevents the overall and question timers from
+     * submitting the form twice.
+     */
+    function autoSubmit() {
         if (submitted) {
-
-            /*
-                Browser normally won't submit twice.
-            */
-
             return;
-
         }
 
         submitted = true;
+        stopTimers();
 
-        if (overallInterval) {
+        nextButton.disabled = true;
 
-            clearInterval(
-                overallInterval
-            );
-
-        }
-
-        if (questionInterval) {
-
-            clearInterval(
-                questionInterval
-            );
-
-        }
-
+        /*
+         * Intentional: timer expiry must submit even if no answer
+         * is selected. Native form.submit() bypasses required
+         * validation and the submit event.
+         */
+        HTMLFormElement.prototype.submit.call(quizForm);
     }
-);
 
+    function updateOverallDisplay() {
+        overallTimer.textContent = formatTime(overallSeconds);
+
+        if (overallSeconds <= 60) {
+            overallTimer.style.color = "#dc2626";
+        }
+
+        if (overallSeconds <= 0) {
+            autoSubmit();
+        }
+    }
+
+    function updateQuestionDisplay() {
+        if (!hasQuestionTimer || !questionTimer) {
+            return;
+        }
+
+        questionTimer.textContent = formatTime(questionSeconds);
+
+        if (questionSeconds <= 10 && questionSeconds > 5) {
+            questionTimerBox.classList.add("timer-warning");
+        } else {
+            questionTimerBox.classList.remove("timer-warning");
+        }
+
+        if (questionSeconds <= 5) {
+            questionTimerBox.classList.add("timer-danger");
+        } else {
+            questionTimerBox.classList.remove("timer-danger");
+        }
+
+        if (questionSeconds <= 0) {
+            autoSubmit();
+        }
+    }
+
+    function updateCountdowns() {
+        if (submitted) {
+            return;
+        }
+
+        const now = Date.now();
+        const elapsed = Math.max(0, (now - lastTick) / 1000);
+
+        lastTick = now;
+
+        overallSeconds = Math.max(0, overallSeconds - elapsed);
+
+        if (hasQuestionTimer) {
+            questionSeconds = Math.max(0, questionSeconds - elapsed);
+        }
+
+        updateOverallDisplay();
+
+        if (!submitted && hasQuestionTimer) {
+            updateQuestionDisplay();
+        }
+    }
+
+    function checkDeadline() {
+        if (submitted || !quizDeadline) {
+            return;
+        }
+
+        /*
+         * Browser deadline check is a convenience only.
+         * The Flask server must also enforce the deadline.
+         */
+        const serverDeadlineRemaining =
+            quizDeadline - (Date.now() / 1000);
+
+        if (serverDeadlineRemaining <= 0) {
+            autoSubmit();
+        }
+    }
+
+    /*
+     * Restore visual selection state and highlight the selected
+     * option without changing the existing stylesheet.
+     */
+    function refreshSelectedOption() {
+        document.querySelectorAll(".attempt-option").forEach((label) => {
+            const radio = label.querySelector('input[type="radio"]');
+
+            if (radio) {
+                label.classList.toggle("selected", radio.checked);
+            }
+        });
+    }
+
+    quizForm.querySelectorAll('input[name="answer"]').forEach((radio) => {
+        radio.addEventListener("change", () => {
+            refreshSelectedOption();
+
+            if (errorMessage) {
+                errorMessage.classList.remove("visible");
+            }
+        });
+    });
+
+    refreshSelectedOption();
+
+    /*
+     * Manual submit requires an answer.
+     * Timer-triggered submission bypasses this listener intentionally.
+     */
+    quizForm.addEventListener("submit", (event) => {
+        if (submitted) {
+            event.preventDefault();
+            return;
+        }
+
+        const selectedAnswer = quizForm.querySelector(
+            'input[name="answer"]:checked'
+        );
+
+        if (!selectedAnswer) {
+            event.preventDefault();
+
+            if (errorMessage) {
+                errorMessage.classList.add("visible");
+                errorMessage.textContent =
+                    "Please select an answer before continuing.";
+            }
+
+            const firstRadio = quizForm.querySelector(
+                'input[name="answer"]'
+            );
+
+            if (firstRadio) {
+                firstRadio.focus();
+            }
+
+            return;
+        }
+
+        submitted = true;
+        stopTimers();
+        nextButton.disabled = true;
+    });
+
+    /*
+     * Initial display.
+     */
+    updateOverallDisplay();
+
+    if (!submitted && hasQuestionTimer) {
+        updateQuestionDisplay();
+    }
+
+    /*
+     * One countdown interval updates both timers.
+     */
+    if (!submitted) {
+        overallInterval = setInterval(updateCountdowns, 250);
+        deadlineInterval = setInterval(checkDeadline, 500);
+    }
+
+    /*
+     * Start question countdown only if the feature is enabled.
+     */
+    if (hasQuestionTimer && !submitted) {
+        questionInterval = setInterval(updateQuestionDisplay, 1000);
+    }
+
+    /*
+     * If the page becomes visible after being backgrounded,
+     * immediately recalculate the countdown.
+     */
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && !submitted) {
+            updateCountdowns();
+            checkDeadline();
+        }
+    });
+
+    /*
+     * Prevent accidental repeated clicks while a request is being
+     * submitted. Timer submissions use autoSubmit() above.
+     */
+})();
 </script>
 
+{% endif %}
 
-<script src="{{ url_for('static', filename='js/darkmode.js') }}">
-</script>
-
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
 
 </body>
-
 </html>
+
