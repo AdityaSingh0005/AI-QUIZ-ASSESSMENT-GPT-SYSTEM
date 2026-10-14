@@ -885,7 +885,7 @@ def guest_start_quiz(quiz_id):
 
     if request.method == "GET":
         return render_template(
-            "guest_start.html",
+            "guest_start_quiz.html",
             quiz=quiz,
             error=None,
         )
@@ -906,14 +906,14 @@ def guest_start_quiz(quiz_id):
 
     if not student_name or not roll_number:
         return render_template(
-            "guest_start.html",
+            "guest_start_quiz.html",
             quiz=quiz,
             error="Please enter your name and roll number.",
         ), 400
 
     if not _can_access_quiz(quiz):
         return render_template(
-            "guest_start.html",
+            "guest_start_quiz.html",
             quiz=quiz,
             error="This quiz is not currently available.",
         ), 400
@@ -961,7 +961,7 @@ def guest_start_quiz(quiz_id):
         )
 
         return render_template(
-            "guest_start.html",
+            "guest_start_quiz.html",
             quiz=quiz,
             error="Unable to start the quiz. Please try again.",
         ), 500
