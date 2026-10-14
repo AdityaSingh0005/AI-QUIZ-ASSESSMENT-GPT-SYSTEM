@@ -4,816 +4,838 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Attempt Quiz | AI Quiz Assessment System</title>
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet">
+    <title>
+        {% if show_result %}
+            Quiz Result
+        {% else %}
+            Quiz Attempt
+        {% endif %}
+        | AI Quiz Assessment
+    </title>
 
     <style>
-        /* =====================================================
-           QUIZ TIMER
-        ===================================================== */
+        * {
+            box-sizing: border-box;
+        }
 
-        .quiz-timer-area {
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #e2e8f0;
+            background: #0f172a;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 950px;
+            margin: 0 auto;
+        }
+
+        .header {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
             gap: 18px;
-            margin-top: 20px;
-            padding: 16px 18px;
-            border-radius: 16px;
-            background: #f8f9ff;
-            border: 1px solid #e8eaf5;
+            margin-bottom: 24px;
         }
 
-        .overall-timer {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .header h1 {
+            margin: 0 0 8px;
+            font-size: 27px;
         }
 
-        .timer-icon {
-            width: 42px;
-            height: 42px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            background: #eef2ff;
-            font-size: 20px;
-            flex-shrink: 0;
+        .muted {
+            color: #94a3b8;
+            line-height: 1.6;
         }
 
-        .timer-info {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
+        .timer {
+            min-width: 145px;
+            padding: 14px 18px;
+            border: 1px solid #334155;
+            border-radius: 14px;
+            text-align: center;
+            background: #1e293b;
         }
 
         .timer-label {
-            color: #8a91a3;
-            font-size: 9px;
-            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+            color: #94a3b8;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .7px;
+        }
+
+        .timer-value {
+            font-size: 25px;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .progress-wrapper {
+            margin-bottom: 22px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 9px;
+            color: #cbd5e1;
+            font-size: 13px;
+        }
+
+        .progress-track {
+            height: 9px;
+            overflow: hidden;
+            border-radius: 20px;
+            background: #334155;
+        }
+
+        .progress-bar {
+            width: 0;
+            height: 100%;
+            border-radius: 20px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            transition: width .25s;
+        }
+
+        .card {
+            padding: 28px;
+            border: 1px solid #334155;
+            border-radius: 18px;
+            background: #1e293b;
+            box-shadow: 0 15px 45px rgba(0,0,0,.18);
+        }
+
+        .question-number {
+            margin-bottom: 14px;
+            color: #93c5fd;
+            font-size: 13px;
+            font-weight: bold;
             text-transform: uppercase;
             letter-spacing: .6px;
         }
 
-        .overall-time {
-            color: #252d40;
-            font-size: 18px;
-            font-weight: 800;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .question-timer {
-            display: flex;
-            align-items: center;
-            gap: 9px;
-            padding: 9px 13px;
-            border-radius: 12px;
-            background: #ffffff;
-            border: 1px solid #e4e6ef;
-        }
-
-        .question-timer-icon {
-            font-size: 16px;
-        }
-
-        .question-time {
-            min-width: 45px;
-            color: #4f46e5;
-            font-size: 16px;
-            font-weight: 800;
-            text-align: center;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .timer-warning {
-            background: #fff7ed;
-            border-color: #fed7aa;
-        }
-
-        .timer-warning .question-time {
-            color: #ea580c;
-        }
-
-        .timer-danger {
-            background: #fef2f2;
-            border-color: #fecaca;
-            animation: timerPulse 1s infinite;
-        }
-
-        .timer-danger .question-time,
-        .timer-danger .timer-label {
-            color: #dc2626;
-        }
-
-        @keyframes timerPulse {
-            50% {
-                transform: scale(1.02);
-            }
-        }
-
-        .deadline-notice {
-            margin-top: 12px;
-            padding: 10px 14px;
-            border-radius: 10px;
-            background: #fff7ed;
-            border: 1px solid #fed7aa;
-            color: #9a3412;
-            font-size: 12px;
-            font-weight: 600;
-            text-align: center;
-        }
-
-        /* =====================================================
-           QUESTION OPTIONS
-        ===================================================== */
-
-        .attempt-option {
-            cursor: pointer;
-        }
-
-        .attempt-option input[type="radio"] {
-            cursor: pointer;
-        }
-
-        .attempt-option:focus-within {
-            outline: 2px solid #6366f1;
-            outline-offset: 3px;
-        }
-
-        .attempt-option-text {
+        .question-text {
+            margin: 0 0 25px;
+            color: #f8fafc;
+            font-size: 21px;
+            line-height: 1.6;
             overflow-wrap: anywhere;
         }
 
-        .attempt-option.selected {
-            border-color: #6366f1;
-            background: #f5f5ff;
+        .options {
+            display: grid;
+            gap: 12px;
         }
 
-        .next-question-btn:disabled {
-            opacity: .65;
+        .option {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 15px;
+            border: 1px solid #475569;
+            border-radius: 12px;
+            background: #0f172a;
+            cursor: pointer;
+            transition: border-color .2s, background .2s;
+        }
+
+        .option:hover {
+            border-color: #60a5fa;
+        }
+
+        .option.selected {
+            border-color: #60a5fa;
+            background: rgba(37,99,235,.16);
+        }
+
+        .option input {
+            margin-top: 4px;
+            accent-color: #60a5fa;
+        }
+
+        .option-text {
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 25px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 43px;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            color: white;
+            background: #2563eb;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-secondary {
+            color: #e2e8f0;
+            background: #334155;
+        }
+
+        .btn-danger {
+            color: white;
+            background: #b91c1c;
+        }
+
+        .btn:disabled {
+            opacity: .5;
             cursor: not-allowed;
         }
 
-        .quiz-error-message {
-            display: none;
+        .notice {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            color: #cbd5e1;
+            background: #1e293b;
+            line-height: 1.6;
+        }
+
+        .result-score {
+            margin: 22px 0;
+            padding: 25px;
+            border-radius: 16px;
+            text-align: center;
+            background: #0f172a;
+        }
+
+        .score-number {
+            margin: 12px 0;
+            color: #93c5fd;
+            font-size: 40px;
+            font-weight: bold;
+        }
+
+        .review-item {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            background: #0f172a;
+        }
+
+        .review-item h3 {
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
+
+        .correct {
+            color: #86efac;
+        }
+
+        .incorrect {
+            color: #fca5a5;
+        }
+
+        .explanation {
             margin-top: 14px;
-            padding: 12px 14px;
-            border: 1px solid #fecaca;
-            border-radius: 10px;
-            background: #fef2f2;
-            color: #b91c1c;
-            font-size: 13px;
+            padding: 13px;
+            border-left: 3px solid #60a5fa;
+            color: #cbd5e1;
+            background: #1e293b;
+            line-height: 1.6;
         }
 
-        .quiz-error-message.visible {
-            display: block;
+        .hidden {
+            display: none !important;
         }
 
-        /* =====================================================
-           MOBILE
-        ===================================================== */
+        @media (max-width: 600px) {
+            body {
+                padding: 14px;
+            }
 
-        @media (max-width: 650px) {
-            .quiz-timer-area {
-                flex-direction: column;
+            .card {
+                padding: 19px;
+            }
+
+            .question-text {
+                font-size: 18px;
+            }
+
+            .header h1 {
+                font-size: 23px;
+            }
+
+            .controls {
                 align-items: stretch;
-                gap: 12px;
             }
 
-            .overall-timer {
-                justify-content: space-between;
-            }
-
-            .question-timer {
-                justify-content: center;
-            }
-
-            .overall-time {
-                font-size: 17px;
-            }
-        }
-
-        @media (max-width: 400px) {
-            .quiz-timer-area {
-                padding: 13px;
-            }
-
-            .timer-icon {
-                width: 38px;
-                height: 38px;
-                font-size: 17px;
-            }
-
-            .overall-time {
-                font-size: 16px;
-            }
-
-            .question-time {
-                font-size: 15px;
+            .controls .btn,
+            .controls button {
+                width: 100%;
             }
         }
     </style>
 </head>
 
-<body class="attempt-page">
+<body>
+<div class="container">
 
-<div class="dashboard-page">
+    {% if unavailable %}
 
-    <!-- NAVBAR -->
-    <nav class="top-navbar quiz-top-navbar">
-
-        <div class="attempt-brand">
-            <div class="attempt-brand-icon">🧠</div>
-
+        <div class="header">
             <div>
-                <strong>AI Quiz</strong>
-                <span>Assessment System</span>
+                <h1>
+                    {% if quiz %}
+                        {{ quiz.title }}
+                    {% else %}
+                        Quiz unavailable
+                    {% endif %}
+                </h1>
+
+                <p class="muted">
+                    The quiz cannot be started right now.
+                </p>
             </div>
         </div>
 
-        <div class="attempt-status">
-            <span class="status-dot"></span>
-            Quiz in Progress
+        <div class="notice">
+            {{ unavailable_message or
+               "This quiz is unavailable or contains no questions." }}
         </div>
 
-        <div class="attempt-nav-actions">
-            <a href="{{ url_for('student.student_dashboard') }}">
-                🏠 Dashboard
-            </a>
+        <a
+            class="btn btn-primary"
+            href="{{ url_for('student.available_quizzes') }}"
+        >
+            Back to Available Quizzes
+        </a>
 
-            <a href="/logout">
-                🚪 Logout
-            </a>
+    {% elif show_result %}
+
+        <div class="header">
+            <div>
+                <h1>{{ quiz.title }}</h1>
+                <p class="muted">Your quiz has been submitted.</p>
+            </div>
         </div>
 
-    </nav>
+        <section class="card">
+            <div class="result-score">
+                <div class="muted">Your Score</div>
 
-    <!-- MAIN -->
-    <main class="attempt-container">
-
-        {% if unavailable %}
-
-            <section class="attempt-question-card">
-                <h2>Quiz Unavailable</h2>
-
-                <p>
-                    {{ unavailable_message }}
-                </p>
-
-                <a href="{{ url_for('student.available_quizzes') }}">
-                    Back to Available Quizzes
-                </a>
-            </section>
-
-        {% else %}
-
-            <!-- PROGRESS HEADER -->
-            <section class="attempt-progress-card">
-
-                <div class="attempt-progress-top">
-
-                    <div>
-                        <span class="attempt-eyebrow">
-                            CURRENT QUESTION
-                        </span>
-
-                        <h1>
-                            Question {{ number }}
-                            <span>/ {{ total }}</span>
-                        </h1>
-                    </div>
-
-                    <div class="question-counter">
-                        {{ number }} of {{ total }}
-                    </div>
-
+                <div class="score-number">
+                    {{ result.score or 0 }}
+                    /
+                    {{ quiz.total_questions or 0 }}
                 </div>
 
-                <div class="progress-track"
-                     role="progressbar"
-                     aria-label="Quiz progress"
-                     aria-valuemin="0"
-                     aria-valuemax="100"
-                     aria-valuenow="{{ ((number / total) * 100)|round|int }}">
-
-                    <div class="progress-fill"
-                         style="width: {{ ((number / total) * 100)|round(2) }}%;">
-                    </div>
-
-                </div>
-
-                <div class="progress-caption">
-                    <span>Progress</span>
-
+                <div>
+                    Percentage:
                     <strong>
-                        {{ ((number / total) * 100)|round|int }}%
+                        {{ "%.2f"|format(result.percentage or 0) }}%
                     </strong>
                 </div>
 
-                <!-- TIMERS -->
-                <div class="quiz-timer-area">
+                {% if result.submitted_at %}
+                    <p class="muted">
+                        Submitted: {{ result.submitted_at }}
+                    </p>
+                {% endif %}
+            </div>
 
-                    <div class="overall-timer">
+            <h2>Answer Review</h2>
 
-                        <div class="timer-icon">⏱️</div>
-
-                        <div class="timer-info">
-
-                            <span class="timer-label">
-                                Quiz Time Remaining
-                            </span>
-
-                            <span id="overallTimer"
-                                  class="overall-time"
-                                  aria-live="off">
-                                --:--
-                            </span>
-
+            {% if review %}
+                {% for item in review %}
+                    <article class="review-item">
+                        <div class="question-number">
+                            Question {{ loop.index }}
                         </div>
 
-                    </div>
+                        <h3>{{ item.question }}</h3>
 
-                    {% if question_time_seconds|default(0)|int > 0 %}
+                        <p>
+                            <strong>Your answer:</strong>
 
-                    <div id="questionTimerBox"
-                         class="question-timer">
+                            {% if item.selected_option %}
+                                {{ item.selected_option }}
+                            {% else %}
+                                Not answered
+                            {% endif %}
+                        </p>
 
-                        <span class="question-timer-icon">⏳</span>
+                        <p class="correct">
+                            <strong>Correct answer:</strong>
+                            {{ item.correct_option }}
+                        </p>
 
-                        <span class="timer-label">
-                            Question Time
-                        </span>
+                        {% if item.explanation %}
+                            <div class="explanation">
+                                <strong>Explanation:</strong><br>
+                                {{ item.explanation }}
+                            </div>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p class="muted">
+                    No answer review is available.
+                </p>
+            {% endif %}
 
-                        <strong id="questionTimer"
-                                class="question-time">
-                            --:--
-                        </strong>
-
-                    </div>
-
-                    {% endif %}
-
-                </div>
-
-                {% if quiz_available_until %}
-
-                <div class="deadline-notice">
-                    ⏰ This quiz will close automatically at its scheduled closing time.
-                </div>
-
+            <div class="controls">
+                {% if session.get("student_id") %}
+                    <a
+                        class="btn btn-primary"
+                        href="{{ url_for('student.my_results') }}"
+                    >
+                        My Results
+                    </a>
                 {% endif %}
 
-            </section>
+                <a
+                    class="btn btn-secondary"
+                    href="{{ url_for('student.available_quizzes') }}"
+                >
+                    Back to Quizzes
+                </a>
+            </div>
+        </section>
 
-            <!-- QUESTION CARD -->
-            <section class="attempt-question-card">
+    {% else %}
 
-                <div class="question-badge">
-                    <span>✦</span>
-                    QUESTION {{ number }}
-                </div>
+        <header class="header">
+            <div>
+                <h1>{{ quiz.title }}</h1>
 
-                <h2 class="attempt-question-text">
-                    {{ question.question }}
-                </h2>
-
-                <p class="select-hint">
-                    Select one answer from the options below.
-                </p>
-
-                <!-- QUIZ FORM -->
-                <form method="POST"
-                      class="attempt-form"
-                      id="quizForm"
-                      autocomplete="off">
-
-                    <!-- IMPORTANT: identifies the question being submitted -->
-                    <input type="hidden"
-                           name="question_id"
-                           value="{{ question.question_id }}">
-
-                    <div class="attempt-options">
-
-                        <label class="attempt-option">
-
-                            <input type="radio"
-                                   name="answer"
-                                   value="A"
-                                   {% if selected_answer == 'A' %}checked{% endif %}>
-
-                            <span class="attempt-option-letter">A</span>
-
-                            <span class="attempt-option-text">
-                                {{ question.option_a }}
-                            </span>
-
-                            <span class="attempt-option-check">✓</span>
-
-                        </label>
-
-                        <label class="attempt-option">
-
-                            <input type="radio"
-                                   name="answer"
-                                   value="B"
-                                   {% if selected_answer == 'B' %}checked{% endif %}>
-
-                            <span class="attempt-option-letter">B</span>
-
-                            <span class="attempt-option-text">
-                                {{ question.option_b }}
-                            </span>
-
-                            <span class="attempt-option-check">✓</span>
-
-                        </label>
-
-                        <label class="attempt-option">
-
-                            <input type="radio"
-                                   name="answer"
-                                   value="C"
-                                   {% if selected_answer == 'C' %}checked{% endif %}>
-
-                            <span class="attempt-option-letter">C</span>
-
-                            <span class="attempt-option-text">
-                                {{ question.option_c }}
-                            </span>
-
-                            <span class="attempt-option-check">✓</span>
-
-                        </label>
-
-                        <label class="attempt-option">
-
-                            <input type="radio"
-                                   name="answer"
-                                   value="D"
-                                   {% if selected_answer == 'D' %}checked{% endif %}>
-
-                            <span class="attempt-option-letter">D</span>
-
-                            <span class="attempt-option-text">
-                                {{ question.option_d }}
-                            </span>
-
-                            <span class="attempt-option-check">✓</span>
-
-                        </label>
-
-                    </div>
-
-                    <div id="quizError"
-                         class="quiz-error-message"
-                         role="alert">
-                        Please select an answer before continuing.
-                    </div>
-
-                    <!-- FOOTER -->
-                    <div class="attempt-footer">
-
-                        <div class="answer-security">
-                            <span>🔒</span>
-
-                            <p>
-                                Your answer is securely recorded.
-                            </p>
-                        </div>
-
-                        <button type="submit"
-                                class="next-question-btn"
-                                id="nextButton">
-
-                            {% if number == total %}
-                                <span>Submit Quiz</span>
-                                <span class="btn-icon">🚀</span>
-                            {% else %}
-                                <span>Next Question</span>
-                                <span class="btn-icon">→</span>
-                            {% endif %}
-
-                        </button>
-
-                    </div>
-
-                </form>
-
-            </section>
-
-            <!-- HELPER -->
-            <div class="attempt-helper">
-                <span>💡</span>
-
-                <p>
-                    Choose your answer carefully before continuing.
-                    You won't be able to return to a previous question.
+                <p class="muted">
+                    Question-by-question assessment
                 </p>
             </div>
 
-        {% endif %}
+            <div class="timer">
+                <span class="timer-label">Time Remaining</span>
 
-    </main>
+                <span
+                    class="timer-value"
+                    id="overallTimer"
+                >
+                    --:--
+                </span>
+            </div>
+        </header>
 
+        <div class="progress-wrapper">
+            <div class="progress-label">
+                <span id="progressText">Question 1</span>
+                <span id="answeredText">0 answered</span>
+            </div>
+
+            <div class="progress-track">
+                <div
+                    class="progress-bar"
+                    id="progressBar"
+                ></div>
+            </div>
+        </div>
+
+        <div class="notice hidden" id="timerNotice">
+            Time is up. Submitting your quiz...
+        </div>
+
+        <form
+            id="quizForm"
+            method="POST"
+            action="{{ url_for('student.quiz') }}"
+        >
+            <input
+                type="hidden"
+                name="question_id"
+                id="questionId"
+                value=""
+            >
+
+            <input
+                type="hidden"
+                name="action"
+                id="formAction"
+                value="save"
+            >
+
+            {% for question in questions %}
+                <section
+                    class="card question-card {% if not loop.first %}hidden{% endif %}"
+                    data-index="{{ loop.index0 }}"
+                    data-question-id="{{ question.question_id }}"
+                >
+                    <div class="question-number">
+                        Question {{ loop.index }}
+                        of {{ questions|length }}
+                    </div>
+
+                    <h2 class="question-text">
+                        {{ question.question }}
+                    </h2>
+
+                    <div class="options">
+                        {% for letter, option in [
+                            ('A', question.option_a),
+                            ('B', question.option_b),
+                            ('C', question.option_c),
+                            ('D', question.option_d)
+                        ] %}
+                            <label class="option">
+                                <input
+                                    type="radio"
+                                    name="selected_option"
+                                    value="{{ letter }}"
+                                    data-question-id="{{ question.question_id }}"
+                                    {% if answers and
+                                          answers.get(question.question_id) == letter %}
+                                        checked
+                                    {% endif %}
+                                >
+
+                                <span class="option-text">
+                                    <strong>{{ letter }}.</strong>
+                                    {{ option }}
+                                </span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endfor %}
+
+            <div class="controls">
+                <button
+                    class="btn btn-secondary"
+                    type="button"
+                    id="previousButton"
+                >
+                    ← Previous
+                </button>
+
+                <button
+                    class="btn btn-primary"
+                    type="button"
+                    id="nextButton"
+                >
+                    Save & Next →
+                </button>
+
+                <button
+                    class="btn btn-danger"
+                    type="button"
+                    id="submitButton"
+                >
+                    Submit Quiz
+                </button>
+            </div>
+        </form>
+
+    {% endif %}
 </div>
 
-{% if not unavailable %}
-
+{% if not unavailable and not show_result %}
 <script>
-(() => {
+(function () {
     "use strict";
 
-    const quizForm = document.getElementById("quizForm");
-    const overallTimer = document.getElementById("overallTimer");
-    const questionTimer = document.getElementById("questionTimer");
-    const questionTimerBox = document.getElementById("questionTimerBox");
-    const nextButton = document.getElementById("nextButton");
-    const errorMessage = document.getElementById("quizError");
+    const form = document.getElementById("quizForm");
+    const cards = Array.from(
+        document.querySelectorAll(".question-card")
+    );
 
-    if (!quizForm || !overallTimer || !nextButton) {
+    if (!form || cards.length === 0) {
         return;
     }
 
-    /*
-     * Values are calculated by Flask.
-     * Server-side validation remains authoritative.
-     */
-    let overallSeconds = Math.max(
+    const overallTimer = document.getElementById("overallTimer");
+    const progressText = document.getElementById("progressText");
+    const answeredText = document.getElementById("answeredText");
+    const progressBar = document.getElementById("progressBar");
+
+    const previousButton = document.getElementById("previousButton");
+    const nextButton = document.getElementById("nextButton");
+    const submitButton = document.getElementById("submitButton");
+
+    const questionIdInput = document.getElementById("questionId");
+    const actionInput = document.getElementById("formAction");
+    const timerNotice = document.getElementById("timerNotice");
+
+    let currentIndex = 0;
+    let submitting = false;
+
+    let remainingSeconds = Math.max(
         0,
         Number({{ remaining_seconds|default(0)|int }})
     );
 
-    let questionSeconds = Math.max(
+    const questionTimeSeconds = Math.max(
         0,
-        Number({{ question_remaining_seconds|default(0)|int }})
+        Number({{ question_time_seconds|default(0)|int }})
     );
 
-    const hasQuestionTimer = Boolean(questionTimerBox);
-
-    /*
-     * Epoch seconds supplied by Flask.
-     */
-    const quizDeadline = Number(
-        {{ quiz_deadline|default(0)|int }}
-    );
-
-    let submitted = false;
-    let overallInterval = null;
-    let questionInterval = null;
-    let deadlineInterval = null;
-
-    /*
-     * Use elapsed browser time for smoother countdowns.
-     * The server independently checks the actual deadline.
-     */
-    let lastTick = Date.now();
+    let questionRemainingSeconds = questionTimeSeconds;
 
     function formatTime(seconds) {
         seconds = Math.max(0, Math.floor(seconds));
 
         const minutes = Math.floor(seconds / 60);
-        const secondsPart = seconds % 60;
+        const remainder = seconds % 60;
 
-        return (
-            String(minutes).padStart(2, "0") +
-            ":" +
-            String(secondsPart).padStart(2, "0")
+        return String(minutes).padStart(2, "0")
+            + ":"
+            + String(remainder).padStart(2, "0");
+    }
+
+    function getQuestionInputs(index) {
+        return Array.from(
+            cards[index].querySelectorAll(
+                'input[name="selected_option"]'
+            )
         );
     }
 
-    function stopTimers() {
-        if (overallInterval !== null) {
-            clearInterval(overallInterval);
-            overallInterval = null;
-        }
-
-        if (questionInterval !== null) {
-            clearInterval(questionInterval);
-            questionInterval = null;
-        }
-
-        if (deadlineInterval !== null) {
-            clearInterval(deadlineInterval);
-            deadlineInterval = null;
-        }
+    function getSelectedAnswer(index) {
+        return getQuestionInputs(index).find(
+            input => input.checked
+        );
     }
 
-    /*
-     * All timer-triggered submissions go through one function.
-     * This prevents the overall and question timers from
-     * submitting the form twice.
-     */
-    function autoSubmit() {
-        if (submitted) {
-            return;
-        }
+    function countAnswered() {
+        let count = 0;
 
-        submitted = true;
-        stopTimers();
+        cards.forEach((card, index) => {
+            if (getSelectedAnswer(index)) {
+                count++;
+            }
+        });
 
-        nextButton.disabled = true;
-
-        /*
-         * Intentional: timer expiry must submit even if no answer
-         * is selected. Native form.submit() bypasses required
-         * validation and the submit event.
-         */
-        HTMLFormElement.prototype.submit.call(quizForm);
+        return count;
     }
 
-    function updateOverallDisplay() {
-        overallTimer.textContent = formatTime(overallSeconds);
+    function updateProgress() {
+        const total = cards.length;
+        const answered = countAnswered();
 
-        if (overallSeconds <= 60) {
-            overallTimer.style.color = "#dc2626";
-        }
+        progressText.textContent =
+            "Question " + (currentIndex + 1)
+            + " of " + total;
 
-        if (overallSeconds <= 0) {
-            autoSubmit();
-        }
+        answeredText.textContent =
+            answered + " answered";
+
+        progressBar.style.width =
+            ((currentIndex + 1) / total * 100) + "%";
     }
 
     function updateQuestionDisplay() {
-        if (!hasQuestionTimer || !questionTimer) {
-            return;
-        }
-
-        questionTimer.textContent = formatTime(questionSeconds);
-
-        if (questionSeconds <= 10 && questionSeconds > 5) {
-            questionTimerBox.classList.add("timer-warning");
-        } else {
-            questionTimerBox.classList.remove("timer-warning");
-        }
-
-        if (questionSeconds <= 5) {
-            questionTimerBox.classList.add("timer-danger");
-        } else {
-            questionTimerBox.classList.remove("timer-danger");
-        }
-
-        if (questionSeconds <= 0) {
-            autoSubmit();
-        }
-    }
-
-    function updateCountdowns() {
-        if (submitted) {
-            return;
-        }
-
-        const now = Date.now();
-        const elapsed = Math.max(0, (now - lastTick) / 1000);
-
-        lastTick = now;
-
-        overallSeconds = Math.max(0, overallSeconds - elapsed);
-
-        if (hasQuestionTimer) {
-            questionSeconds = Math.max(0, questionSeconds - elapsed);
-        }
-
-        updateOverallDisplay();
-
-        if (!submitted && hasQuestionTimer) {
-            updateQuestionDisplay();
-        }
-    }
-
-    function checkDeadline() {
-        if (submitted || !quizDeadline) {
-            return;
-        }
-
-        /*
-         * Browser deadline check is a convenience only.
-         * The Flask server must also enforce the deadline.
-         */
-        const serverDeadlineRemaining =
-            quizDeadline - (Date.now() / 1000);
-
-        if (serverDeadlineRemaining <= 0) {
-            autoSubmit();
-        }
-    }
-
-    /*
-     * Restore visual selection state and highlight the selected
-     * option without changing the existing stylesheet.
-     */
-    function refreshSelectedOption() {
-        document.querySelectorAll(".attempt-option").forEach((label) => {
-            const radio = label.querySelector('input[type="radio"]');
-
-            if (radio) {
-                label.classList.toggle("selected", radio.checked);
-            }
+        cards.forEach((card, index) => {
+            card.classList.toggle(
+                "hidden",
+                index !== currentIndex
+            );
         });
+
+        const currentCard = cards[currentIndex];
+
+        questionIdInput.value =
+            currentCard.dataset.questionId;
+
+        previousButton.disabled = currentIndex === 0;
+
+        nextButton.textContent =
+            currentIndex === cards.length - 1
+                ? "Save Answer"
+                : "Save & Next →";
+
+        questionRemainingSeconds = questionTimeSeconds;
+
+        updateProgress();
     }
 
-    quizForm.querySelectorAll('input[name="answer"]').forEach((radio) => {
-        radio.addEventListener("change", () => {
-            refreshSelectedOption();
+    function saveCurrentAnswerLocally() {
+        // Selected radio buttons are part of the form and will be
+        // submitted to the server. Do not store questions in session.
+        updateProgress();
+    }
 
-            if (errorMessage) {
-                errorMessage.classList.remove("visible");
-            }
-        });
+    function postAction(action) {
+        if (submitting) {
+            return;
+        }
+
+        if (remainingSeconds <= 0) {
+            autoSubmit();
+            return;
+        }
+
+        submitting = true;
+        actionInput.value = action;
+
+        previousButton.disabled = true;
+        nextButton.disabled = true;
+        submitButton.disabled = true;
+
+        form.submit();
+    }
+
+    function autoSubmit() {
+        if (submitting) {
+            return;
+        }
+
+        submitting = true;
+
+        timerNotice.classList.remove("hidden");
+        actionInput.value = "submit";
+
+        // The normal form submit handler is deliberately bypassed.
+        // This ensures the quiz can be submitted even when no answer
+        // is selected on the current question.
+        HTMLFormElement.prototype.submit.call(form);
+    }
+
+    previousButton.addEventListener("click", function () {
+        if (submitting || currentIndex <= 0) {
+            return;
+        }
+
+        saveCurrentAnswerLocally();
+        currentIndex--;
+        updateQuestionDisplay();
     });
 
-    refreshSelectedOption();
-
-    /*
-     * Manual submit requires an answer.
-     * Timer-triggered submission bypasses this listener intentionally.
-     */
-    quizForm.addEventListener("submit", (event) => {
-        if (submitted) {
-            event.preventDefault();
+    nextButton.addEventListener("click", function () {
+        if (submitting) {
             return;
         }
 
-        const selectedAnswer = quizForm.querySelector(
-            'input[name="answer"]:checked'
+        saveCurrentAnswerLocally();
+
+        if (currentIndex < cards.length - 1) {
+            postAction("save");
+        } else {
+            postAction("save");
+        }
+    });
+
+    submitButton.addEventListener("click", function () {
+        if (submitting) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            "Are you sure you want to submit your quiz?"
         );
 
-        if (!selectedAnswer) {
-            event.preventDefault();
+        if (confirmed) {
+            postAction("submit");
+        }
+    });
 
-            if (errorMessage) {
-                errorMessage.classList.add("visible");
-                errorMessage.textContent =
-                    "Please select an answer before continuing.";
-            }
+    form.addEventListener("change", function (event) {
+        if (
+            event.target.matches(
+                'input[name="selected_option"]'
+            )
+        ) {
+            cards.forEach(card => {
+                card.querySelectorAll(".option").forEach(
+                    label => label.classList.remove("selected")
+                );
 
-            const firstRadio = quizForm.querySelector(
-                'input[name="answer"]'
-            );
+                const checked = card.querySelector(
+                    'input[name="selected_option"]:checked'
+                );
 
-            if (firstRadio) {
-                firstRadio.focus();
-            }
+                if (checked) {
+                    checked.closest(".option")
+                        .classList.add("selected");
+                }
+            });
 
+            updateProgress();
+        }
+    });
+
+    // Initialize the page using the server-provided remaining time.
+    updateQuestionDisplay();
+
+    cards.forEach(card => {
+        const checked = card.querySelector(
+            'input[name="selected_option"]:checked'
+        );
+
+        if (checked) {
+            checked.closest(".option")
+                .classList.add("selected");
+        }
+    });
+
+    overallTimer.textContent = formatTime(remainingSeconds);
+
+    const overallInterval = window.setInterval(function () {
+        if (submitting) {
+            window.clearInterval(overallInterval);
             return;
         }
 
-        submitted = true;
-        stopTimers();
-        nextButton.disabled = true;
-    });
+        remainingSeconds--;
 
-    /*
-     * Initial display.
-     */
-    updateOverallDisplay();
+        overallTimer.textContent =
+            formatTime(remainingSeconds);
 
-    if (!submitted && hasQuestionTimer) {
-        updateQuestionDisplay();
-    }
-
-    /*
-     * One countdown interval updates both timers.
-     */
-    if (!submitted) {
-        overallInterval = setInterval(updateCountdowns, 250);
-        deadlineInterval = setInterval(checkDeadline, 500);
-    }
-
-    /*
-     * Start question countdown only if the feature is enabled.
-     */
-    if (hasQuestionTimer && !submitted) {
-        questionInterval = setInterval(updateQuestionDisplay, 1000);
-    }
-
-    /*
-     * If the page becomes visible after being backgrounded,
-     * immediately recalculate the countdown.
-     */
-    document.addEventListener("visibilitychange", () => {
-        if (!document.hidden && !submitted) {
-            updateCountdowns();
-            checkDeadline();
+        if (remainingSeconds <= 0) {
+            window.clearInterval(overallInterval);
+            autoSubmit();
         }
-    });
+    }, 1000);
 
-    /*
-     * Prevent accidental repeated clicks while a request is being
-     * submitted. Timer submissions use autoSubmit() above.
-     */
+    if (questionTimeSeconds > 0) {
+        window.setInterval(function () {
+            if (submitting) {
+                return;
+            }
+
+            questionRemainingSeconds--;
+
+            if (questionRemainingSeconds <= 0) {
+                if (currentIndex < cards.length - 1) {
+                    postAction("save");
+                } else {
+                    postAction("submit");
+                }
+            }
+        }, 1000);
+    }
 })();
 </script>
-
 {% endif %}
-
-<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
 
 </body>
 </html>
-

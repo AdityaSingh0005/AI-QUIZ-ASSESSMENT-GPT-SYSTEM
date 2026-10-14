@@ -1,438 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Join Quiz</title>
+    <title>Join Quiz | AI Quiz Assessment</title>
 
     <style>
-
         * {
             box-sizing: border-box;
         }
 
         body {
-
             margin: 0;
-
             min-height: 100vh;
-
             display: flex;
-
             align-items: center;
-
             justify-content: center;
-
             padding: 20px;
-
-            font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
-
+            font-family: Arial, Helvetica, sans-serif;
+            color: #f1f5f9;
             background:
-                linear-gradient(
-                    135deg,
-                    #0f172a,
-                    #1e1b4b
-                );
-
-            color: white;
+                radial-gradient(circle at top left, #253b80, transparent 45%),
+                linear-gradient(135deg, #0f172a, #111827 60%, #172554);
         }
 
         .card {
-
             width: 100%;
-
-            max-width: 460px;
-
+            max-width: 480px;
             padding: 35px;
-
-            border-radius: 24px;
-
-            background:
-                rgba(
-                    255,
-                    255,
-                    255,
-                    0.08
-                );
-
-            border:
-                1px solid
-                rgba(
-                    255,
-                    255,
-                    255,
-                    0.15
-                );
-
-            backdrop-filter:
-                blur(20px);
-
-            box-shadow:
-                0 25px 70px
-                rgba(
-                    0,
-                    0,
-                    0,
-                    0.4
-                );
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 22px;
+            background: rgba(15,23,42,.94);
+            box-shadow: 0 25px 70px rgba(0,0,0,.35);
         }
 
-        .icon {
-
-            width: 70px;
-
-            height: 70px;
-
-            margin: 0 auto 20px;
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            border-radius: 20px;
-
-            font-size: 32px;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #2563eb,
-                    #7c3aed
-                );
+        .badge {
+            display: inline-block;
+            padding: 7px 12px;
+            border-radius: 30px;
+            color: #bfdbfe;
+            background: rgba(59,130,246,.15);
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: .5px;
         }
 
         h1 {
-
-            margin: 0;
-
-            text-align: center;
-
+            margin: 18px 0 8px;
             font-size: 28px;
         }
 
-        .quiz-title {
-
-            margin-top: 10px;
-
-            text-align: center;
-
-            color: #cbd5e1;
-
-            font-size: 16px;
-
-            line-height: 1.5;
-        }
-
-        .info {
-
-            display: grid;
-
-            grid-template-columns:
-                1fr 1fr;
-
-            gap: 10px;
-
-            margin:
-                25px 0;
-        }
-
-        .info-box {
-
-            padding: 14px;
-
-            border-radius: 14px;
-
-            background:
-                rgba(
-                    255,
-                    255,
-                    255,
-                    0.06
-                );
-
-            text-align: center;
-        }
-
-        .info-box strong {
-
-            display: block;
-
-            font-size: 18px;
-
-            margin-bottom: 5px;
-        }
-
-        .info-box span {
-
+        .subtitle {
+            margin-bottom: 25px;
             color: #94a3b8;
+            line-height: 1.6;
+        }
 
-            font-size: 12px;
+        .quiz-info {
+            margin: 20px 0 25px;
+            padding: 18px;
+            border-radius: 14px;
+            background: #1e293b;
+        }
+
+        .quiz-info h2 {
+            margin: 0 0 14px;
+            font-size: 19px;
+            line-height: 1.4;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,.07);
+            color: #cbd5e1;
+            font-size: 14px;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
         }
 
         label {
-
             display: block;
-
-            margin-bottom: 8px;
-
-            color: #e2e8f0;
-
+            margin: 18px 0 8px;
             font-size: 14px;
-
             font-weight: 600;
         }
 
         input {
-
             width: 100%;
-
-            padding: 14px 15px;
-
-            margin-bottom: 18px;
-
-            border: 1px solid
-                rgba(
-                    255,
-                    255,
-                    255,
-                    0.15
-                );
-
-            border-radius: 12px;
-
+            padding: 13px 14px;
+            border: 1px solid #334155;
+            border-radius: 10px;
             outline: none;
-
             color: white;
-
-            background:
-                rgba(
-                    0,
-                    0,
-                    0,
-                    0.2
-                );
-
+            background: #0f172a;
             font-size: 15px;
         }
 
         input:focus {
-
-            border-color: #6366f1;
-
-            box-shadow:
-                0 0 0 3px
-                rgba(
-                    99,
-                    102,
-                    241,
-                    0.15
-                );
-        }
-
-        button {
-
-            width: 100%;
-
-            padding: 15px;
-
-            border: none;
-
-            border-radius: 13px;
-
-            cursor: pointer;
-
-            color: white;
-
-            font-size: 16px;
-
-            font-weight: 700;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #2563eb,
-                    #7c3aed
-                );
-
-            transition:
-                transform .2s,
-                box-shadow .2s;
-        }
-
-        button:hover {
-
-            transform:
-                translateY(-2px);
-
-            box-shadow:
-                0 12px 30px
-                rgba(
-                    37,
-                    99,
-                    235,
-                    0.35
-                );
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96,165,250,.12);
         }
 
         .error {
-
-            padding: 12px;
-
-            margin-bottom: 18px;
-
+            margin: 15px 0;
+            padding: 12px 14px;
+            border: 1px solid rgba(248,113,113,.3);
             border-radius: 10px;
-
             color: #fecaca;
-
-            background:
-                rgba(
-                    239,
-                    68,
-                    68,
-                    0.12
-                );
-
-            border:
-                1px solid
-                rgba(
-                    239,
-                    68,
-                    68,
-                    0.25
-                );
-
+            background: rgba(127,29,29,.3);
+            line-height: 1.5;
             font-size: 14px;
         }
 
-        .note {
-
-            margin-top: 18px;
-
-            text-align: center;
-
-            color: #64748b;
-
-            font-size: 12px;
-
-            line-height: 1.5;
+        .submit-btn {
+            width: 100%;
+            margin-top: 25px;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform .2s, opacity .2s;
         }
 
-    </style>
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
 
+        .submit-btn:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .note {
+            margin-top: 18px;
+            color: #94a3b8;
+            font-size: 12px;
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
 </head>
 
 <body>
+    <main class="card">
+        <span class="badge">AI QUIZ ASSESSMENT</span>
 
-    <div class="card">
+        <h1>Ready to begin?</h1>
 
-        <div class="icon">
-            📝
-        </div>
+        <p class="subtitle">
+            Enter your details below to start the quiz.
+            Make sure your information is correct.
+        </p>
 
-        <h1>
-            Join Quiz
-        </h1>
+        <section class="quiz-info">
+            <h2>
+                {{ quiz.title }}
+            </h2>
 
-        <div class="quiz-title">
-
-            {{ quiz.title }}
-
-        </div>
-
-        <div class="info">
-
-            <div class="info-box">
-
-                <strong>
-                    {{ quiz.total_questions }}
-                </strong>
-
-                <span>
-                    Questions
-                </span>
-
+            <div class="info-row">
+                <span>Total Questions</span>
+                <strong>{{ quiz.total_questions }}</strong>
             </div>
 
-            <div class="info-box">
-
-                <strong>
-                    {{ quiz.duration_minutes }} min
-                </strong>
-
-                <span>
-                    Duration
-                </span>
-
+            <div class="info-row">
+                <span>Duration</span>
+                <strong>{{ quiz.duration_minutes }} minutes</strong>
             </div>
-
-        </div>
+        </section>
 
         {% if error %}
-
-        <div class="error">
-
-            {{ error }}
-
-        </div>
-
+            <div class="error" role="alert">
+                {{ error }}
+            </div>
         {% endif %}
 
         <form
+            id="guestForm"
             method="POST"
             action="{{ url_for('student.guest_start_quiz', quiz_id=quiz.quiz_id) }}"
         >
-
-            <label>
-                Student Name
-            </label>
+            <label for="student_name">Full Name</label>
 
             <input
-                type="text"
+                id="student_name"
                 name="student_name"
+                type="text"
+                maxlength="120"
+                autocomplete="name"
                 placeholder="Enter your full name"
                 required
-                autocomplete="name"
             >
 
-            <label>
-                Roll Number
-            </label>
+            <label for="roll_number">Roll Number</label>
 
             <input
-                type="text"
+                id="roll_number"
                 name="roll_number"
+                type="text"
+                maxlength="50"
+                autocomplete="off"
                 placeholder="Enter your roll number"
                 required
-                autocomplete="off"
             >
 
-            <button type="submit">
-                🚀 Start Quiz
+            <button
+                class="submit-btn"
+                id="startButton"
+                type="submit"
+            >
+                Start Quiz →
             </button>
-
         </form>
 
-        <div class="note">
+        <p class="note">
+            By starting the quiz, you confirm that the details
+            entered above are correct.
+        </p>
+    </main>
 
-            Enter your correct name and roll number
-            before starting the quiz.
+    <script>
+        const form = document.getElementById("guestForm");
+        const button = document.getElementById("startButton");
 
-        </div>
+        form.addEventListener("submit", function (event) {
+            const name = document
+                .getElementById("student_name")
+                .value.trim();
 
-    </div>
+            const roll = document
+                .getElementById("roll_number")
+                .value.trim();
 
+            if (!name || !roll) {
+                event.preventDefault();
+                alert("Please enter your name and roll number.");
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = "Starting quiz...";
+        });
+    </script>
 </body>
-
 </html>
