@@ -1004,6 +1004,7 @@ def guest_start():
 # QUIZ PAGE AND ANSWER SUBMISSION
 # ============================================================
 
+
 @student.route("/quiz", methods=["GET", "POST"])
 def quiz():
     attempt_id = _active_attempt_id()
@@ -1061,8 +1062,23 @@ def quiz():
     deadline = _effective_deadline(attempt, quiz_data)
     remaining_seconds = _seconds_left(deadline)
 
+    # Initialize and validate the server-side question index.
+    try:
+        expected_index = int(
+            session.get("quiz_current_index", 0)
+        )
+    except (TypeError, ValueError):
+        expected_index = 0
+
+    expected_index = max(
+        0,
+        min(expected_index, len(questions) - 1),
+    )
+
+    session["quiz_current_index"] = expected_index
+
     # --------------------------------------------------------
-    # POST: Save answer, move to next question, or submit quiz.
+    # POST: Save answer, move forward, or submit the quiz.
     # --------------------------------------------------------
     if request.method == "POST":
         posted_question_id = request.form.get(
@@ -1076,12 +1092,12 @@ def quiz():
 
         action = request.form.get("action", "save")
 
-        # Validate the question ID.
         question_ids = {
             question["question_id"]
             for question in questions
         }
 
+        # Reject missing or invalid question IDs.
         if (
             not posted_question_id
             or posted_question_id not in question_ids
@@ -1091,26 +1107,31 @@ def quiz():
                 "error",
             )
             return redirect(url_for("student.quiz"))
-        
-            expected_index = session.get("quiz_current_index", 0)
 
-    expected_index = max(
-        0,
-        min(int(expected_index), len(questions) - 1),
-    )
+        expected_question_id = questions[
+            expected_index
+        ]["question_id"]
 
-    expected_question_id = questions[expected_index]["question_id"]
+        # Reject attempts to submit answers for other questions.
+        if posted_question_id != expected_question_id:
+            current_app.logger.warning(
+                "Blocked invalid question navigation: "
+                "attempt_id=%s, posted_question_id=%s, "
+                "expected_question_id=%s",
+                attempt_id,
+                posted_question_id,
+                expected_question_id,
+            )
+            return redirect(url_for("student.quiz"))
 
-    if posted_question_id != expected_question_id:
-        current_app.logger.warning(
-            "Blocked invalid question navigation: attempt_id=%s",
-            attempt_id,
-        )
-        return redirect(url_for("student.quiz"))
+        # Overall quiz timeout: submit without accepting a new answer.
+        if remaining_seconds <= 0:
+            _mark_attempt_submitted(attempt_id)
+            return redirect(url_for("student.quiz"))
 
-        # Save the currently displayed question's answer.
-        if selected_option in ("A", "B", "C", "D"):
-            if remaining_seconds > 0:
+        # Explicit submission.
+        if action == "submit":
+            if selected_option in ("A", "B", "C", "D"):
                 try:
                     _save_answer(
                         attempt,
@@ -1119,50 +1140,49 @@ def quiz():
                     )
                 except Exception:
                     current_app.logger.exception(
-                        "Unable to save the current answer."
+                        "Unable to save the final answer."
                     )
                     flash(
-                        "Unable to save your answer. Please try again.",
+                        "Unable to save your answer.",
                         "error",
                     )
-                    return redirect(
-                        url_for("student.quiz")
-                    )
+                    return redirect(url_for("student.quiz"))
 
-        # Submit if the overall timer has expired.
-        if remaining_seconds <= 0:
             _mark_attempt_submitted(attempt_id)
             return redirect(url_for("student.quiz"))
 
-        # Submit when the student explicitly clicks Submit Quiz.
-        if action == "submit":
-            _mark_attempt_submitted(attempt_id)
-            return redirect(url_for("student.quiz"))
+        # Save the answer for the current question.
+        if selected_option in ("A", "B", "C", "D"):
+            try:
+                _save_answer(
+                    attempt,
+                    posted_question_id,
+                    selected_option,
+                )
+            except Exception:
+                current_app.logger.exception(
+                    "Unable to save the current answer."
+                )
+                flash(
+                    "Unable to save your answer. "
+                    "Please try again.",
+                    "error",
+                )
+                return redirect(url_for("student.quiz"))
 
-        # Keep the current question index between requests.
-        current_index = request.form.get(
-            "current_index",
-            default=0,
-            type=int,
-        )
-
-        # Protect against an invalid index.
-        current_index = max(
-            0,
-            min(current_index, len(questions) - 1),
-        )
-
-        # Move forward without going beyond the last question.
+        # Advance only according to the server-side index.
         next_index = min(
             expected_index + 1,
             len(questions) - 1,
         )
-        session["quiz_current_index"] = next_index
+
+        if next_index != expected_index:
+            session["quiz_current_index"] = next_index
 
         return redirect(url_for("student.quiz"))
 
     # --------------------------------------------------------
-    # GET: Render the requested question.
+    # GET: Render the current question.
     # --------------------------------------------------------
     attempt = _get_attempt(attempt_id)
 
@@ -1182,18 +1202,20 @@ def quiz():
     except (TypeError, ValueError):
         question_time_seconds = 0
 
-    # Server-side question position: ignore URL changes.
-    current_index = session.get("quiz_current_index", 0)
-
-    current_index = max(
-        0,
-        min(int(current_index), len(questions) - 1),
-    )
+    # Revalidate the current index before rendering.
+    try:
+        current_index = int(
+            session.get("quiz_current_index", 0)
+        )
+    except (TypeError, ValueError):
+        current_index = 0
 
     current_index = max(
         0,
         min(current_index, len(questions) - 1),
     )
+
+    session["quiz_current_index"] = current_index
 
     return render_template(
         "quiz.html",
@@ -1207,6 +1229,8 @@ def quiz():
         unavailable=False,
         show_result=False,
     )
+
+
 
 
 # ============================================================
