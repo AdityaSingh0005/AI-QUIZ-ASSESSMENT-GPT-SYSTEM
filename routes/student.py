@@ -996,12 +996,9 @@ def guest_start():
             url_for("student.available_quizzes")
         )
 
-    return redirect(
-        url_for(
-            "student.guest_start_quiz",
-            quiz_id=quiz_id,
-        )
-    )
+    # Process the submitted name and roll number
+    # using the existing guest quiz-start logic.
+    return guest_start_quiz(quiz_id)
 
 
 # ============================================================
