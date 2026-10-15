@@ -970,6 +970,12 @@ def guest_start_quiz(quiz_id):
         _close_db(connection)
 
     _clear_active_quiz_session()
+    
+    current_app.logger.warning(
+    "GUEST DEBUG: attempt_id=%s, quiz_id=%s",
+    attempt["attempt_id"],
+    quiz_id,
+)
 
     session["active_attempt_id"] = attempt["attempt_id"]
     session["active_quiz_id"] = quiz_id
@@ -1005,6 +1011,12 @@ def guest_start():
 @student.route("/quiz", methods=["GET", "POST"])
 def quiz():
     attempt_id = _active_attempt_id()
+    
+    current_app.logger.warning(
+    "QUIZ DEBUG: attempt_id=%s, attempt_mode=%s",
+    session.get("active_attempt_id"),
+    session.get("attempt_mode"),
+)
 
     if not attempt_id:
         flash(
@@ -1171,6 +1183,8 @@ def quiz():
 )
 def submit_quiz():
     attempt_id = _active_attempt_id()
+    
+    
 
     if not attempt_id:
         flash("No active quiz found.", "error")
