@@ -1008,30 +1008,17 @@ def guest_start():
 @student.route("/quiz", methods=["GET", "POST"])
 def quiz():
     attempt_id = _active_attempt_id()
-    
-    current_app.logger.warning(
-    "QUIZ DEBUG: attempt_id=%s, attempt_mode=%s",
-    session.get("active_attempt_id"),
-    session.get("attempt_mode"),
-)
 
     if not attempt_id:
-        flash(
-            "Please start a quiz first.",
-            "error",
-        )
-        return redirect(
-            url_for("student.available_quizzes")
-        )
+        flash("Please start a quiz first.", "error")
+        return redirect(url_for("student.available_quizzes"))
 
     attempt = _get_attempt(attempt_id)
 
     if not attempt:
         _clear_active_quiz_session()
         flash("Quiz attempt not found.", "error")
-        return redirect(
-            url_for("student.available_quizzes")
-        )
+        return redirect(url_for("student.available_quizzes"))
 
     quiz_data = _get_quiz(attempt["quiz_id"])
 
@@ -1039,7 +1026,7 @@ def quiz():
         _clear_active_quiz_session()
         return "Quiz not found.", 404
 
-    # Prevent access to a different student's attempt.
+    # Validate access for logged-in students.
     if not _is_guest():
         logged_in_id = session.get("student_id")
 
@@ -1050,7 +1037,7 @@ def quiz():
             _clear_active_quiz_session()
             return redirect(url_for("auth.login"))
 
-    # Show results if the attempt was already submitted.
+    # Show results when the attempt has already been submitted.
     if attempt["status"] == "submitted":
         review = _build_result_review(attempt_id)
 
@@ -1064,9 +1051,7 @@ def quiz():
             unavailable=False,
         )
 
-    questions = _get_attempt_questions(
-        attempt["quiz_id"]
-    )
+    questions = _get_attempt_questions(attempt["quiz_id"])
 
     if not questions:
         return _quiz_unavailable_page(
@@ -1074,13 +1059,12 @@ def quiz():
             "This quiz does not contain any questions.",
         )
 
-    deadline = _effective_deadline(
-        attempt,
-        quiz_data,
-    )
-
+    deadline = _effective_deadline(attempt, quiz_data)
     remaining_seconds = _seconds_left(deadline)
 
+    # --------------------------------------------------------
+    # POST: Save answer, move to next question, or submit quiz.
+    # --------------------------------------------------------
     if request.method == "POST":
         posted_question_id = request.form.get(
             "question_id",
@@ -1088,64 +1072,94 @@ def quiz():
         )
 
         selected_option = (
-            request.form.get("selected_option")
-            or ""
+            request.form.get("selected_option") or ""
         ).strip().upper()
-
-        # Save only a valid question belonging to this quiz.
-        if posted_question_id:
-            question_ids = {
-                question["question_id"]
-                for question in questions
-            }
-
-            if posted_question_id not in question_ids:
-                flash(
-                    "Invalid question. Please try again.",
-                    "error",
-                )
-                return redirect(url_for("student.quiz"))
-
-            if selected_option in ("A", "B", "C", "D"):
-                if remaining_seconds > 0:
-                    try:
-                        _save_answer(
-                            attempt,
-                            posted_question_id,
-                            selected_option,
-                        )
-                    except Exception:
-                        flash(
-                            "Unable to save your answer.",
-                            "error",
-                        )
-                        return redirect(
-                            url_for("student.quiz")
-                        )
-
-        # Submit once the overall timer has expired.
-        if remaining_seconds <= 0:
-            _mark_attempt_submitted(attempt_id)
-
-            return redirect(
-                url_for("student.quiz")
-            )
 
         action = request.form.get("action", "save")
 
+        # Validate the question ID.
+        question_ids = {
+            question["question_id"]
+            for question in questions
+        }
+
+        if (
+            not posted_question_id
+            or posted_question_id not in question_ids
+        ):
+            flash(
+                "Invalid question. Please try again.",
+                "error",
+            )
+            return redirect(url_for("student.quiz"))
+
+        # Save the currently displayed question's answer.
+        if selected_option in ("A", "B", "C", "D"):
+            if remaining_seconds > 0:
+                try:
+                    _save_answer(
+                        attempt,
+                        posted_question_id,
+                        selected_option,
+                    )
+                except Exception:
+                    current_app.logger.exception(
+                        "Unable to save the current answer."
+                    )
+                    flash(
+                        "Unable to save your answer. Please try again.",
+                        "error",
+                    )
+                    return redirect(
+                        url_for("student.quiz")
+                    )
+
+        # Submit if the overall timer has expired.
+        if remaining_seconds <= 0:
+            _mark_attempt_submitted(attempt_id)
+            return redirect(url_for("student.quiz"))
+
+        # Submit when the student explicitly clicks Submit Quiz.
         if action == "submit":
             _mark_attempt_submitted(attempt_id)
+            return redirect(url_for("student.quiz"))
 
-            return redirect(
-                url_for("student.quiz")
+        # Keep the current question index between requests.
+        current_index = request.form.get(
+            "current_index",
+            default=0,
+            type=int,
+        )
+
+        # Protect against an invalid index.
+        current_index = max(
+            0,
+            min(current_index, len(questions) - 1),
+        )
+
+        # Move forward without going beyond the last question.
+        next_index = min(
+            current_index + 1,
+            len(questions) - 1,
+        )
+
+        return redirect(
+            url_for(
+                "student.quiz",
+                question=next_index,
             )
+        )
 
-        return redirect(url_for("student.quiz"))
-
-    # Refresh attempt in case it was submitted elsewhere.
+    # --------------------------------------------------------
+    # GET: Render the requested question.
+    # --------------------------------------------------------
     attempt = _get_attempt(attempt_id)
 
-    if not attempt or attempt["status"] == "submitted":
+    if not attempt:
+        _clear_active_quiz_session()
+        return redirect(url_for("student.available_quizzes"))
+
+    if attempt["status"] == "submitted":
         return redirect(url_for("student.quiz"))
 
     answers = _get_attempt_answers(attempt_id)
@@ -1157,6 +1171,18 @@ def quiz():
     except (TypeError, ValueError):
         question_time_seconds = 0
 
+    # Read the question index from the URL.
+    current_index = request.args.get(
+        "question",
+        default=0,
+        type=int,
+    )
+
+    current_index = max(
+        0,
+        min(current_index, len(questions) - 1),
+    )
+
     return render_template(
         "quiz.html",
         quiz=quiz_data,
@@ -1165,6 +1191,7 @@ def quiz():
         attempt=attempt,
         remaining_seconds=remaining_seconds,
         question_time_seconds=question_time_seconds,
+        current_index=current_index,
         unavailable=False,
         show_result=False,
     )

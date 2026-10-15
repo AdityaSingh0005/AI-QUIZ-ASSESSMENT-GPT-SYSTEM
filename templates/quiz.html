@@ -472,18 +472,32 @@
             action="{{ url_for('student.quiz') }}"
         >
             <input
-                type="hidden"
-                name="question_id"
-                id="questionId"
-                value=""
-            >
+    type="hidden"
+    name="question_id"
+    id="questionId"
+    value=""
+>
 
-            <input
-                type="hidden"
-                name="action"
-                id="formAction"
-                value="save"
-            >
+<input
+    type="hidden"
+    name="action"
+    id="formAction"
+    value="save"
+>
+
+<input
+    type="hidden"
+    name="current_index"
+    id="currentIndexInput"
+    value="{{ current_index|default(0)|int }}"
+>
+
+<input
+    type="hidden"
+    name="selected_option"
+    id="selectedOptionInput"
+    value=""
+>
 
             {% for question in questions %}
                 <section
@@ -508,13 +522,13 @@
                             ('D', question.option_d)
                         ] %}
                             <label class="option">
-                                <input
+                               <input
                                     type="radio"
-                                    name="selected_option"
+                                    name="selected_option_{{ question.question_id }}"
                                     value="{{ letter }}"
                                     data-question-id="{{ question.question_id }}"
                                     {% if answers and
-                                          answers.get(question.question_id) == letter %}
+                                        answers.get(question.question_id) == letter %}
                                         checked
                                     {% endif %}
                                 >
@@ -584,9 +598,18 @@
 
     const questionIdInput = document.getElementById("questionId");
     const actionInput = document.getElementById("formAction");
+    const currentIndexInput = document.getElementById("currentIndexInput");
+    const selectedOptionInput = document.getElementById("selectedOptionInput");
     const timerNotice = document.getElementById("timerNotice");
 
-    let currentIndex = 0;
+    let currentIndex = Math.min(
+        cards.length - 1,
+        Math.max(
+            0,
+            Number({{ current_index|default(0)|int }})
+        )
+    );
+
     let submitting = false;
 
     let remainingSeconds = Math.max(
@@ -612,10 +635,11 @@
             + String(remainder).padStart(2, "0");
     }
 
+    // Return only the radio buttons belonging to one question.
     function getQuestionInputs(index) {
         return Array.from(
             cards[index].querySelectorAll(
-                'input[name="selected_option"]'
+                'input[type="radio"][data-question-id]'
             )
         );
     }
@@ -629,7 +653,7 @@
     function countAnswered() {
         let count = 0;
 
-        cards.forEach((card, index) => {
+        cards.forEach(function (card, index) {
             if (getSelectedAnswer(index)) {
                 count++;
             }
@@ -653,8 +677,30 @@
             ((currentIndex + 1) / total * 100) + "%";
     }
 
+    function updateSelectedStyles() {
+        cards.forEach(function (card) {
+            card.querySelectorAll(".option").forEach(
+                function (label) {
+                    label.classList.remove("selected");
+                }
+            );
+
+            const checked = card.querySelector(
+                'input[type="radio"][data-question-id]:checked'
+            );
+
+            if (checked) {
+                const label = checked.closest(".option");
+
+                if (label) {
+                    label.classList.add("selected");
+                }
+            }
+        });
+    }
+
     function updateQuestionDisplay() {
-        cards.forEach((card, index) => {
+        cards.forEach(function (card, index) {
             card.classList.toggle(
                 "hidden",
                 index !== currentIndex
@@ -666,6 +712,8 @@
         questionIdInput.value =
             currentCard.dataset.questionId;
 
+        currentIndexInput.value = currentIndex;
+
         previousButton.disabled = currentIndex === 0;
 
         nextButton.textContent =
@@ -675,13 +723,23 @@
 
         questionRemainingSeconds = questionTimeSeconds;
 
+        updateSelectedStyles();
         updateProgress();
     }
 
-    function saveCurrentAnswerLocally() {
-        // Selected radio buttons are part of the form and will be
-        // submitted to the server. Do not store questions in session.
-        updateProgress();
+    // Copy the current question's answer to the backend field.
+    function prepareSubmission(action) {
+        const selectedAnswer = getSelectedAnswer(currentIndex);
+
+        questionIdInput.value =
+            cards[currentIndex].dataset.questionId;
+
+        currentIndexInput.value = currentIndex;
+
+        selectedOptionInput.value =
+            selectedAnswer ? selectedAnswer.value : "";
+
+        actionInput.value = action;
     }
 
     function postAction(action) {
@@ -694,14 +752,16 @@
             return;
         }
 
+        prepareSubmission(action);
+
         submitting = true;
-        actionInput.value = action;
 
         previousButton.disabled = true;
         nextButton.disabled = true;
         submitButton.disabled = true;
 
-        form.submit();
+        // Native submission sends the hidden selected_option field.
+        HTMLFormElement.prototype.submit.call(form);
     }
 
     function autoSubmit() {
@@ -709,41 +769,40 @@
             return;
         }
 
+        prepareSubmission("submit");
+
         submitting = true;
 
         timerNotice.classList.remove("hidden");
-        actionInput.value = "submit";
 
-        // The normal form submit handler is deliberately bypassed.
-        // This ensures the quiz can be submitted even when no answer
-        // is selected on the current question.
+        previousButton.disabled = true;
+        nextButton.disabled = true;
+        submitButton.disabled = true;
+
         HTMLFormElement.prototype.submit.call(form);
     }
 
+    // Previous changes the displayed question without submitting.
     previousButton.addEventListener("click", function () {
         if (submitting || currentIndex <= 0) {
             return;
         }
 
-        saveCurrentAnswerLocally();
         currentIndex--;
+
         updateQuestionDisplay();
     });
 
+    // Save the current answer and move to the next question.
     nextButton.addEventListener("click", function () {
         if (submitting) {
             return;
         }
 
-        saveCurrentAnswerLocally();
-
-        if (currentIndex < cards.length - 1) {
-            postAction("save");
-        } else {
-            postAction("save");
-        }
+        postAction("save");
     });
 
+    // Explicitly submit the quiz.
     submitButton.addEventListener("click", function () {
         if (submitting) {
             return;
@@ -758,47 +817,24 @@
         }
     });
 
+    // Update progress and highlighting when an option is selected.
     form.addEventListener("change", function (event) {
         if (
             event.target.matches(
-                'input[name="selected_option"]'
+                'input[type="radio"][data-question-id]'
             )
         ) {
-            cards.forEach(card => {
-                card.querySelectorAll(".option").forEach(
-                    label => label.classList.remove("selected")
-                );
-
-                const checked = card.querySelector(
-                    'input[name="selected_option"]:checked'
-                );
-
-                if (checked) {
-                    checked.closest(".option")
-                        .classList.add("selected");
-                }
-            });
-
+            updateSelectedStyles();
             updateProgress();
         }
     });
 
-    // Initialize the page using the server-provided remaining time.
+    // Initialize the page at the question requested by Flask.
     updateQuestionDisplay();
-
-    cards.forEach(card => {
-        const checked = card.querySelector(
-            'input[name="selected_option"]:checked'
-        );
-
-        if (checked) {
-            checked.closest(".option")
-                .classList.add("selected");
-        }
-    });
 
     overallTimer.textContent = formatTime(remainingSeconds);
 
+    // Overall quiz timer.
     const overallInterval = window.setInterval(function () {
         if (submitting) {
             window.clearInterval(overallInterval);
@@ -816,6 +852,7 @@
         }
     }, 1000);
 
+    // Optional per-question timer.
     if (questionTimeSeconds > 0) {
         window.setInterval(function () {
             if (submitting) {
@@ -833,6 +870,7 @@
             }
         }, 1000);
     }
+
 })();
 </script>
 {% endif %}
