@@ -544,13 +544,7 @@
             {% endfor %}
 
             <div class="controls">
-                <button
-                    class="btn btn-secondary"
-                    type="button"
-                    id="previousButton"
-                >
-                    ← Previous
-                </button>
+               
 
                 <button
                     class="btn btn-primary"
@@ -592,7 +586,6 @@
     const answeredText = document.getElementById("answeredText");
     const progressBar = document.getElementById("progressBar");
 
-    const previousButton = document.getElementById("previousButton");
     const nextButton = document.getElementById("nextButton");
     const submitButton = document.getElementById("submitButton");
 
@@ -714,7 +707,6 @@
 
         currentIndexInput.value = currentIndex;
 
-        previousButton.disabled = currentIndex === 0;
 
         nextButton.textContent =
             currentIndex === cards.length - 1
@@ -756,7 +748,6 @@
 
         submitting = true;
 
-        previousButton.disabled = true;
         nextButton.disabled = true;
         submitButton.disabled = true;
 
@@ -764,34 +755,57 @@
         HTMLFormElement.prototype.submit.call(form);
     }
 
-    function autoSubmit() {
-        if (submitting) {
-            return;
+            function autoSubmit() {
+            if (submitting) {
+                return;
+            }
+
+            prepareSubmission("submit");
+            submitting = true;
+
+            timerNotice.textContent =
+                "Submitting your quiz...";
+
+            timerNotice.classList.remove("hidden");
+
+            nextButton.disabled = true;
+            submitButton.disabled = true;
+
+            HTMLFormElement.prototype.submit.call(form);
         }
 
-        prepareSubmission("submit");
 
-        submitting = true;
+                // Anti-cheating: detect tab switching and window visibility changes.
+        let violationHandled = false;
+        let tabSwitchDetected = false;
 
-        timerNotice.classList.remove("hidden");
+        function handleTabSwitch() {
+            if (submitting || violationHandled) {
+                return;
+            }
 
-        previousButton.disabled = true;
-        nextButton.disabled = true;
-        submitButton.disabled = true;
+            violationHandled = true;
 
-        HTMLFormElement.prototype.submit.call(form);
-    }
+            alert(
+                "Warning: You switched away from the quiz. " +
+                "Your quiz will now be submitted automatically."
+            );
 
-    // Previous changes the displayed question without submitting.
-    previousButton.addEventListener("click", function () {
-        if (submitting || currentIndex <= 0) {
-            return;
+            autoSubmit();
         }
 
-        currentIndex--;
+        document.addEventListener("visibilitychange", function () {
+            if (document.hidden) {
+                tabSwitchDetected = true;
+                return;
+            }
 
-        updateQuestionDisplay();
-    });
+            if (tabSwitchDetected) {
+                handleTabSwitch();
+            }
+        });
+
+    
 
     // Save the current answer and move to the next question.
     nextButton.addEventListener("click", function () {

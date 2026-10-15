@@ -283,6 +283,7 @@ def _clear_active_quiz_session():
         "quiz_id",
         "attempt_mode",
         "question_started_at",
+        "quiz_current_index",
     ]
 
     for key in keys:
@@ -865,6 +866,7 @@ def start_quiz(quiz_id):
     session["active_attempt_id"] = attempt["attempt_id"]
     session["active_quiz_id"] = quiz_id
     session["attempt_mode"] = "student"
+    session["quiz_current_index"] = 0
 
     return redirect(url_for("student.quiz"))
 
@@ -971,17 +973,14 @@ def guest_start_quiz(quiz_id):
 
     _clear_active_quiz_session()
     
-    current_app.logger.warning(
-    "GUEST DEBUG: attempt_id=%s, quiz_id=%s",
-    attempt["attempt_id"],
-    quiz_id,
-)
+
 
     session["active_attempt_id"] = attempt["attempt_id"]
     session["active_quiz_id"] = quiz_id
     session["attempt_mode"] = "guest"
     session["guest_name"] = student_name
     session["guest_roll_number"] = roll_number
+    session["quiz_current_index"] = 0
 
     return redirect(url_for("student.quiz"))
 
@@ -1092,6 +1091,22 @@ def quiz():
                 "error",
             )
             return redirect(url_for("student.quiz"))
+        
+            expected_index = session.get("quiz_current_index", 0)
+
+    expected_index = max(
+        0,
+        min(int(expected_index), len(questions) - 1),
+    )
+
+    expected_question_id = questions[expected_index]["question_id"]
+
+    if posted_question_id != expected_question_id:
+        current_app.logger.warning(
+            "Blocked invalid question navigation: attempt_id=%s",
+            attempt_id,
+        )
+        return redirect(url_for("student.quiz"))
 
         # Save the currently displayed question's answer.
         if selected_option in ("A", "B", "C", "D"):
@@ -1139,16 +1154,12 @@ def quiz():
 
         # Move forward without going beyond the last question.
         next_index = min(
-            current_index + 1,
+            expected_index + 1,
             len(questions) - 1,
         )
+        session["quiz_current_index"] = next_index
 
-        return redirect(
-            url_for(
-                "student.quiz",
-                question=next_index,
-            )
-        )
+        return redirect(url_for("student.quiz"))
 
     # --------------------------------------------------------
     # GET: Render the requested question.
@@ -1171,11 +1182,12 @@ def quiz():
     except (TypeError, ValueError):
         question_time_seconds = 0
 
-    # Read the question index from the URL.
-    current_index = request.args.get(
-        "question",
-        default=0,
-        type=int,
+    # Server-side question position: ignore URL changes.
+    current_index = session.get("quiz_current_index", 0)
+
+    current_index = max(
+        0,
+        min(int(current_index), len(questions) - 1),
     )
 
     current_index = max(
