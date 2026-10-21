@@ -737,7 +737,24 @@ def available_quizzes():
                 ORDER BY created_at DESC
                 """
             )
-            quizzes = cursor.fetchall()
+
+            quizzes = [
+                dict(quiz)
+                for quiz in cursor.fetchall()
+            ]
+
+        # Calculate status for every quiz.
+        for quiz in quizzes:
+            actual_status = _quiz_status(quiz)
+
+            if actual_status == "upcoming":
+                quiz["status"] = "upcoming"
+
+            elif actual_status == "available":
+                quiz["status"] = "live"
+
+            else:
+                quiz["status"] = "closed"
 
         return render_template(
             "available_quizzes.html",
