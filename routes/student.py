@@ -833,6 +833,10 @@ def start_quiz(quiz_id):
                         CURRENT_TIMESTAMP,
                         'in_progress', 0, 0
                     )
+                    ON CONFLICT (quiz_id, student_id)
+                    WHERE status = 'in_progress'
+                      AND student_id IS NOT NULL
+                    DO NOTHING
                     RETURNING *
                     """,
                     (
@@ -844,6 +848,29 @@ def start_quiz(quiz_id):
                 )
 
                 attempt = cursor.fetchone()
+
+                # Another simultaneous request may have created
+                # the in-progress attempt first.
+                if not attempt:
+                    cursor.execute(
+                        """
+                        SELECT *
+                        FROM quiz_attempts
+                        WHERE quiz_id = %s
+                          AND student_id = %s
+                          AND status = 'in_progress'
+                        ORDER BY attempt_id DESC
+                        LIMIT 1
+                        """,
+                        (quiz_id, student_id),
+                    )
+
+                    attempt = cursor.fetchone()
+
+                if not attempt:
+                    raise RuntimeError(
+                        "Unable to create or retrieve quiz attempt."
+                    )
 
         connection.commit()
 
