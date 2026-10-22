@@ -14,16 +14,19 @@ OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
 if not OLLAMA_API_KEY:
     raise Exception("OLLAMA_API_KEY environment variable is not set")
 
+
 client = Client(
     host="https://ollama.com",
     headers={
         "Authorization": f"Bearer {OLLAMA_API_KEY}"
-    }
+    },
+    timeout=75,
 )
+
 
 GENERATION_MODEL = "gpt-oss:20b"
 
-MAX_GENERATION_ATTEMPTS = 3
+MAX_GENERATION_ATTEMPTS = 2
 MAX_EVALUATION_ATTEMPTS = 3
 MAX_REPLACEMENT_ATTEMPTS = 5
 
