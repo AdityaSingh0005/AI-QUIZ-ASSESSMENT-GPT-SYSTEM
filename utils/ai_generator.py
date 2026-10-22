@@ -901,360 +901,101 @@ Generate exactly {count} question(s).
 # MAIN QUESTION GENERATOR
 # ============================================================
 
-def generate_questions(
-    topic,
-    easy,
-    medium,
-    hard
-):
-    """
-    Generate questions with requested difficulty distribution.
-
-    Returns:
-        questions, final_evaluations
-    """
-
-    easy = int(easy)
-    medium = int(medium)
-    hard = int(hard)
-
+def generate_questions(topic, easy, medium, hard):
+    """Generate validated small batches to reduce invalid JSON and worker timeouts."""
+    easy, medium, hard = int(easy), int(medium), int(hard)
     total = easy + medium + hard
-
+    if min(easy, medium, hard) < 0:
+        raise ValueError("Question counts cannot be negative.")
     if total <= 0:
-        raise ValueError(
-            "At least one question is required."
-        )
+        raise ValueError("At least one question is required.")
+    if total > 150:
+        raise ValueError("A quiz cannot contain more than 150 questions.")
 
-    prompt = f"""
-Generate exactly {total} multiple-choice questions.
+    batch_size = 10
+    requirements = [("Easy", easy), ("Medium", medium), ("Hard", hard)]
+    all_questions = []
+    seen_questions = set()
 
-Topic:
+    for difficulty, requested_count in requirements:
+        remaining = requested_count
+        while remaining:
+            batch_count = min(batch_size, remaining)
+            previous_questions = "\n".join(
+                "- " + question[:180]
+                for question in list(seen_questions)[-20:]
+            ) or "(none yet)"
+            prompt = f"""
+Create exactly {batch_count} multiple-choice questions about this topic:
 {topic}
 
-Required difficulty distribution:
+Do not repeat or paraphrase these previously generated questions:
+{previous_questions}
 
-Easy: {easy}
-Medium: {medium}
-Hard: {hard}
-
-IMPORTANT:
-
-- Generate EXACTLY the requested number of questions.
-- Each question must have exactly four options.
-- Only one option should be correct.
-- Do not create duplicate questions.
-- Do not create duplicate options within a question.
-- Difficulty must be exactly one of:
-  Easy, Medium, Hard.
-- Difficulty labels must match the actual difficulty.
-
-Difficulty definitions:
-
-Easy:
-Basic concepts, direct recall, simple understanding.
-
-Medium:
-Application of concepts, moderate reasoning, multiple steps.
-
-Hard:
-Advanced reasoning, deeper conceptual understanding,
-multiple concepts or non-trivial analysis.
-
-Return ONLY valid JSON.
-
-Format:
-
-[
-  {{
-    "question": "...",
-    "option_a": "...",
-    "option_b": "...",
-    "option_c": "...",
-    "option_d": "...",
-    "correct_option": "A",
-    "difficulty": "Easy",
-    "explanation": "..."
-  }}
-]
+Every question must have difficulty exactly: {difficulty}.
+Return only a valid JSON array, no markdown or commentary. Each object must
+contain these fields: question, option_a, option_b, option_c, option_d,
+correct_option, difficulty, explanation.
+correct_option must be A, B, C, or D. Use four distinct options and exactly
+one correct answer. Questions must be distinct, clear, and factually correct.
+The difficulty value for every object must be exactly "{difficulty}".
+Example object: {{"question":"...","option_a":"...","option_b":"...","option_c":"...","option_d":"...","correct_option":"A","difficulty":"{difficulty}","explanation":"..."}}
 """
-
-    questions = None
-
-    # ========================================================
-    # INITIAL GENERATION
-    # ========================================================
-
-    for attempt in range(
-        MAX_GENERATION_ATTEMPTS
-    ):
-
-        try:
-
-            response = client.chat(
-                model=GENERATION_MODEL,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                options={
-                    "temperature": 0.1
-                },
-                format="json"
-            )
-
-            content = response["message"]["content"]
-
-            generated = extract_questions_from_response(
-                content
-            )
-
-            # ------------------------------------------------
-            # Handle extra questions before exact validation
-            # ------------------------------------------------
-
-            if len(generated) > total:
-
-                print(
-                    "[AI GENERATION] "
-                    "AI generated extra questions. "
-                    "Attempting safe trimming."
+            batch = None
+            last_error = None
+            for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
+                try:
+                    print(f"[AI GENERATION] {difficulty} batch of {batch_count}; attempt {attempt}/{MAX_GENERATION_ATTEMPTS}")
+                    response = client.chat(
+                        model=GENERATION_MODEL,
+                        messages=[{"role": "user", "content": prompt}],
+                        options={"temperature": 0.1},
+                        format="json",
+                    )
+                    content = response["message"]["content"]
+                    generated = extract_questions_from_response(content)
+                    if not validate_basic_question_structure(generated, batch_count):
+                        raise ValueError("Generated question structure or count is invalid")
+                    expected = (
+                        batch_count if difficulty == "Easy" else 0,
+                        batch_count if difficulty == "Medium" else 0,
+                        batch_count if difficulty == "Hard" else 0,
+                    )
+                    if not check_difficulty_distribution(generated, *expected):
+                        raise ValueError(f"Difficulty mismatch; expected {difficulty}")
+                    normalized = [
+                        re.sub(r"\s+", " ", str(item.get("question", "")).strip()).casefold()
+                        for item in generated
+                    ]
+                    if len(set(normalized)) != len(normalized):
+                        raise ValueError("Duplicate questions inside batch")
+                    if any(question in seen_questions for question in normalized):
+                        raise ValueError("Question duplicates an earlier batch")
+                    batch = generated
+                    break
+                except Exception as exc:
+                    last_error = exc
+                    print(f"[AI GENERATION] {difficulty} attempt {attempt} failed: {exc}")
+            if batch is None:
+                raise RuntimeError(
+                    f"Could not generate a valid batch of {batch_count} {difficulty} questions. "
+                    f"Please retry or reduce the question count. Last error: {last_error}"
                 )
-
-                generated = trim_extra_questions(
-                    generated,
-                    easy,
-                    medium,
-                    hard
+            for item in batch:
+                seen_questions.add(
+                    re.sub(r"\s+", " ", str(item.get("question", "")).strip()).casefold()
                 )
+            all_questions.extend(batch)
+            remaining -= batch_count
 
-            # ------------------------------------------------
-            # Basic structure validation
-            # ------------------------------------------------
+    if len(all_questions) != total:
+        raise RuntimeError(f"Generated {len(all_questions)} questions, expected {total}.")
+    if not validate_basic_question_structure(all_questions, total):
+        raise RuntimeError("Final quiz failed question-structure validation.")
+    if not check_difficulty_distribution(all_questions, easy, medium, hard):
+        raise RuntimeError("Final quiz failed difficulty-distribution validation.")
 
-            if not validate_basic_question_structure(
-                generated,
-                total
-            ):
-
-                raise ValueError(
-                    "Generated question structure is invalid"
-                )
-
-            # ------------------------------------------------
-            # Difficulty distribution
-            # ------------------------------------------------
-
-            if not check_difficulty_distribution(
-                generated,
-                easy,
-                medium,
-                hard
-            ):
-
-                raise ValueError(
-                    "Difficulty distribution mismatch"
-                )
-
-            questions = generated
-
-            break
-
-        except Exception as error:
-
-            print(
-                f"[AI GENERATION] "
-                f"Attempt {attempt + 1} failed: {error}"
-            )
-
-    if questions is None:
-
-        raise Exception(
-            "AI failed to generate valid questions "
-            "after multiple attempts."
-        )
-
-    # ========================================================
-    # FIRST AI DIFFICULTY EVALUATION
-    # ========================================================
-
-    evaluations = evaluate_question_difficulties(
-        topic,
-        questions
-    )
-
-    # ========================================================
-    # IF EVALUATION FAILS
-    # ========================================================
-
-    if evaluations is None:
-
-        print(
-            "[AI DIFFICULTY EVALUATION] "
-            "Evaluation unavailable. "
-            "Returning generated questions."
-        )
-
-        return questions, []
-
-    # ========================================================
-    # FIND DIFFICULTY MISMATCHES
-    # ========================================================
-
-    passed, failed = validate_actual_difficulty(
-        questions,
-        evaluations
-    )
-
-    print(
-        f"[AI DIFFICULTY CHECK] "
-        f"Passed: {len(passed)}, "
-        f"Failed: {len(failed)}"
-    )
-
-    # ========================================================
-    # REPLACE MISMATCHED QUESTIONS
-    # ========================================================
-
-    if failed:
-
-        replacement_by_difficulty = {
-            "Easy": [],
-            "Medium": [],
-            "Hard": []
-        }
-
-        for item in failed:
-
-            generated_difficulty = normalize_difficulty(
-                item["question"].get("difficulty")
-            )
-
-            if generated_difficulty in replacement_by_difficulty:
-
-                replacement_by_difficulty[
-                    generated_difficulty
-                ].append(item["index"])
-
-        replacement_questions = {}
-
-        for difficulty, indexes in (
-            replacement_by_difficulty.items()
-        ):
-
-            count = len(indexes)
-
-            if count <= 0:
-                continue
-
-            replacements = generate_replacement_questions(
-                topic,
-                difficulty,
-                count
-            )
-
-            if len(replacements) != count:
-
-                # ------------------------------------------------
-                # IMPORTANT:
-                # Instead of silently keeping a known mismatch,
-                # fail clearly so teacher does not receive a
-                # misleading "verified" quiz.
-                # ------------------------------------------------
-
-                raise Exception(
-                    f"Failed to generate replacement "
-                    f"questions for {difficulty}."
-                )
-
-            for index, replacement in zip(
-                indexes,
-                replacements
-            ):
-
-                replacement_questions[index] = replacement
-
-        # ====================================================
-        # APPLY REPLACEMENTS
-        # ====================================================
-
-        for index, replacement in (
-            replacement_questions.items()
-        ):
-
-            questions[index - 1] = replacement
-
-        # ====================================================
-        # FINAL BASIC VALIDATION
-        # ====================================================
-
-        if not validate_basic_question_structure(
-            questions,
-            total
-        ):
-
-            raise Exception(
-                "Questions became invalid after replacement."
-            )
-
-        # ====================================================
-        # FINAL DISTRIBUTION VALIDATION
-        # ====================================================
-
-        if not check_difficulty_distribution(
-            questions,
-            easy,
-            medium,
-            hard
-        ):
-
-            raise Exception(
-                "Difficulty distribution changed "
-                "after replacement."
-            )
-
-        # ====================================================
-        # FINAL AI EVALUATION
-        # ====================================================
-
-        final_evaluations = evaluate_question_difficulties(
-            topic,
-            questions
-        )
-
-        if final_evaluations is None:
-
-            print(
-                "[AI DIFFICULTY EVALUATION] "
-                "Final evaluation failed."
-            )
-
-            return questions, []
-
-        final_passed, final_failed = (
-            validate_actual_difficulty(
-                questions,
-                final_evaluations
-            )
-        )
-
-        print(
-            f"[AI FINAL DIFFICULTY CHECK] "
-            f"Passed: {len(final_passed)}, "
-            f"Failed: {len(final_failed)}"
-        )
-
-        # ----------------------------------------------------
-        # IMPORTANT:
-        # Return FINAL evaluations.
-        # ----------------------------------------------------
-
-        return questions, final_evaluations
-
-    # ========================================================
-    # NO MISMATCHES
-    # ========================================================
-
-    return questions, evaluations
-
+    print(f"[AI GENERATION] Successfully generated {total} questions in small batches.")
+    # The create_quiz route supports an empty evaluations list. Avoiding extra
+    # full-quiz evaluation/replacement calls reduces synchronous request time.
+    return all_questions, []

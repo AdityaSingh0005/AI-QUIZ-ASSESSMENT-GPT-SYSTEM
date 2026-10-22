@@ -968,6 +968,35 @@ def guest_start_quiz(quiz_id):
 
     try:
         with connection.cursor() as cursor:
+            # Serialize concurrent requests for the same quiz + normalized roll number.
+            normalized_roll = roll_number.strip().casefold()
+            cursor.execute(
+                "SELECT pg_advisory_xact_lock(%s, hashtext(%s))",
+                (quiz_id, normalized_roll),
+            )
+            cursor.execute(
+                """
+                SELECT attempt_id
+                FROM quiz_attempts
+                WHERE quiz_id = %s
+                  AND attempt_mode = 'guest'
+                  AND LOWER(BTRIM(roll_number)) = LOWER(BTRIM(%s))
+                LIMIT 1
+                """,
+                (quiz_id, roll_number),
+            )
+            existing_attempt = cursor.fetchone()
+            if existing_attempt:
+                connection.rollback()
+                return render_template(
+                    "guest_start_quiz.html",
+                    quiz=quiz,
+                    error=(
+                        "This roll number has already been used for this quiz. "
+                        "Only one attempt is allowed."
+                    ),
+                ), 409
+
             cursor.execute(
                 """
                 INSERT INTO quiz_attempts

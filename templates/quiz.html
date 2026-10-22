@@ -558,7 +558,7 @@
                     class="btn btn-danger"
                     type="button"
                     id="submitButton"
-                >
+                 hidden>
                     Submit Quiz
                 </button>
             </div>
@@ -710,7 +710,7 @@
 
         nextButton.textContent =
             currentIndex === cards.length - 1
-                ? "Save Answer"
+                ? "Submit Quiz"
                 : "Save & Next →";
 
         questionRemainingSeconds = questionTimeSeconds;
@@ -812,8 +812,15 @@
         if (submitting) {
             return;
         }
-
-        postAction("save");
+        const isLastQuestion = currentIndex === cards.length - 1;
+        if (!isLastQuestion) {
+            postAction("save");
+            return;
+        }
+        const confirmed = window.confirm("Are you sure you want to submit your quiz?");
+        if (confirmed) {
+            postAction("submit");
+        }
     });
 
     // Explicitly submit the quiz.
