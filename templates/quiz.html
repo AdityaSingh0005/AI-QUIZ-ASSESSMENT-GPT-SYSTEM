@@ -423,7 +423,7 @@ body{padding:14px}
         }
 
         try {
-            const response = await fetch(form.action, {
+            const response = await fetch(window.location.pathname, {
                 method: "POST",
                 body: new FormData(form),
                 headers: {
