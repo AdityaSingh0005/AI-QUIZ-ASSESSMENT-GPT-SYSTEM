@@ -47,7 +47,6 @@ body{margin:0;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#e2e8f0;
 .question-timer-value{font-size:18px;font-weight:bold;font-variant-numeric:tabular-nums}
 .error-message{color:#fecaca}
 .success-message{color:#bbf7d0}
-
 @media(max-width:600px){
 body{padding:14px}
 .card{padding:19px}
@@ -58,212 +57,106 @@ body{padding:14px}
 }
 </style>
 </head>
-
 <body>
 <div class="container">
-
 {% if unavailable %}
-
 <div class="header">
     <div>
         <h1>{% if quiz %}{{ quiz.title }}{% else %}Quiz unavailable{% endif %}</h1>
         <p class="muted">The quiz cannot be started right now.</p>
     </div>
 </div>
-
-<div class="notice">
-    {{ unavailable_message or "This quiz is unavailable or contains no questions." }}
-</div>
-
-<a class="btn btn-primary" href="{{ url_for('student.available_quizzes') }}">
-    Back to Available Quizzes
-</a>
-
+<div class="notice">{{ unavailable_message or "This quiz is unavailable or contains no questions." }}</div>
+<a class="btn btn-primary" href="{{ url_for('student.available_quizzes') }}">Back to Available Quizzes</a>
 {% elif show_result %}
-
 <div class="header">
     <div>
         <h1>{{ quiz.title }}</h1>
         <p class="muted">Your quiz has been submitted.</p>
     </div>
 </div>
-
 <section class="card">
     <div class="result-score">
         <div class="muted">Your Score</div>
-        <div class="score-number">
-            {{ result.score or 0 }} / {{ quiz.total_questions or 0 }}
-        </div>
-        <div>
-            Percentage:
-            <strong>{{ "%.2f"|format(result.percentage or 0) }}%</strong>
-        </div>
-
-        {% if result.submitted_at %}
-        <p class="muted">Submitted: {{ result.submitted_at }}</p>
-        {% endif %}
+        <div class="score-number">{{ result.score or 0 }} / {{ quiz.total_questions or 0 }}</div>
+        <div>Percentage: <strong>{{ "%.2f"|format(result.percentage or 0) }}%</strong></div>
+        {% if result.submitted_at %}<p class="muted">Submitted: {{ result.submitted_at }}</p>{% endif %}
     </div>
-
     <h2>Answer Review</h2>
-
     {% if review %}
         {% for item in review %}
         <article class="review-item">
             <div class="question-number">Question {{ loop.index }}</div>
             <h3>{{ item.question }}</h3>
-
-            <p>
-                <strong>Your answer:</strong>
-                {% if item.selected_option %}
-                    {{ item.selected_option }}
-                {% else %}
-                    Not answered
-                {% endif %}
-            </p>
-
-            <p class="correct">
-                <strong>Correct answer:</strong> {{ item.correct_option }}
-            </p>
-
+            <p><strong>Your answer:</strong> {% if item.selected_option %}{{ item.selected_option }}{% else %}Not answered{% endif %}</p>
+            <p class="correct"><strong>Correct answer:</strong> {{ item.correct_option }}</p>
             {% if item.explanation %}
-            <div class="explanation">
-                <strong>Explanation:</strong><br>
-                {{ item.explanation }}
-            </div>
+            <div class="explanation"><strong>Explanation:</strong><br>{{ item.explanation }}</div>
             {% endif %}
         </article>
         {% endfor %}
     {% else %}
         <p class="muted">No answer review is available.</p>
     {% endif %}
-
     <div class="controls">
         {% if session.get("student_id") %}
-        <a class="btn btn-primary" href="{{ url_for('student.my_results') }}">
-            My Results
-        </a>
+        <a class="btn btn-primary" href="{{ url_for('student.my_results') }}">My Results</a>
         {% endif %}
-
-        <a class="btn btn-secondary" href="{{ url_for('student.available_quizzes') }}">
-            Back to Quizzes
-        </a>
+        <a class="btn btn-secondary" href="{{ url_for('student.available_quizzes') }}">Back to Quizzes</a>
     </div>
 </section>
-
 {% else %}
-
 <header class="header">
     <div>
         <h1>{{ quiz.title }}</h1>
         <p class="muted">Question-by-question assessment</p>
     </div>
-
     <div class="timer">
         <span class="timer-label">Time Remaining</span>
         <span class="timer-value" id="overallTimer">--:--</span>
     </div>
 </header>
-
 <div class="progress-wrapper">
     <div class="progress-label">
         <span id="progressText">Question 1</span>
         <span id="answeredText">0 answered</span>
     </div>
-
-    <div class="progress-track">
-        <div class="progress-bar" id="progressBar"></div>
-    </div>
+    <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
 </div>
-
-<div class="notice hidden" id="timerNotice" role="status" aria-live="polite">
-    Time is up. Submitting your quiz...
-</div>
-
+<div class="notice hidden" id="timerNotice" role="status" aria-live="polite">Time is up. Submitting your quiz...</div>
 <div class="notice hidden" id="requestNotice" role="alert"></div>
-
 <form id="quizForm" method="POST" action="{{ url_for('student.quiz') }}">
-
     <input type="hidden" name="question_id" id="questionId" value="">
     <input type="hidden" name="action" id="formAction" value="save">
-
-    <input type="hidden"
-           name="current_index"
-           id="currentIndexInput"
-           value="{{ current_index|default(0)|int }}">
-
-    <input type="hidden"
-           name="selected_option"
-           id="selectedOptionInput"
-           value="">
-
+    <input type="hidden" name="current_index" id="currentIndexInput" value="{{ current_index|default(0)|int }}">
+    <input type="hidden" name="selected_option" id="selectedOptionInput" value="">
     {% for question in questions %}
-
-    <section class="card question-card {% if not loop.first %}hidden{% endif %}"
-             data-index="{{ loop.index0 }}"
-             data-question-id="{{ question.question_id }}">
-
-        <div class="question-number">
-            Question {{ loop.index }} of {{ questions|length }}
-        </div>
-
+    <section class="card question-card {% if not loop.first %}hidden{% endif %}" data-index="{{ loop.index0 }}" data-question-id="{{ question.question_id }}">
+        <div class="question-number">Question {{ loop.index }} of {{ questions|length }}</div>
         <h2 class="question-text">{{ question.question }}</h2>
-
         {% if question_time_seconds|default(0)|int > 0 %}
         <div class="question-timer-row">
             <span>Time for this question</span>
             <span class="question-timer-value" id="questionTimer">--:--</span>
         </div>
         {% endif %}
-
         <div class="options">
-
-            {% for letter, option in [
-                ('A', question.option_a),
-                ('B', question.option_b),
-                ('C', question.option_c),
-                ('D', question.option_d)
-            ] %}
-
+            {% for letter, option in [('A', question.option_a), ('B', question.option_b), ('C', question.option_c), ('D', question.option_d)] %}
             <label class="option">
-                <input type="radio"
-                       name="selected_option_{{ question.question_id }}"
-                       value="{{ letter }}"
-                       data-question-id="{{ question.question_id }}"
-                       {% if answers and answers.get(question.question_id)==letter %}checked{% endif %}>
-
-                <span class="option-text">
-                    <strong>{{ letter }}.</strong> {{ option }}
-                </span>
+                <input type="radio" name="selected_option_{{ question.question_id }}" value="{{ letter }}" data-question-id="{{ question.question_id }}" {% if answers and answers.get(question.question_id)==letter %}checked{% endif %}>
+                <span class="option-text"><strong>{{ letter }}.</strong> {{ option }}</span>
             </label>
-
             {% endfor %}
-
         </div>
     </section>
-
     {% endfor %}
-
     <div class="controls">
-        <button class="btn btn-primary"
-                type="button"
-                id="nextButton">
-            Save &amp; Next →
-        </button>
-
-        <button class="btn btn-danger"
-                type="button"
-                id="submitButton"
-                hidden>
-            Submit Quiz
-        </button>
+        <button class="btn btn-primary" type="button" id="nextButton">Save &amp; Next →</button>
+        <button class="btn btn-danger" type="button" id="submitButton" hidden>Submit Quiz</button>
     </div>
-
 </form>
-
 {% endif %}
-
 </div>
-
 {% if not unavailable and not show_result %}
 <script>
 (function () {
@@ -271,62 +164,37 @@ body{padding:14px}
 
     const form = document.getElementById("quizForm");
     const cards = Array.from(document.querySelectorAll(".question-card"));
-
     if (!form || !cards.length) return;
 
     const overallTimer = document.getElementById("overallTimer");
     const progressText = document.getElementById("progressText");
     const answeredText = document.getElementById("answeredText");
     const progressBar = document.getElementById("progressBar");
-
     const nextButton = document.getElementById("nextButton");
     const submitButton = document.getElementById("submitButton");
-
     const questionIdInput = document.getElementById("questionId");
     const actionInput = document.getElementById("formAction");
     const currentIndexInput = document.getElementById("currentIndexInput");
     const selectedOptionInput = document.getElementById("selectedOptionInput");
-
     const timerNotice = document.getElementById("timerNotice");
     const requestNotice = document.getElementById("requestNotice");
     const questionTimer = document.getElementById("questionTimer");
 
-    let currentIndex = Math.min(
-        cards.length - 1,
-        Math.max(0, Number({{ current_index|default(0)|int }}))
-    );
-
+    let currentIndex = Math.min(cards.length - 1, Math.max(0, Number({{ current_index|default(0)|int }})));
     let submitting = false;
-
-    let remainingSeconds = Math.max(
-        0,
-        Number({{ remaining_seconds|default(0)|int }})
-    );
-
-    const questionTimeSeconds = Math.max(
-        0,
-        Number({{ question_time_seconds|default(0)|int }})
-    );
-
-    let questionRemainingSeconds = Math.max(
-        0,
-        Number({{ question_remaining_seconds|default(question_time_seconds|default(0))|int }})
-    );
+    let overallInterval = null;
+    let questionInterval = null;
+    let remainingSeconds = Math.max(0, Number({{ remaining_seconds|default(0)|int }}));
+    const questionTimeSeconds = Math.max(0, Number({{ question_time_seconds|default(0)|int }}));
+    let questionRemainingSeconds = Math.max(0, Number({{ question_remaining_seconds|default(question_time_seconds|default(0))|int }}));
 
     function formatTime(seconds) {
         seconds = Math.max(0, Math.floor(seconds));
-
-        return String(Math.floor(seconds / 60)).padStart(2, "0")
-            + ":"
-            + String(seconds % 60).padStart(2, "0");
+        return String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
     }
 
     function getInputs(index) {
-        return Array.from(
-            cards[index].querySelectorAll(
-                'input[type="radio"][data-question-id]'
-            )
-        );
+        return Array.from(cards[index].querySelectorAll('input[type="radio"][data-question-id]'));
     }
 
     function getSelected(index) {
@@ -340,13 +208,9 @@ body{padding:14px}
     }
 
     function updateProgress() {
-        progressText.textContent =
-            "Question " + (currentIndex + 1) + " of " + cards.length;
-
+        progressText.textContent = "Question " + (currentIndex + 1) + " of " + cards.length;
         answeredText.textContent = countAnswered() + " answered";
-
-        progressBar.style.width =
-            ((currentIndex + 1) / cards.length * 100) + "%";
+        progressBar.style.width = ((currentIndex + 1) / cards.length * 100) + "%";
     }
 
     function updateStyles() {
@@ -354,14 +218,8 @@ body{padding:14px}
             card.querySelectorAll(".option").forEach(function (label) {
                 label.classList.remove("selected");
             });
-
-            const checked = card.querySelector(
-                'input[type="radio"][data-question-id]:checked'
-            );
-
-            if (checked && checked.closest(".option")) {
-                checked.closest(".option").classList.add("selected");
-            }
+            const checked = card.querySelector('input[type="radio"][data-question-id]:checked');
+            if (checked && checked.closest(".option")) checked.closest(".option").classList.add("selected");
         });
     }
 
@@ -369,52 +227,55 @@ body{padding:14px}
         cards.forEach(function (card, index) {
             card.classList.toggle("hidden", index !== currentIndex);
         });
-
         const card = cards[currentIndex];
-
         questionIdInput.value = card.dataset.questionId;
         currentIndexInput.value = currentIndex;
-
-        nextButton.textContent =
-            currentIndex === cards.length - 1
-                ? "Submit Quiz"
-                : "Save & Next →";
-
+        nextButton.textContent = currentIndex === cards.length - 1 ? "Submit Quiz" : "Save & Next →";
         submitButton.hidden = currentIndex !== cards.length - 1;
-
-        questionRemainingSeconds = questionTimeSeconds;
-
         updateStyles();
         updateProgress();
-
-        if (questionTimer) {
-            questionTimer.textContent = formatTime(questionRemainingSeconds);
-        }
+        if (questionTimer) questionTimer.textContent = formatTime(questionRemainingSeconds);
     }
 
     function prepare(action) {
         const selected = getSelected(currentIndex);
-
         questionIdInput.value = cards[currentIndex].dataset.questionId;
         currentIndexInput.value = currentIndex;
         selectedOptionInput.value = selected ? selected.value : "";
         actionInput.value = action;
     }
 
+    function startQuestionTimer() {
+        if (questionInterval !== null) {
+            clearInterval(questionInterval);
+            questionInterval = null;
+        }
+        if (questionTimeSeconds <= 0) return;
+        if (questionTimer) questionTimer.textContent = formatTime(questionRemainingSeconds);
+
+        questionInterval = window.setInterval(function () {
+            if (submitting) return;
+            questionRemainingSeconds = Math.max(0, questionRemainingSeconds - 1);
+            if (questionTimer) questionTimer.textContent = formatTime(questionRemainingSeconds);
+            if (questionRemainingSeconds <= 0) {
+                clearInterval(questionInterval);
+                questionInterval = null;
+                postAction(currentIndex === cards.length - 1 ? "submit" : "save", true);
+            }
+        }, 1000);
+    }
+
     async function postAction(action, automatic) {
         if (submitting) return;
-
         if (remainingSeconds <= 0 && action !== "submit") {
             action = "submit";
             automatic = true;
         }
 
         prepare(action);
-
         submitting = true;
         nextButton.disabled = true;
         submitButton.disabled = true;
-
         requestNotice.classList.add("hidden");
 
         if (automatic) {
@@ -426,77 +287,64 @@ body{padding:14px}
             const response = await fetch(window.location.pathname, {
                 method: "POST",
                 body: new FormData(form),
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest",
-                    "Accept": "application/json"
-                },
+                headers: {"X-Requested-With": "XMLHttpRequest", "Accept": "application/json"},
                 credentials: "same-origin"
             });
 
             let data;
-
             try {
                 data = await response.json();
             } catch (error) {
-                throw new Error(
-                    "Server returned an unexpected response. Reload the quiz and try again."
-                );
+                throw new Error("Server returned an unexpected response. Reload the quiz and try again.");
             }
 
-            if (!response.ok || !data.ok) {
-                throw new Error(data.message || "Could not save your answer.");
-            }
+            if (!response.ok || !data.ok) throw new Error(data.message || "Could not save your answer.");
 
             if (data.submitted) {
                 window.location.href = data.redirect_url || form.action;
                 return;
             }
 
-            currentIndex = Number(data.current_index);
-
-            if (Number.isFinite(Number(data.remaining_seconds))) {
-                remainingSeconds = Number(data.remaining_seconds);
+            const nextIndex = Number(data.current_index);
+            if (!Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= cards.length) {
+                throw new Error("The server returned an invalid question position. Please reload the quiz.");
             }
 
+            currentIndex = nextIndex;
+            if (Number.isFinite(Number(data.remaining_seconds))) {
+                remainingSeconds = Math.max(0, Number(data.remaining_seconds));
+            }
+
+            // A successful navigation starts a fresh question clock.
             questionRemainingSeconds = questionTimeSeconds;
-
             updateDisplay();
-
             submitting = false;
             nextButton.disabled = false;
             submitButton.disabled = false;
-
+            timerNotice.classList.add("hidden");
+            startQuestionTimer();
         } catch (error) {
             submitting = false;
-
             nextButton.disabled = false;
             submitButton.disabled = false;
-
-            requestNotice.textContent =
-                error.message || "Network error. Please try again.";
-
+            requestNotice.textContent = error.message || "Network error. Please try again.";
             requestNotice.classList.remove("hidden");
             timerNotice.classList.add("hidden");
+            if (questionTimeSeconds > 0 && questionInterval === null) startQuestionTimer();
         }
     }
 
     nextButton.addEventListener("click", function () {
         if (submitting) return;
-
         if (currentIndex === cards.length - 1) {
-            if (window.confirm("Are you sure you want to submit your quiz?")) {
-                postAction("submit", false);
-            }
+            if (window.confirm("Are you sure you want to submit your quiz?")) postAction("submit", false);
         } else {
             postAction("save", false);
         }
     });
 
     submitButton.addEventListener("click", function () {
-        if (
-            !submitting
-            && window.confirm("Are you sure you want to submit your quiz?")
-        ) {
+        if (!submitting && window.confirm("Are you sure you want to submit your quiz?")) {
             postAction("submit", false);
         }
     });
@@ -509,46 +357,20 @@ body{padding:14px}
     });
 
     updateDisplay();
-
     overallTimer.textContent = formatTime(remainingSeconds);
+    startQuestionTimer();
 
-    const overallInterval = window.setInterval(function () {
-        if (submitting) {
-            clearInterval(overallInterval);
-            return;
+    // Keep the overall timer interval alive while a save/navigation request is in progress.
+    overallInterval = window.setInterval(function () {
+        if (!submitting) {
+            remainingSeconds = Math.max(0, remainingSeconds - 1);
+            overallTimer.textContent = formatTime(remainingSeconds);
         }
-
-        remainingSeconds = Math.max(0, remainingSeconds - 1);
-        overallTimer.textContent = formatTime(remainingSeconds);
-
-        if (remainingSeconds <= 0) {
+        if (remainingSeconds <= 0 && !submitting) {
             clearInterval(overallInterval);
             postAction("submit", true);
         }
     }, 1000);
-
-    if (questionTimeSeconds > 0) {
-        window.setInterval(function () {
-            if (submitting) return;
-
-            questionRemainingSeconds = Math.max(
-                0,
-                questionRemainingSeconds - 1
-            );
-
-            if (questionTimer) {
-                questionTimer.textContent =
-                    formatTime(questionRemainingSeconds);
-            }
-
-            if (questionRemainingSeconds <= 0) {
-                postAction(
-                    currentIndex === cards.length - 1 ? "submit" : "save",
-                    true
-                );
-            }
-        }, 1000);
-    }
 
     // Preserve the existing tab-switch submission safeguard.
     let tabSwitchDetected = false;
@@ -556,13 +378,8 @@ body{padding:14px}
 
     function handleTabSwitch() {
         if (submitting || violationHandled) return;
-
         violationHandled = true;
-
-        alert(
-            "Warning: You switched away from the quiz. Your quiz will now be submitted automatically."
-        );
-
+        alert("Warning: You switched away from the quiz. Your quiz will now be submitted automatically.");
         postAction("submit", true);
     }
 
@@ -571,15 +388,10 @@ body{padding:14px}
             tabSwitchDetected = true;
             return;
         }
-
-        if (tabSwitchDetected) {
-            handleTabSwitch();
-        }
+        if (tabSwitchDetected) handleTabSwitch();
     });
-
 })();
 </script>
 {% endif %}
-
 </body>
 </html>
