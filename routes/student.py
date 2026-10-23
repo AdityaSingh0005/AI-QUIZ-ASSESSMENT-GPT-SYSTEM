@@ -14,6 +14,7 @@ from flask import (
     session,
     flash,
     current_app,
+    jsonify,
 )
 
 student = Blueprint("student", __name__)
@@ -283,6 +284,7 @@ def _clear_active_quiz_session():
         "quiz_id",
         "attempt_mode",
         "question_started_at",
+        "question_started_index",
         "quiz_current_index",
     ]
 
@@ -911,6 +913,8 @@ def start_quiz(quiz_id):
     session["active_quiz_id"] = quiz_id
     session["attempt_mode"] = "student"
     session["quiz_current_index"] = 0
+    session["question_started_index"] = 0
+    session["question_started_at"] = time.time()
 
     return redirect(url_for("student.quiz"))
 
@@ -968,35 +972,6 @@ def guest_start_quiz(quiz_id):
 
     try:
         with connection.cursor() as cursor:
-            # Serialize concurrent requests for the same quiz + normalized roll number.
-            normalized_roll = roll_number.strip().casefold()
-            cursor.execute(
-                "SELECT pg_advisory_xact_lock(%s, hashtext(%s))",
-                (quiz_id, normalized_roll),
-            )
-            cursor.execute(
-                """
-                SELECT attempt_id
-                FROM quiz_attempts
-                WHERE quiz_id = %s
-                  AND attempt_mode = 'guest'
-                  AND LOWER(BTRIM(roll_number)) = LOWER(BTRIM(%s))
-                LIMIT 1
-                """,
-                (quiz_id, roll_number),
-            )
-            existing_attempt = cursor.fetchone()
-            if existing_attempt:
-                connection.rollback()
-                return render_template(
-                    "guest_start_quiz.html",
-                    quiz=quiz,
-                    error=(
-                        "This roll number has already been used for this quiz. "
-                        "Only one attempt is allowed."
-                    ),
-                ), 409
-
             cursor.execute(
                 """
                 INSERT INTO quiz_attempts
@@ -1054,6 +1029,8 @@ def guest_start_quiz(quiz_id):
     session["guest_name"] = student_name
     session["guest_roll_number"] = roll_number
     session["quiz_current_index"] = 0
+    session["question_started_index"] = 0
+    session["question_started_at"] = time.time()
 
     return redirect(url_for("student.quiz"))
 
@@ -1080,230 +1057,166 @@ def guest_start():
 
 @student.route("/quiz", methods=["GET", "POST"])
 def quiz():
-    attempt_id = _active_attempt_id()
+    """Render and process a quiz. AJAX requests save answers without a full page reload."""
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
+    def ajax_error(message, status=400, **extra):
+        payload = {"ok": False, "message": message}
+        payload.update(extra)
+        return jsonify(payload), status
+
+    attempt_id = _active_attempt_id()
     if not attempt_id:
+        if is_ajax:
+            return ajax_error("No active quiz found. Please start again.", 401)
         flash("Please start a quiz first.", "error")
         return redirect(url_for("student.available_quizzes"))
 
     attempt = _get_attempt(attempt_id)
-
     if not attempt:
         _clear_active_quiz_session()
+        if is_ajax:
+            return ajax_error("Quiz attempt not found. Please start again.", 404)
         flash("Quiz attempt not found.", "error")
         return redirect(url_for("student.available_quizzes"))
 
     quiz_data = _get_quiz(attempt["quiz_id"])
-
     if not quiz_data:
         _clear_active_quiz_session()
+        if is_ajax:
+            return ajax_error("Quiz not found.", 404)
         return "Quiz not found.", 404
 
-    # Validate access for logged-in students.
     if not _is_guest():
         logged_in_id = session.get("student_id")
-
-        if (
-            not logged_in_id
-            or attempt["student_id"] != logged_in_id
-        ):
+        if not logged_in_id or attempt["student_id"] != logged_in_id:
             _clear_active_quiz_session()
+            if is_ajax:
+                return ajax_error("Please log in again.", 401)
             return redirect(url_for("auth.login"))
 
-    # Show results when the attempt has already been submitted.
     if attempt["status"] == "submitted":
+        if is_ajax:
+            return jsonify({"ok": True, "submitted": True,
+                            "redirect_url": url_for("student.quiz")})
         review = _build_result_review(attempt_id)
-
-        return render_template(
-            "quiz.html",
-            quiz=quiz_data,
-            questions=[],
-            result=attempt,
-            review=review,
-            show_result=True,
-            unavailable=False,
-        )
+        return render_template("quiz.html", quiz=quiz_data, questions=[],
+                               result=attempt, review=review,
+                               show_result=True, unavailable=False)
 
     questions = _get_attempt_questions(attempt["quiz_id"])
-
     if not questions:
-        return _quiz_unavailable_page(
-            quiz_data,
-            "This quiz does not contain any questions.",
-        )
+        if is_ajax:
+            return ajax_error("This quiz does not contain any questions.", 400)
+        return _quiz_unavailable_page(quiz_data, "This quiz does not contain any questions.")
+
+    try:
+        question_time_seconds = max(0, int(quiz_data.get("question_time_seconds") or 0))
+    except (TypeError, ValueError):
+        question_time_seconds = 0
 
     deadline = _effective_deadline(attempt, quiz_data)
     remaining_seconds = _seconds_left(deadline)
 
-    # Initialize and validate the server-side question index.
     try:
-        expected_index = int(
-            session.get("quiz_current_index", 0)
-        )
+        expected_index = int(session.get("quiz_current_index", 0))
     except (TypeError, ValueError):
         expected_index = 0
-
-    expected_index = max(
-        0,
-        min(expected_index, len(questions) - 1),
-    )
-
+    expected_index = max(0, min(expected_index, len(questions) - 1))
     session["quiz_current_index"] = expected_index
 
-    # --------------------------------------------------------
-    # POST: Save answer, move forward, or submit the quiz.
-    # --------------------------------------------------------
+    # Server-side question clock: reset only when the server advances to a new question.
+    try:
+        clock_index = int(session.get("question_started_index", -1))
+        question_started_at = float(session.get("question_started_at", 0) or 0)
+    except (TypeError, ValueError):
+        clock_index, question_started_at = -1, 0
+    if clock_index != expected_index or question_started_at <= 0:
+        question_started_at = time.time()
+        session["question_started_at"] = question_started_at
+        session["question_started_index"] = expected_index
+    question_remaining_seconds = question_time_seconds
+    if question_time_seconds > 0:
+        question_remaining_seconds = max(0, question_time_seconds - int(time.time() - question_started_at))
+
     if request.method == "POST":
-        posted_question_id = request.form.get(
-            "question_id",
-            type=int,
-        )
+        posted_question_id = request.form.get("question_id", type=int)
+        selected_option = (request.form.get("selected_option") or "").strip().upper()
+        action = (request.form.get("action") or "save").strip().lower()
+        expected_question_id = questions[expected_index]["question_id"]
 
-        selected_option = (
-            request.form.get("selected_option") or ""
-        ).strip().upper()
-
-        action = request.form.get("action", "save")
-
-        question_ids = {
-            question["question_id"]
-            for question in questions
-        }
-
-        # Reject missing or invalid question IDs.
-        if (
-            not posted_question_id
-            or posted_question_id not in question_ids
-        ):
-            flash(
-                "Invalid question. Please try again.",
-                "error",
-            )
-            return redirect(url_for("student.quiz"))
-
-        expected_question_id = questions[
-            expected_index
-        ]["question_id"]
-
-        # Reject attempts to submit answers for other questions.
-        if posted_question_id != expected_question_id:
+        if not posted_question_id or posted_question_id != expected_question_id:
             current_app.logger.warning(
-                "Blocked invalid question navigation: "
-                "attempt_id=%s, posted_question_id=%s, "
-                "expected_question_id=%s",
-                attempt_id,
-                posted_question_id,
-                expected_question_id,
-            )
+                "Blocked invalid quiz navigation: attempt_id=%s posted=%s expected=%s",
+                attempt_id, posted_question_id, expected_question_id)
+            if is_ajax:
+                return ajax_error("Question state mismatch. Please try again.", 409,
+                                  current_index=expected_index)
             return redirect(url_for("student.quiz"))
 
-        # Overall quiz timeout: submit without accepting a new answer.
-        if remaining_seconds <= 0:
+        # Overall deadline is authoritative on the server.
+        if deadline is not None and remaining_seconds <= 0:
             _mark_attempt_submitted(attempt_id)
+            session.pop("question_started_at", None)
+            if is_ajax:
+                return jsonify({"ok": True, "submitted": True,
+                                "redirect_url": url_for("student.quiz"),
+                                "message": "Time is up. Your quiz was submitted."})
             return redirect(url_for("student.quiz"))
 
-        # Explicit submission.
-        if action == "submit":
-            if selected_option in ("A", "B", "C", "D"):
-                try:
-                    _save_answer(
-                        attempt,
-                        posted_question_id,
-                        selected_option,
-                    )
-                except Exception:
-                    current_app.logger.exception(
-                        "Unable to save the final answer."
-                    )
-                    flash(
-                        "Unable to save your answer.",
-                        "error",
-                    )
-                    return redirect(url_for("student.quiz"))
-
-            _mark_attempt_submitted(attempt_id)
-            return redirect(url_for("student.quiz"))
-
-        # Save the answer for the current question.
-        if selected_option in ("A", "B", "C", "D"):
+        # If the per-question timer expired, ignore its submitted answer and move on.
+        question_expired = question_time_seconds > 0 and question_remaining_seconds <= 0
+        if not question_expired and selected_option in ("A", "B", "C", "D"):
             try:
-                _save_answer(
-                    attempt,
-                    posted_question_id,
-                    selected_option,
-                )
+                saved = _save_answer(attempt, posted_question_id, selected_option)
             except Exception:
-                current_app.logger.exception(
-                    "Unable to save the current answer."
-                )
-                flash(
-                    "Unable to save your answer. "
-                    "Please try again.",
-                    "error",
-                )
+                current_app.logger.exception("Unable to save quiz answer.")
+                if is_ajax:
+                    return ajax_error("Unable to save your answer. Please retry.", 500)
+                flash("Unable to save your answer. Please try again.", "error")
+                return redirect(url_for("student.quiz"))
+            if not saved:
+                if is_ajax:
+                    return ajax_error("Your answer could not be saved. Please retry.", 409)
+                flash("Your answer could not be saved. Please try again.", "error")
                 return redirect(url_for("student.quiz"))
 
-        # Advance only according to the server-side index.
-        next_index = min(
-            expected_index + 1,
-            len(questions) - 1,
-        )
+        if action == "submit" or expected_index == len(questions) - 1:
+            _mark_attempt_submitted(attempt_id)
+            session.pop("question_started_at", None)
+            session.pop("question_started_index", None)
+            if is_ajax:
+                return jsonify({"ok": True, "submitted": True,
+                                "redirect_url": url_for("student.quiz")})
+            return redirect(url_for("student.quiz"))
 
-        if next_index != expected_index:
-            session["quiz_current_index"] = next_index
-
+        next_index = expected_index + 1
+        session["quiz_current_index"] = next_index
+        session["question_started_index"] = next_index
+        session["question_started_at"] = time.time()
+        if is_ajax:
+            return jsonify({"ok": True, "submitted": False,
+                            "current_index": next_index,
+                            "question_time_seconds": question_time_seconds,
+                            "remaining_seconds": remaining_seconds,
+                            "message": "Question saved."})
         return redirect(url_for("student.quiz"))
 
-    # --------------------------------------------------------
-    # GET: Render the current question.
-    # --------------------------------------------------------
+    # GET: render the current question and existing answers.
     attempt = _get_attempt(attempt_id)
-
     if not attempt:
         _clear_active_quiz_session()
         return redirect(url_for("student.available_quizzes"))
-
     if attempt["status"] == "submitted":
         return redirect(url_for("student.quiz"))
-
     answers = _get_attempt_answers(attempt_id)
-
-    try:
-        question_time_seconds = int(
-            quiz_data.get("question_time_seconds") or 0
-        )
-    except (TypeError, ValueError):
-        question_time_seconds = 0
-
-    # Revalidate the current index before rendering.
-    try:
-        current_index = int(
-            session.get("quiz_current_index", 0)
-        )
-    except (TypeError, ValueError):
-        current_index = 0
-
-    current_index = max(
-        0,
-        min(current_index, len(questions) - 1),
-    )
-
-    session["quiz_current_index"] = current_index
-
     return render_template(
-        "quiz.html",
-        quiz=quiz_data,
-        questions=questions,
-        answers=answers,
-        attempt=attempt,
-        remaining_seconds=remaining_seconds,
+        "quiz.html", quiz=quiz_data, questions=questions, answers=answers,
+        attempt=attempt, remaining_seconds=remaining_seconds,
         question_time_seconds=question_time_seconds,
-        current_index=current_index,
-        unavailable=False,
-        show_result=False,
+        question_remaining_seconds=question_remaining_seconds,
+        current_index=expected_index, unavailable=False, show_result=False,
     )
-
-
 
 
 # ============================================================
