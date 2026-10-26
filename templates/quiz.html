@@ -137,7 +137,7 @@ body{padding:14px}
         {% if question_time_seconds|default(0)|int > 0 %}
         <div class="question-timer-row">
             <span>Time for this question</span>
-            <span class="question-timer-value" id="questionTimer">--:--</span>
+            <span class="question-timer-value" class="question-timer-value question-timer">--:--</span>
         </div>
         {% endif %}
         <div class="options">
@@ -178,12 +178,19 @@ body{padding:14px}
     const selectedOptionInput = document.getElementById("selectedOptionInput");
     const timerNotice = document.getElementById("timerNotice");
     const requestNotice = document.getElementById("requestNotice");
-    const questionTimer = document.getElementById("questionTimer");
+    const questionTimers = Array.from(document.querySelectorAll(".question-timer"));
+    function updateQuestionTimerDisplay(value) {
+        questionTimers.forEach(function (element) {
+            element.textContent = formatTime(value);
+        });
+    }
 
     let currentIndex = Math.min(cards.length - 1, Math.max(0, Number({{ current_index|default(0)|int }})));
     let submitting = false;
     let overallInterval = null;
     let questionInterval = null;
+    let questionDeadlineMs = 0;
+    let overallDeadlineMs = Date.now() + Math.max(0, Number({{ remaining_seconds|default(0)|int }})) * 1000;
     let remainingSeconds = Math.max(0, Number({{ remaining_seconds|default(0)|int }}));
     const questionTimeSeconds = Math.max(0, Number({{ question_time_seconds|default(0)|int }}));
     let questionRemainingSeconds = Math.max(0, Number({{ question_remaining_seconds|default(question_time_seconds|default(0))|int }}));
@@ -234,7 +241,7 @@ body{padding:14px}
         submitButton.hidden = currentIndex !== cards.length - 1;
         updateStyles();
         updateProgress();
-        if (questionTimer) questionTimer.textContent = formatTime(questionRemainingSeconds);
+        updateQuestionTimerDisplay(questionRemainingSeconds);
     }
 
     function prepare(action) {
@@ -251,18 +258,25 @@ body{padding:14px}
             questionInterval = null;
         }
         if (questionTimeSeconds <= 0) return;
-        if (questionTimer) questionTimer.textContent = formatTime(questionRemainingSeconds);
+
+        questionDeadlineMs = Date.now() + questionRemainingSeconds * 1000;
+        updateQuestionTimerDisplay(questionRemainingSeconds);
 
         questionInterval = window.setInterval(function () {
             if (submitting) return;
-            questionRemainingSeconds = Math.max(0, questionRemainingSeconds - 1);
-            if (questionTimer) questionTimer.textContent = formatTime(questionRemainingSeconds);
+
+            questionRemainingSeconds = Math.max(
+                0,
+                Math.ceil((questionDeadlineMs - Date.now()) / 1000)
+            );
+            updateQuestionTimerDisplay(questionRemainingSeconds);
+
             if (questionRemainingSeconds <= 0) {
                 clearInterval(questionInterval);
                 questionInterval = null;
                 postAction(currentIndex === cards.length - 1 ? "submit" : "save", true);
             }
-        }, 1000);
+        }, 200);
     }
 
     async function postAction(action, automatic) {
@@ -313,10 +327,14 @@ body{padding:14px}
             currentIndex = nextIndex;
             if (Number.isFinite(Number(data.remaining_seconds))) {
                 remainingSeconds = Math.max(0, Number(data.remaining_seconds));
+                overallDeadlineMs = Date.now() + remainingSeconds * 1000;
             }
-
-            // A successful navigation starts a fresh question clock.
-            questionRemainingSeconds = questionTimeSeconds;
+            if (Number.isFinite(Number(data.question_remaining_seconds))) {
+                questionRemainingSeconds = Math.max(0, Number(data.question_remaining_seconds));
+            } else {
+                // Server starts the next question clock when it processes navigation.
+                questionRemainingSeconds = questionTimeSeconds;
+            }
             updateDisplay();
             submitting = false;
             nextButton.disabled = false;
@@ -363,14 +381,14 @@ body{padding:14px}
     // Keep the overall timer interval alive while a save/navigation request is in progress.
     overallInterval = window.setInterval(function () {
         if (!submitting) {
-            remainingSeconds = Math.max(0, remainingSeconds - 1);
+            remainingSeconds = Math.max(0, Math.ceil((overallDeadlineMs - Date.now()) / 1000));
             overallTimer.textContent = formatTime(remainingSeconds);
         }
         if (remainingSeconds <= 0 && !submitting) {
             clearInterval(overallInterval);
             postAction("submit", true);
         }
-    }, 1000);
+    }, 200);
 
     // Preserve the existing tab-switch submission safeguard.
     let tabSwitchDetected = false;
