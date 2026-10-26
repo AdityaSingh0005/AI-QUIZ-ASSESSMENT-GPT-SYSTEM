@@ -1198,6 +1198,7 @@ def quiz():
             return jsonify({"ok": True, "submitted": False,
                             "current_index": next_index,
                             "question_time_seconds": question_time_seconds,
+                            "question_remaining_seconds": question_time_seconds,
                             "remaining_seconds": remaining_seconds,
                             "message": "Question saved."})
         return redirect(url_for("student.quiz"))

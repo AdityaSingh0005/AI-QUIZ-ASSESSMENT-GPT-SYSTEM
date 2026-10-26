@@ -10,297 +10,226 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1.0">
 
-<title>Manage Quizzes | AI Quiz System</title>
+<title>Manage Quizzes</title>
 
-<link rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+    * {
+        box-sizing: border-box;
+    }
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet">
+    body {
+        margin: 0;
+        padding: 24px;
+        font-family: Arial, sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+    }
+
+    .container {
+        max-width: 1100px;
+        margin: auto;
+    }
+
+    h1 {
+        margin-bottom: 8px;
+    }
+
+    .muted {
+        color: #94a3b8;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+        margin-top: 24px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 12px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+    }
+
+    th,
+    td {
+        text-align: left;
+        padding: 14px;
+        border-bottom: 1px solid #334155;
+    }
+
+    th {
+        background: #0b1220;
+    }
+
+    tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 9px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        color: #fff;
+        background: #2563eb;
+        border: 0;
+        cursor: pointer;
+    }
+
+    .danger {
+        background: #b91c1c;
+    }
+
+    .flash {
+        padding: 12px;
+        background: #334155;
+        border-radius: 8px;
+        margin: 12px 0;
+    }
+
+    .empty {
+        padding: 22px;
+        background: #1e293b;
+        border-radius: 12px;
+        margin-top: 20px;
+    }
+</style>
 
 
 </head>
 
-<body class="dashboard-page">
+<body>
 
+<main class="container">
 
-<!-- ================= NAVBAR ================= -->
+```
+<h1>Manage Quizzes</h1>
 
-<nav class="premium-navbar">
+<p class="muted">
+    View quiz availability and delete quizzes you own.
+</p>
 
-    <div class="navbar-brand">
+{% with messages = get_flashed_messages(with_categories=true) %}
 
-        <div class="navbar-logo">
-            🧠
+    {% for category, message in messages %}
+
+        <div class="flash">
+            {{ message }}
         </div>
 
-        <div class="navbar-brand-text">
+    {% endfor %}
 
-            <strong>
-                AI Quiz
-            </strong>
+{% endwith %}
 
-            <span>
-                ASSESSMENT SYSTEM
-            </span>
+{% if quizzes %}
 
-        </div>
+    <div class="table-wrap">
+
+        <table>
+
+            <thead>
+
+                <tr>
+                    <th>Quiz</th>
+                    <th>Questions</th>
+                    <th>Duration</th>
+                    <th>Available From</th>
+                    <th>Available Until</th>
+                    <th>Actions</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for quiz in quizzes %}
+
+                    <tr>
+
+                        <td>
+                            {{ quiz.title }}
+                        </td>
+
+                        <td>
+                            {{ quiz.total_questions or '—' }}
+                        </td>
+
+                        <td>
+                            {{ quiz.duration_minutes or '—' }} min
+                        </td>
+
+                        <td>
+
+                            {% if quiz.available_from %}
+
+                                {{ quiz.available_from.strftime('%d %b %Y, %I:%M %p') if quiz.available_from.strftime is defined else quiz.available_from }}
+
+                            {% else %}
+
+                                Not set
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            {% if quiz.available_until %}
+
+                                {{ quiz.available_until.strftime('%d %b %Y, %I:%M %p') if quiz.available_until.strftime is defined else quiz.available_until }}
+
+                            {% else %}
+
+                                No end time
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            <a
+                                class="btn danger"
+                                href="{{ url_for('teacher.delete_quiz', quiz_id=quiz.quiz_id) }}"
+                                onclick="return confirm('Delete this quiz and its attempts, answers, and results permanently? This cannot be undone.');"
+                            >
+                                Delete
+                            </a>
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
 
     </div>
 
+{% else %}
 
-    <div class="navbar-actions">
-
-        <a href="/teacher_dashboard"
-           class="navbar-link">
-
-            <span class="navbar-link-icon">
-                🏠
-            </span>
-
-            Dashboard
-
-        </a>
-
-
-        <a href="/logout"
-           class="navbar-link logout-link">
-
-            <span class="navbar-link-icon">
-                🚪
-            </span>
-
-            Logout
-
-        </a>
-
+    <div class="empty">
+        You have not created any quizzes yet.
     </div>
 
-</nav>
+{% endif %}
 
+<p style="margin-top: 22px">
 
+    <a class="btn"
+       href="{{ url_for('teacher.create_quiz') }}">
+        Create Quiz
+    </a>
 
-<!-- ================= MAIN ================= -->
-
-<main class="manage-page">
-
-
-    <!-- HEADER -->
-
-    <section class="manage-header">
-
-        <div>
-
-            <div class="manage-eyebrow">
-                <span>✦</span>
-                QUIZ MANAGEMENT
-            </div>
-
-            <h1>
-                My Created Quizzes
-            </h1>
-
-            <p>
-                Manage your assessments, share quiz access
-                and organize your created quizzes.
-            </p>
-
-        </div>
-
-
-        <a href="/create_quiz"
-           class="create-quiz-btn">
-
-            <span>＋</span>
-            Create Quiz
-
-        </a>
-
-    </section>
-
-
-
-    <!-- QUIZ COUNT -->
-
-    <div class="quiz-management-summary">
-
-        <div class="summary-icon">
-            📚
-        </div>
-
-        <div>
-
-            <strong>
-                {{ quizzes|length }}
-            </strong>
-
-            <span>
-                Total Quizzes
-            </span>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- QUIZ GRID -->
-
-    {% if quizzes %}
-
-    <section class="manage-quiz-grid">
-
-
-        {% for quiz in quizzes %}
-
-        <article class="manage-quiz-card">
-
-
-            <div class="manage-card-top">
-
-                <div class="manage-quiz-icon">
-                    📝
-                </div>
-
-                <span class="quiz-status">
-                    ● Active
-                </span>
-
-            </div>
-
-
-            <div class="manage-card-content">
-
-                <h2>
-                    {{ quiz.title }}
-                </h2>
-
-                <div class="quiz-meta">
-
-                    <div class="quiz-meta-item">
-
-                        <span class="meta-icon">
-                            📋
-                        </span>
-
-                        <div>
-
-                            <small>
-                                Questions
-                            </small>
-
-                            <strong>
-                                {{ quiz.total_questions }}
-                            </strong>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="quiz-meta-item">
-
-                        <span class="meta-icon">
-                            📅
-                        </span>
-
-                        <div>
-
-                            <small>
-                                Created
-                            </small>
-
-                            <strong>
-                                {{ quiz.created_at }}
-                            </strong>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <div class="manage-card-actions">
-
-                <a href="/show_qr/{{ quiz.quiz_id }}"
-                   class="quiz-action primary-action">
-
-                    <span>
-                        📱
-                    </span>
-
-                    View QR
-
-                </a>
-
-
-                <a href="/delete_quiz/{{ quiz.quiz_id }}"
-                   class="quiz-action delete-action">
-
-                    <span>
-                        🗑
-                    </span>
-
-                    Delete
-
-                </a>
-
-            </div>
-
-
-        </article>
-
-        {% endfor %}
-
-
-    </section>
-
-
-    {% else %}
-
-
-    <!-- EMPTY STATE -->
-
-    <section class="manage-empty">
-
-        <div class="manage-empty-icon">
-            📚
-        </div>
-
-        <h2>
-            No quizzes created yet
-        </h2>
-
-        <p>
-            Create your first AI-powered quiz and start
-            assessing your students.
-        </p>
-
-        <a href="/create_quiz"
-           class="create-quiz-btn">
-
-            <span>＋</span>
-            Create Your First Quiz
-
-        </a>
-
-    </section>
-
-
-    {% endif %}
+</p>
 
 
 </main>
-
-
-{% include 'footer.html' %}
-
-
-<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
-
 
 </body>
 
