@@ -2,241 +2,1320 @@
 
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Available Quizzes | AI Quiz Assessment</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+```
+<title>Available Quizzes | QuizSphere</title>
+<meta name="theme-color" content="#0b1020">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <style>
-* {
-    box-sizing: border-box;
-}
-
-body {
-    margin: 0;
-    padding: 24px;
-    font-family: Arial, sans-serif;
-    background: #0f172a;
-    color: #e2e8f0;
-}
-
-.container {
-    max-width: 1100px;
-    margin: auto;
-}
-
-h1 {
-    margin-bottom: 8px;
-}
-
-.muted {
-    color: #94a3b8;
-    line-height: 1.5;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 18px;
-    margin-top: 24px;
-}
-
-.quiz {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 16px;
-    padding: 22px;
-}
-
-.quiz h2 {
-    margin-top: 0;
-}
-
-.dates {
-    padding: 12px;
-    background: #0f172a;
-    border-radius: 10px;
-    line-height: 1.8;
-    font-size: 14px;
-    margin: 16px 0;
-}
-
-.badge {
-    display: inline-block;
-    padding: 6px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: bold;
-    text-transform: uppercase;
-}
-
-.live {
-    background: #14532d;
-    color: #bbf7d0;
-}
-
-.upcoming {
-    background: #78350f;
-    color: #fde68a;
-}
-
-.closed {
-    background: #7f1d1d;
-    color: #fecaca;
-}
-
-.btn {
-    display: inline-block;
-    padding: 11px 15px;
-    border-radius: 9px;
-    text-decoration: none;
-    font-weight: bold;
-    background: #2563eb;
-    color: white;
-    border: 0;
-    cursor: pointer;
-}
-
-.btn:disabled {
-    opacity: 0.45;
-}
-
-.empty {
-    margin-top: 22px;
-    padding: 22px;
-    border-radius: 12px;
-    background: #1e293b;
-}
-
-.flash {
-    padding: 12px;
-    border-radius: 8px;
-    background: #334155;
-    margin: 12px 0;
-}
-
-@media (max-width: 600px) {
-    body {
-        padding: 14px;
+    :root {
+        --bg: #0b1020;
+        --surface: #111a2e;
+        --card: #141f35;
+        --card-hover: #192640;
+        --border: rgba(148, 163, 184, .14);
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --blue: #6485ff;
+        --blue-light: #8ba3ff;
+        --green: #34d399;
+        --amber: #fbbf24;
+        --red: #fb7185;
+        --radius: 20px;
     }
-}
+
+    * {
+        box-sizing: border-box;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+            radial-gradient(ellipse at 8% 0%, rgba(79, 70, 229, .13), transparent 36%),
+            radial-gradient(ellipse at 100% 12%, rgba(37, 99, 235, .10), transparent 32%),
+            var(--bg);
+        color: var(--text);
+        font-family: "DM Sans", sans-serif;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    button, input {
+        font: inherit;
+    }
+
+    a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    a:focus-visible {
+        outline: 2px solid var(--blue-light);
+        outline-offset: 4px;
+    }
+
+    .app {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 0 44px 64px;
+    }
+
+    /* Top navigation */
+
+    .topbar {
+        min-height: 82px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 46px;
+    }
+
+    .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-weight: 800;
+        font-size: 19px;
+        letter-spacing: -.6px;
+    }
+
+    .brand-icon {
+        width: 40px;
+        height: 40px;
+        display: grid;
+        place-items: center;
+        border-radius: 13px;
+        background: linear-gradient(135deg, #7190ff, #5546dc);
+        color: white;
+        box-shadow: 0 7px 24px rgba(99, 102, 241, .24);
+    }
+
+    .brand-icon svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .secure-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 13px;
+    }
+
+    .secure-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 12px rgba(52, 211, 153, .5);
+    }
+
+    .nav-button {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 15px;
+        border: 1px solid var(--border);
+        border-radius: 11px;
+        background: rgba(255,255,255,.035);
+        color: #e2e8f0;
+        font-size: 13px;
+        font-weight: 700;
+        transition: .2s ease;
+    }
+
+    .nav-button:hover {
+        background: rgba(255,255,255,.08);
+        border-color: rgba(148,163,184,.3);
+    }
+
+    .nav-button svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Page heading */
+
+    .hero {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 28px;
+        margin-bottom: 30px;
+    }
+
+    .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--blue-light);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 1.7px;
+        text-transform: uppercase;
+        margin-bottom: 16px;
+    }
+
+    .eyebrow-line {
+        height: 2px;
+        width: 22px;
+        border-radius: 2px;
+        background: var(--blue);
+    }
+
+    h1, h2, p {
+        margin-top: 0;
+    }
+
+    h1 {
+        margin-bottom: 12px;
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: clamp(30px, 4vw, 43px);
+        font-weight: 800;
+        letter-spacing: -1.8px;
+        line-height: 1.18;
+    }
+
+    .hero-description {
+        max-width: 590px;
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.8;
+    }
+
+    .hero-note {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 13px 16px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: rgba(20,31,53,.72);
+        color: #cbd5e1;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .hero-note svg {
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        color: var(--blue-light);
+    }
+
+    /* Statistics */
+
+    .stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        min-height: 100px;
+        padding: 20px 22px;
+        background: linear-gradient(145deg, rgba(20,31,53,.96), rgba(17,26,46,.96));
+        border: 1px solid var(--border);
+        border-radius: 17px;
+    }
+
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        border-radius: 13px;
+    }
+
+    .stat-icon svg {
+        width: 21px;
+        height: 21px;
+    }
+
+    .stat-icon.purple {
+        background: rgba(129,140,248,.13);
+        color: #a5b4fc;
+    }
+
+    .stat-icon.green {
+        background: rgba(52,211,153,.12);
+        color: #6ee7b7;
+    }
+
+    .stat-icon.amber {
+        background: rgba(251,191,36,.12);
+        color: #fcd34d;
+    }
+
+    .stat-label {
+        margin-bottom: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .stat-value {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 25px;
+        line-height: 1.1;
+        font-weight: 800;
+        letter-spacing: -.6px;
+    }
+
+    /* Search and filter */
+
+    .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 24px;
+    }
+
+    .search-wrap {
+        position: relative;
+        width: min(100%, 360px);
+    }
+
+    .search-wrap svg {
+        position: absolute;
+        top: 50%;
+        left: 15px;
+        width: 18px;
+        height: 18px;
+        color: #64748b;
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+
+    .search-input {
+        width: 100%;
+        height: 46px;
+        padding: 0 15px 0 44px;
+        color: var(--text);
+        background: #111a2e;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        outline: none;
+        transition: border-color .2s, box-shadow .2s;
+    }
+
+    .search-input::placeholder {
+        color: #718096;
+    }
+
+    .search-input:focus {
+        border-color: rgba(100,133,255,.7);
+        box-shadow: 0 0 0 3px rgba(100,133,255,.1);
+    }
+
+    .filters {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .filter-btn {
+        min-height: 40px;
+        padding: 0 15px;
+        border: 1px solid var(--border);
+        border-radius: 11px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: .2s ease;
+    }
+
+    .filter-btn:hover {
+        background: rgba(255,255,255,.04);
+        color: var(--text);
+    }
+
+    .filter-btn.active {
+        color: white;
+        background: rgba(100,133,255,.15);
+        border-color: rgba(100,133,255,.45);
+    }
+
+    /* Section heading */
+
+    .section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 17px;
+    }
+
+    .section-heading h2 {
+        margin-bottom: 0;
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: -.4px;
+    }
+
+    .results-count {
+        color: var(--muted);
+        font-size: 12px;
+    }
+
+    /* Quiz cards */
+
+    .quiz-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: stretch;
+        gap: 20px;
+    }
+
+    .quiz-card {
+        position: relative;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 23px;
+        overflow: hidden;
+        background: linear-gradient(155deg, #17243b 0%, #121d32 100%);
+        border: 1px solid rgba(148,163,184,.15);
+        border-radius: var(--radius);
+        transition: transform .23s ease, border-color .23s ease, box-shadow .23s ease;
+    }
+
+    .quiz-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(129,150,255,.4);
+        box-shadow: 0 18px 45px rgba(0,0,0,.17);
+    }
+
+    .card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 19px;
+    }
+
+    .quiz-symbol {
+        width: 45px;
+        height: 45px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        border-radius: 14px;
+        color: #a5b4fc;
+        background: linear-gradient(135deg, rgba(99,102,241,.19), rgba(59,130,246,.09));
+        border: 1px solid rgba(129,140,248,.13);
+    }
+
+    .quiz-symbol svg {
+        width: 23px;
+        height: 23px;
+    }
+
+    .status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 7px 10px;
+        border-radius: 30px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .55px;
+        white-space: nowrap;
+        text-transform: uppercase;
+    }
+
+    .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+
+    .status-live {
+        color: #6ee7b7;
+        background: rgba(16,185,129,.12);
+        border: 1px solid rgba(52,211,153,.18);
+    }
+
+    .status-live .status-dot {
+        box-shadow: 0 0 8px rgba(52,211,153,.65);
+    }
+
+    .status-upcoming {
+        color: #fcd34d;
+        background: rgba(245,158,11,.10);
+        border: 1px solid rgba(251,191,36,.18);
+    }
+
+    .status-closed {
+        color: #fda4af;
+        background: rgba(244,63,94,.10);
+        border: 1px solid rgba(251,113,133,.18);
+    }
+
+    .quiz-title {
+        margin: 0 0 10px;
+        color: #f1f5f9;
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: -.4px;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+    }
+
+    .quiz-description {
+        margin: 0 0 22px;
+        color: #8f9db3;
+        font-size: 12px;
+        line-height: 1.7;
+    }
+
+    .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin-bottom: 22px;
+    }
+
+    .meta-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 10px;
+        border: 1px solid rgba(148,163,184,.12);
+        border-radius: 9px;
+        color: #cbd5e1;
+        background: rgba(8,15,30,.32);
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .meta-chip svg {
+        width: 14px;
+        height: 14px;
+        color: #94a3b8;
+        flex-shrink: 0;
+    }
+
+    .availability {
+        padding: 15px;
+        margin-bottom: 20px;
+        background: rgba(7,13,27,.36);
+        border: 1px solid rgba(148,163,184,.10);
+        border-radius: 13px;
+    }
+
+    .availability-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 13px;
+        color: #cbd5e1;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .availability-title svg {
+        width: 15px;
+        height: 15px;
+        color: var(--blue-light);
+    }
+
+    .date-item {
+        display: grid;
+        grid-template-columns: 17px minmax(0, 1fr);
+        gap: 9px;
+        align-items: start;
+    }
+
+    .date-item + .date-item {
+        margin-top: 13px;
+    }
+
+    .date-icon {
+        width: 16px;
+        height: 16px;
+        color: #7185bd;
+        margin-top: 2px;
+    }
+
+    .date-label {
+        display: block;
+        margin-bottom: 4px;
+        color: #8391a8;
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+    .date-value {
+        display: block;
+        color: #e2e8f0;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+    }
+
+    .date-unset {
+        color: #94a3b8;
+        font-weight: 500;
+    }
+
+    .card-footer {
+        margin-top: auto;
+        padding-top: 3px;
+    }
+
+    .start-btn {
+        width: 100%;
+        min-height: 47px;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        color: white;
+        background: linear-gradient(110deg, #526ff2, #657fff);
+        border: 1px solid rgba(165,180,252,.25);
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform .2s, box-shadow .2s, filter .2s;
+    }
+
+    .start-btn:hover {
+        filter: brightness(1.09);
+        box-shadow: 0 7px 24px rgba(79,102,237,.22);
+        transform: translateY(-1px);
+    }
+
+    .start-btn svg {
+        width: 17px;
+        height: 17px;
+    }
+
+    .disabled-btn {
+        color: #8490a5;
+        background: rgba(100,116,139,.12);
+        border: 1px solid rgba(148,163,184,.1);
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+
+    .disabled-btn:hover {
+        filter: none;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .btn-note {
+        margin: 10px 0 0;
+        text-align: center;
+        color: #8490a5;
+        font-size: 10px;
+        line-height: 1.6;
+    }
+
+    /* Empty states */
+
+    .empty-state {
+        display: none;
+        padding: 52px 22px;
+        margin-top: 12px;
+        text-align: center;
+        background: rgba(20,31,53,.65);
+        border: 1px dashed rgba(148,163,184,.23);
+        border-radius: 20px;
+    }
+
+    .empty-state.visible {
+        display: block;
+    }
+
+    .empty-icon {
+        width: 58px;
+        height: 58px;
+        margin: 0 auto 17px;
+        display: grid;
+        place-items: center;
+        color: #a5b4fc;
+        background: rgba(99,102,241,.12);
+        border-radius: 18px;
+    }
+
+    .empty-icon svg {
+        width: 27px;
+        height: 27px;
+    }
+
+    .empty-state h3 {
+        margin-bottom: 9px;
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 18px;
+    }
+
+    .empty-state p {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.7;
+    }
+
+    .flash-messages {
+        margin-bottom: 20px;
+    }
+
+    .flash {
+        padding: 13px 16px;
+        margin-bottom: 10px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        color: #e2e8f0;
+        font-size: 13px;
+    }
+
+    /* Footer */
+
+    .footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-top: 42px;
+        padding-top: 22px;
+        border-top: 1px solid var(--border);
+        color: #718096;
+        font-size: 11px;
+        line-height: 1.7;
+    }
+
+    .footer-brand {
+        color: #a5b4fc;
+        font-weight: 800;
+    }
+
+    /* Responsive */
+
+    @media (max-width: 1100px) {
+        .app {
+            padding-left: 28px;
+            padding-right: 28px;
+        }
+
+        .quiz-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .hero-note {
+            display: none;
+        }
+    }
+
+    @media (max-width: 700px) {
+        .app {
+            padding: 0 17px 35px;
+        }
+
+        .topbar {
+            min-height: 70px;
+            margin-bottom: 32px;
+        }
+
+        .brand {
+            font-size: 16px;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+        }
+
+        .secure-label {
+            display: none;
+        }
+
+        .hero {
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 31px;
+            letter-spacing: -1.2px;
+        }
+
+        .hero-description {
+            font-size: 13px;
+        }
+
+        .stats {
+            gap: 9px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            display: block;
+            min-height: 100px;
+            padding: 13px;
+            border-radius: 14px;
+        }
+
+        .stat-icon {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+        }
+
+        .stat-icon svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            line-height: 1.4;
+        }
+
+        .stat-value {
+            font-size: 22px;
+        }
+
+        .toolbar {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 13px;
+        }
+
+        .search-wrap {
+            width: 100%;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+        }
+
+        .filter-btn {
+            padding: 0 5px;
+            font-size: 10px;
+        }
+
+        .quiz-grid {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 14px;
+        }
+
+        .quiz-card {
+            padding: 20px;
+        }
+
+        .quiz-title {
+            font-size: 16px;
+        }
+
+        .footer {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            scroll-behavior: auto !important;
+            transition-duration: .01ms !important;
+            animation-duration: .01ms !important;
+        }
+    }
 </style>
+```
 
 </head>
 
 <body>
-<main class="container">
 
+{% set quiz_list = quizzes|default([], true) %}
+{% set live_count = quiz_list|selectattr('status', 'equalto', 'live')|list|length %}
+{% set upcoming_count = quiz_list|selectattr('status', 'equalto', 'upcoming')|list|length %}
 
-<h1>Available Quizzes</h1>
+<div class="app">
 
-<p class="muted">
-    Check each quiz's availability window before starting.
-</p>
+```
+<header class="topbar">
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-        <div class="flash">{{ message }}</div>
-    {% endfor %}
-{% endwith %}
+    <a class="brand" href="{{ url_for('student.student_dashboard') }}" aria-label="Back to dashboard">
+        <span class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="4" y="3" width="16" height="18" rx="3"></rect>
+                <path d="M8 8h8M8 12h3M8 16h5"></path>
+                <path d="m14 15 1.5 1.5L19 13"></path>
+            </svg>
+        </span>
+        <span>QuizSphere</span>
+    </a>
 
-{% if quizzes %}
+    <div class="nav-right">
+        <span class="secure-label">
+            <span class="secure-dot"></span>
+            Assessment Portal
+        </span>
 
-    <section class="grid">
+        <a class="nav-button" href="{{ url_for('student.student_dashboard') }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="m15 18-6-6 6-6"></path>
+                <path d="M9 12h11"></path>
+            </svg>
+            Dashboard
+        </a>
+    </div>
 
-        {% for quiz in quizzes %}
+</header>
 
-            <article class="quiz">
+<main>
 
-                <h2>{{ quiz.title }}</h2>
+    <section class="hero">
 
-                {% set status = quiz.status|default('closed') %}
+        <div>
+            <div class="eyebrow">
+                <span class="eyebrow-line"></span>
+                YOUR LEARNING SPACE
+            </div>
 
-                <span class="badge {{ 'live' if status == 'live' else ('upcoming' if status == 'upcoming' else 'closed') }}">
-                    {{ 'Live now' if status == 'live' else ('Upcoming' if status == 'upcoming' else 'Closed') }}
-                </span>
+            <h1>Available Quizzes<span style="color:var(--blue-light)">.</span></h1>
 
-                <div class="dates">
+            <p class="hero-description">
+                Find your next challenge, test your knowledge and track your progress.
+                Check the availability schedule before starting an assessment.
+            </p>
+        </div>
 
-                    <strong>Available from:</strong>
-                    <br>
-
-                    {% if quiz.available_from %}
-                        {{ quiz.available_from.strftime('%d %b %Y, %I:%M %p') if quiz.available_from.strftime is defined else quiz.available_from }}
-                    {% else %}
-                        Not specified
-                    {% endif %}
-
-                    <br>
-
-                    <strong>Available until:</strong>
-                    <br>
-
-                    {% if quiz.available_until %}
-                        {{ quiz.available_until.strftime('%d %b %Y, %I:%M %p') if quiz.available_until.strftime is defined else quiz.available_until }}
-                    {% else %}
-                        No end time specified
-                    {% endif %}
-
-                    <br>
-
-                    <strong>Duration:</strong>
-                    {{ quiz.duration_minutes|default('—') }} minutes
-
-                </div>
-
-                {% if status == 'live' %}
-
-                    {% if session.get('student_id') %}
-
-                        <a class="btn"
-                           href="{{ url_for('student.start_quiz', quiz_id=quiz.quiz_id) }}">
-                            Start Quiz
-                        </a>
-
-                    {% else %}
-
-                        <a class="btn"
-                           href="{{ url_for('student.guest_start_quiz', quiz_id=quiz.quiz_id) }}">
-                            Start Quiz
-                        </a>
-
-                    {% endif %}
-
-                {% elif status == 'upcoming' %}
-
-                    <button class="btn" disabled>
-                        Not started yet
-                    </button>
-
-                {% else %}
-
-                    <button class="btn" disabled>
-                        Quiz closed
-                    </button>
-
-                {% endif %}
-
-            </article>
-
-        {% endfor %}
+        <div class="hero-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="M12 7v5l3 2"></path>
+            </svg>
+            <span>Check quiz timings<br>before you begin</span>
+        </div>
 
     </section>
 
-{% else %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 
-    <div class="empty">
-        No quizzes are available right now.
-    </div>
+    <section class="stats" aria-label="Quiz summary">
 
-{% endif %}
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <rect x="4" y="3" width="16" height="18" rx="3"></rect>
+                    <path d="M8 8h8M8 12h8M8 16h5"></path>
+                </svg>
+            </div>
+            <div>
+                <div class="stat-label">Total Quizzes</div>
+                <div class="stat-value" id="totalCount">{{ quiz_list|length }}</div>
+            </div>
+        </div>
 
-<p style="margin-top: 24px">
-    <a class="btn" href="{{ url_for('student.student_dashboard') }}">
-        Back to Dashboard
-    </a>
-</p>
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="m8 12 2.5 2.5L16 9"></path>
+                </svg>
+            </div>
+            <div>
+                <div class="stat-label">Live Now</div>
+                <div class="stat-value" id="liveCount">{{ live_count }}</div>
+            </div>
+        </div>
 
+        <div class="stat-card">
+            <div class="stat-icon amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M12 7v5l3 2"></path>
+                </svg>
+            </div>
+            <div>
+                <div class="stat-label">Upcoming</div>
+                <div class="stat-value" id="upcomingCount">{{ upcoming_count }}</div>
+            </div>
+        </div>
+
+    </section>
+
+    <section class="toolbar" aria-label="Search and filter quizzes">
+
+        <div class="search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="10.8" cy="10.8" r="6.8"></circle>
+                <path d="m16 16 4 4"></path>
+            </svg>
+            <input
+                type="search"
+                id="quizSearch"
+                class="search-input"
+                placeholder="Search by quiz name..."
+                aria-label="Search quizzes"
+                autocomplete="off"
+            >
+        </div>
+
+        <div class="filters" role="group" aria-label="Filter by status">
+            <button class="filter-btn active" data-filter="all" type="button" aria-pressed="true">All</button>
+            <button class="filter-btn" data-filter="live" type="button" aria-pressed="false">Live</button>
+            <button class="filter-btn" data-filter="upcoming" type="button" aria-pressed="false">Upcoming</button>
+            <button class="filter-btn" data-filter="closed" type="button" aria-pressed="false">Closed</button>
+        </div>
+
+    </section>
+
+    <section aria-labelledby="quizSectionTitle">
+
+        <div class="section-heading">
+            <h2 id="quizSectionTitle">Explore assessments</h2>
+            <span class="results-count" id="resultsCount">
+                {{ quiz_list|length }} quiz{% if quiz_list|length != 1 %}zes{% endif %}
+            </span>
+        </div>
+
+        <div class="quiz-grid" id="quizGrid">
+
+            {% for quiz in quiz_list %}
+
+                {% set status = quiz.status|default('closed', true)|lower %}
+
+                <article
+                    class="quiz-card"
+                    data-status="{{ status if status in ['live', 'upcoming', 'closed'] else 'closed' }}"
+                    data-title="{{ quiz.title|default('Untitled Quiz', true)|lower }}"
+                >
+
+                    <div class="card-top">
+
+                        <div class="quiz-symbol">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <rect x="4" y="3" width="16" height="18" rx="3"></rect>
+                                <path d="M8 8h8M8 12h5"></path>
+                                <path d="m14 16 1.5 1.5L19 14"></path>
+                            </svg>
+                        </div>
+
+                        <span class="status status-{{ status if status in ['live', 'upcoming', 'closed'] else 'closed' }}">
+                            <span class="status-dot"></span>
+                            {% if status == 'live' %}
+                                Live Now
+                            {% elif status == 'upcoming' %}
+                                Upcoming
+                            {% else %}
+                                Closed
+                            {% endif %}
+                        </span>
+
+                    </div>
+
+                    <h3 class="quiz-title">
+                        {{ quiz.title|default('Untitled Quiz', true) }}
+                    </h3>
+
+                    <p class="quiz-description">
+                        Prepare yourself and demonstrate your understanding of this assessment.
+                    </p>
+
+                    <div class="meta-row">
+
+                        <span class="meta-chip">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <path d="M12 7v5l3 2"></path>
+                            </svg>
+                            {{ quiz.duration_minutes|default('—', true) }} min
+                        </span>
+
+                        {% if quiz.total_questions is defined and quiz.total_questions %}
+                            <span class="meta-chip">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                    <path d="M8 6h13M8 12h13M8 18h13"></path>
+                                    <path d="M3 6h.01M3 12h.01M3 18h.01"></path>
+                                </svg>
+                                {{ quiz.total_questions }} questions
+                            </span>
+                        {% endif %}
+
+                    </div>
+
+                    <div class="availability">
+
+                        <div class="availability-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                                <path d="M16 3v4M8 3v4M3 10h18"></path>
+                            </svg>
+                            AVAILABILITY SCHEDULE
+                        </div>
+
+                        <div class="date-item">
+                            <svg class="date-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <path d="M12 7v5l3 2"></path>
+                            </svg>
+                            <div>
+                                <span class="date-label">AVAILABLE FROM</span>
+                                <span class="date-value">
+                                    {% if quiz.available_from %}
+                                        {{ quiz.available_from.strftime('%d %b %Y, %I:%M %p') if quiz.available_from.strftime is defined else quiz.available_from }}
+                                    {% else %}
+                                        <span class="date-unset">Not specified</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="date-item">
+                            <svg class="date-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <path d="M12 7v5l3 2"></path>
+                            </svg>
+                            <div>
+                                <span class="date-label">AVAILABLE UNTIL</span>
+                                <span class="date-value">
+                                    {% if quiz.available_until %}
+                                        {{ quiz.available_until.strftime('%d %b %Y, %I:%M %p') if quiz.available_until.strftime is defined else quiz.available_until }}
+                                    {% else %}
+                                        <span class="date-unset">No end time specified</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="card-footer">
+
+                        {% if status == 'live' %}
+
+                            {% if session.get('student_id') %}
+
+                                <a class="start-btn"
+                                   href="{{ url_for('student.start_quiz', quiz_id=quiz.quiz_id) }}">
+                                    Start Assessment
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M5 12h14M13 6l6 6-6 6"></path>
+                                    </svg>
+                                </a>
+
+                            {% else %}
+
+                                <a class="start-btn"
+                                   href="{{ url_for('student.guest_start_quiz', quiz_id=quiz.quiz_id) }}">
+                                    Start Assessment
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M5 12h14M13 6l6 6-6 6"></path>
+                                    </svg>
+                                </a>
+
+                            {% endif %}
+
+                            <p class="btn-note">Quiz is currently available</p>
+
+                        {% elif status == 'upcoming' %}
+
+                            <button class="start-btn disabled-btn" type="button" disabled>
+                                Not Started Yet
+                            </button>
+
+                            <p class="btn-note">Return when the availability window begins</p>
+
+                        {% else %}
+
+                            <button class="start-btn disabled-btn" type="button" disabled>
+                                Assessment Closed
+                            </button>
+
+                            <p class="btn-note">This quiz is outside its availability window</p>
+
+                        {% endif %}
+
+                    </div>
+
+                </article>
+
+            {% endfor %}
+
+        </div>
+
+        <div class="empty-state {% if not quiz_list %}visible{% endif %}" id="emptyState">
+
+            <div class="empty-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                    <circle cx="10.8" cy="10.8" r="6.8"></circle>
+                    <path d="m16 16 4 4M8 11h6"></path>
+                </svg>
+            </div>
+
+            <h3 id="emptyTitle">
+                {% if quiz_list %}
+                    No matching quizzes
+                {% else %}
+                    No quizzes available
+                {% endif %}
+            </h3>
+
+            <p id="emptyMessage">
+                {% if quiz_list %}
+                    Try a different search term or select another filter.
+                {% else %}
+                    There are no quizzes to display right now. Please check again later.
+                {% endif %}
+            </p>
+
+        </div>
+
+    </section>
 
 </main>
+
+<footer class="footer">
+    <span><span class="footer-brand">QuizSphere</span> · AI Quiz Assessment System</span>
+    <span>Review the availability schedule before starting your assessment.</span>
+</footer>
+```
+
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    const searchInput = document.getElementById("quizSearch");
+    const filterButtons = document.querySelectorAll(".filter-btn");
+    const cards = Array.from(document.querySelectorAll(".quiz-card"));
+    const emptyState = document.getElementById("emptyState");
+    const emptyTitle = document.getElementById("emptyTitle");
+    const emptyMessage = document.getElementById("emptyMessage");
+    const resultsCount = document.getElementById("resultsCount");
+    const totalCount = document.getElementById("totalCount");
+    const liveCount = document.getElementById("liveCount");
+    const upcomingCount = document.getElementById("upcomingCount");
+
+    let activeFilter = "all";
+
+    function applyFilters() {
+        const query = (searchInput.value || "").trim().toLowerCase();
+        let visibleCount = 0;
+
+        cards.forEach(function (card) {
+            const title = card.dataset.title || "";
+            const status = card.dataset.status || "closed";
+
+            const matchesSearch = title.includes(query);
+            const matchesFilter = activeFilter === "all" || status === activeFilter;
+            const visible = matchesSearch && matchesFilter;
+
+            card.hidden = !visible;
+
+            if (visible) {
+                visibleCount++;
+            }
+        });
+
+        emptyState.classList.toggle("visible", visibleCount === 0);
+
+        if (visibleCount === 0) {
+            if (cards.length === 0) {
+                emptyTitle.textContent = "No quizzes available";
+                emptyMessage.textContent =
+                    "There are no quizzes to display right now. Please check again later.";
+            } else {
+                emptyTitle.textContent = "No matching quizzes";
+                emptyMessage.textContent =
+                    "Try another search term or choose a different status filter.";
+            }
+        }
+
+        resultsCount.textContent =
+            visibleCount + (visibleCount === 1 ? " quiz" : " quizzes");
+
+        totalCount.textContent = cards.length;
+
+        liveCount.textContent = cards.filter(function (card) {
+            return card.dataset.status === "live";
+        }).length;
+
+        upcomingCount.textContent = cards.filter(function (card) {
+            return card.dataset.status === "upcoming";
+        }).length;
+    }
+
+    searchInput.addEventListener("input", applyFilters);
+
+    filterButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            activeFilter = button.dataset.filter || "all";
+
+            filterButtons.forEach(function (item) {
+                const selected = item === button;
+                item.classList.toggle("active", selected);
+                item.setAttribute("aria-pressed", String(selected));
+            });
+
+            applyFilters();
+        });
+    });
+
+    applyFilters();
+})();
+</script>
+
 </body>
 </html>
