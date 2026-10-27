@@ -3152,3 +3152,102 @@ def quiz_progress(quiz_id):
 
         cursor.close()
         db.close()
+        
+
+# ============================================================
+# EXPORT TEACHER RESULTS AS CSV (Excel-compatible)
+# ============================================================
+@teacher.route("/export_results", methods=["GET"])
+def export_results():
+    """Export submitted results for the logged-in teacher only."""
+    import csv
+    import io
+    from flask import make_response
+
+    if "teacher_id" not in session:
+        return redirect("/teacher_login")
+
+    teacher_id = session["teacher_id"]
+    quiz_id_raw = (request.args.get("quiz_id") or "").strip()
+    selected_quiz_id = None
+
+    if quiz_id_raw:
+        try:
+            selected_quiz_id = int(quiz_id_raw)
+            if selected_quiz_id <= 0:
+                raise ValueError
+        except ValueError:
+            return "Invalid quiz ID.", 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        query = """
+            SELECT
+                COALESCE(NULLIF(TRIM(s.full_name), ''),
+                         NULLIF(TRIM(qa.student_name), ''),
+                         'Guest Student') AS student_name,
+                COALESCE(NULLIF(TRIM(qa.roll_number), ''),
+                         NULLIF(TRIM(s.roll_number), ''),
+                         'N/A') AS roll_number,
+                q.title AS quiz_title,
+                COALESCE(q.total_questions, 0) AS total_marks,
+                COALESCE(r.score, qa.score, 0) AS marks,
+                COALESCE(r.percentage, qa.percentage, 0) AS percentage,
+                COALESCE(qa.submitted_at, r.submitted_at) AS submitted_at,
+                qa.status AS attempt_status,
+                COALESCE(NULLIF(TRIM(qa.attempt_mode), ''),
+                         CASE WHEN qa.student_id IS NULL
+                              THEN 'Guest' ELSE 'Registered' END) AS attempt_type
+            FROM quiz_attempts qa
+            JOIN quizzes q ON q.quiz_id = qa.quiz_id
+            LEFT JOIN results r ON r.attempt_id = qa.attempt_id
+            LEFT JOIN students s ON s.student_id = qa.student_id
+            WHERE q.teacher_id = %s AND qa.status = 'submitted'
+        """
+        params = [teacher_id]
+        if selected_quiz_id is not None:
+            query += " AND q.quiz_id = %s"
+            params.append(selected_quiz_id)
+        query += """
+            ORDER BY COALESCE(qa.submitted_at, r.submitted_at) DESC NULLS LAST,
+                     qa.attempt_id DESC
+        """
+        cursor.execute(query, tuple(params))
+        rows = cursor.fetchall()
+
+        output = io.StringIO()
+        # UTF-8 BOM makes names display correctly in desktop Excel.
+        output.write("\ufeff")
+        writer = csv.writer(output)
+        writer.writerow([
+            "Student Name", "Roll Number", "Quiz Title", "Total Marks",
+            "Marks Obtained", "Percentage", "Submission Time",
+            "Attempt Status", "Attempt Type"
+        ])
+        for row in rows:
+            writer.writerow([
+                row["student_name"],
+                row["roll_number"],
+                row["quiz_title"],
+                # Marks are currently one mark per question; total marks are
+                # obtained from the quiz's question count in the query below.
+                row.get("total_marks", ""),
+                row["marks"],
+                row["percentage"],
+                row["submitted_at"].isoformat(sep=" ") if row["submitted_at"] else "",
+                row["attempt_status"],
+                row["attempt_type"],
+            ])
+
+        response = make_response(output.getvalue())
+        response.headers["Content-Type"] = "text/csv; charset=utf-8"
+        suffix = f"_quiz_{selected_quiz_id}" if selected_quiz_id else ""
+        response.headers["Content-Disposition"] = (
+            f'attachment; filename="quiz_results{suffix}.csv"'
+        )
+        return response
+    finally:
+        cursor.close()
+        conn.close()
+

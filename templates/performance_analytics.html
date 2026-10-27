@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+  <h1>My Performance Analytics</h1>
+  <p class="text-muted">Based on your submitted quiz attempts.</p>
+
+  <!-- Summary Cards -->
+  <div class="row g-3 my-3">
+    <div class="col-md-3">
+      <div class="card p-3">
+        <small>Completed quizzes</small>
+        <h3>{{ summary.completed_quizzes or 0 }}</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3">
+        <small>Average percentage</small>
+        <h3>{{ '%.1f'|format(summary.average_percentage or 0) }}%</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3">
+        <small>Best percentage</small>
+        <h3>{{ '%.1f'|format(summary.best_percentage or 0) }}%</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3">
+        <small>First-to-last change</small>
+        <h3>
+          {% if trend is not none %}
+            {{ '%+.1f'|format(trend) }}%
+          {% else %}
+            —
+          {% endif %}
+        </h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz-wise Performance Table -->
+  <h2 class="h4 mt-4">Quiz-wise performance</h2>
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Quiz</th>
+          <th>Marks</th>
+          <th>Percentage</th>
+          <th>Submitted</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in quiz_results %}
+          <tr>
+            <td>{{ item.quiz_title }}</td>
+            <td>{{ item.score }} / {{ item.total_marks }}</td>
+            <td>{{ '%.1f'|format(item.percentage or 0) }}%</td>
+            <td>{{ item.submitted_at or '—' }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="4">No submitted quiz results yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Difficulty-wise Analysis Table -->
+  <h2 class="h4 mt-4">Difficulty-wise analysis</h2>
+  <p class="text-muted">
+    Your current database classifies questions by difficulty (Easy/Medium/Hard), not by syllabus topic. 
+    This section uses difficulty as a proxy, not as a topic label.
+  </p>
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Difficulty</th>
+          <th>Questions answered</th>
+          <th>Correct</th>
+          <th>Accuracy</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in difficulty_analysis %}
+          <tr>
+            <td>{{ item.topic }}</td>
+            <td>{{ item.answered }}</td>
+            <td>{{ item.correct }}</td>
+            <td>{{ item.percentage or 0 }}%</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="4">No answer-level data available yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <a class="btn btn-secondary mt-3" href="{{ url_for('student.student_dashboard') }}">
+    Back to dashboard
+  </a>
+</div>
+{% endblock %}

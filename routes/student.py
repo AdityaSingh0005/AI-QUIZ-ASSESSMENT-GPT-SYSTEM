@@ -1404,3 +1404,84 @@ def student_profile():
 
     finally:
         _close_db(connection)
+
+
+# ============================================================
+# STUDENT PERFORMANCE ANALYTICS (database-backed)
+# ============================================================
+@student.route("/performance_analytics")
+def performance_analytics():
+    student_id = session.get("student_id")
+    if not student_id:
+        return redirect(url_for("auth.login"))
+
+    connection = _db_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    COUNT(*) AS completed_quizzes,
+                    COALESCE(AVG(qa.percentage), 0) AS average_percentage,
+                    COALESCE(MAX(qa.percentage), 0) AS best_percentage,
+                    COALESCE(SUM(qa.score), 0) AS total_marks
+                FROM quiz_attempts qa
+                WHERE qa.student_id = %s AND qa.status = 'submitted'
+            """, (student_id,))
+            summary = cursor.fetchone()
+
+            cursor.execute("""
+                SELECT
+                    q.quiz_id,
+                    q.title AS quiz_title,
+                    COALESCE(qa.score, 0) AS score,
+                    COALESCE(q.total_questions, 0) AS total_marks,
+                    COALESCE(qa.percentage, 0) AS percentage,
+                    qa.submitted_at
+                FROM quiz_attempts qa
+                JOIN quizzes q ON q.quiz_id = qa.quiz_id
+                WHERE qa.student_id = %s AND qa.status = 'submitted'
+                ORDER BY qa.submitted_at ASC NULLS LAST, qa.attempt_id ASC
+            """, (student_id,))
+            quiz_results = cursor.fetchall()
+
+            # Question difficulty is the available classification in this schema.
+            cursor.execute("""
+                SELECT
+                    COALESCE(NULLIF(TRIM(q.difficulty), ''), 'Unclassified') AS topic,
+                    COUNT(*) AS answered,
+                    SUM(CASE
+                        WHEN UPPER(TRIM(sa.selected_option)) =
+                             UPPER(TRIM(q.correct_option)) THEN 1 ELSE 0
+                    END) AS correct,
+                    ROUND(
+                        100.0 * SUM(CASE
+                            WHEN UPPER(TRIM(sa.selected_option)) =
+                                 UPPER(TRIM(q.correct_option)) THEN 1 ELSE 0
+                        END) / NULLIF(COUNT(*), 0), 1
+                    ) AS percentage
+                FROM quiz_attempts qa
+                JOIN questions q ON q.quiz_id = qa.quiz_id
+                JOIN student_answers sa
+                  ON sa.attempt_id = qa.attempt_id
+                 AND sa.question_id = q.question_id
+                WHERE qa.student_id = %s AND qa.status = 'submitted'
+                GROUP BY COALESCE(NULLIF(TRIM(q.difficulty), ''), 'Unclassified')
+                ORDER BY percentage DESC NULLS LAST
+            """, (student_id,))
+            difficulty_analysis = cursor.fetchall()
+
+        percentages = [float(row["percentage"] or 0) for row in quiz_results]
+        if len(percentages) >= 2:
+            trend = round(percentages[-1] - percentages[0], 1)
+        else:
+            trend = None
+
+        return render_template(
+            "performance_analytics.html",
+            summary=summary,
+            quiz_results=quiz_results,
+            difficulty_analysis=difficulty_analysis,
+            trend=trend,
+        )
+    finally:
+        _close_db(connection)
