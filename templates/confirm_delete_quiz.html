@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confirm Delete Quiz</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .card {
+      max-width: 520px;
+      padding: 28px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+    }
+    button, a {
+      display: inline-block;
+      padding: 11px 16px;
+      border: 0;
+      border-radius: 8px;
+      text-decoration: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .danger { background: #b91c1c; }
+    .back { background: #334155; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Delete this quiz?</h1>
+    <p>Quiz #{{ quiz_id }} and its associated attempts, answers, and results will be permanently deleted.</p>
+    <form method="post" action="{{ url_for('teacher.delete_quiz', quiz_id=quiz_id) }}">
+      <button class="danger" type="submit">Confirm Delete</button>
+      <a class="back" href="{{ url_for('teacher.manage_quizzes') }}">Cancel</a>
+    </form>
+  </main>
+</body>
+</html>

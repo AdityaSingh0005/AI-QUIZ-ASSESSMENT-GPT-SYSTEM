@@ -1740,22 +1740,16 @@
                             </div>
 
 
-                            <div class="progress-track">
-
-                                <div
-                                    class="progress-fill"
-                                    style="
-                                        width:${percentage}%;
-                                    "
-                                ></div>
-
+                            <div class="progress-track" style="display:flex;overflow:hidden;gap:2px;background:#e2e8f0">
+                                <div title="Correct: ${Number(item.correct_count || 0)}" style="width:${students ? Number(item.correct_count || 0) / students * 100 : 0}%;background:#2563eb;min-height:10px"></div>
+                                <div title="Incorrect: ${Number(item.incorrect_count || 0)}" style="width:${students ? Number(item.incorrect_count || 0) / students * 100 : 0}%;background:#dc2626;min-height:10px"></div>
+                                <div title="Unanswered: ${Number(item.unanswered_count || Math.max(students-count,0))}" style="flex:1;background:#cbd5e1;min-height:10px"></div>
                             </div>
-
-
-                            <div class="progress-percent">
-
-                                ${percentage}% answered
-
+                            <div class="progress-percent" style="display:flex;gap:14px;flex-wrap:wrap">
+                                <span style="color:#2563eb">Correct: ${Number(item.correct_count || 0)}</span>
+                                <span style="color:#dc2626">Incorrect: ${Number(item.incorrect_count || 0)}</span>
+                                <span style="color:#64748b">Unanswered: ${Number(item.unanswered_count || Math.max(students-count,0))}</span>
+                                <span>${percentage}% answered</span>
                             </div>
 
                         </div>

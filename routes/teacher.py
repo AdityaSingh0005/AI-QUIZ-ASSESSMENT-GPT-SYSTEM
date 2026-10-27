@@ -2276,73 +2276,55 @@ def add_questions(quiz_id):
 # ============================================================
 # VIEW ALL STUDENT RESULTS
 # ============================================================
-
-@teacher.route("/view_results")
+@teacher.route("/view_results", methods=["GET"])
 def view_results():
     if "teacher_id" not in session:
         return redirect("/teacher_login")
 
     teacher_id = session["teacher_id"]
+    quiz_id_raw = request.args.get("quiz_id", "").strip()
+
+    selected_quiz_id = None
+    selected_quiz = None
+
+    if quiz_id_raw:
+        try:
+            selected_quiz_id = int(quiz_id_raw)
+            if selected_quiz_id <= 0:
+                raise ValueError
+        except ValueError:
+            return "Invalid quiz ID.", 400
 
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     try:
-        # -------------------------------------------------
-        # 1. Fetch all quizzes belonging to this teacher
-        # -------------------------------------------------
+        # Fetch only quizzes belonging to this teacher.
         cursor.execute(
             """
-            SELECT
-                quiz_id,
-                title,
-                created_at
+            SELECT quiz_id, title, created_at
             FROM quizzes
             WHERE teacher_id = %s
             ORDER BY created_at DESC
             """,
             (teacher_id,)
         )
-
         quizzes = cursor.fetchall()
 
-        # -------------------------------------------------
-        # 2. Validate optional quiz_id filter
-        # -------------------------------------------------
-        quiz_id_raw = request.args.get("quiz_id", "").strip()
-
-        selected_quiz_id = None
-        selected_quiz = None
-
-        if quiz_id_raw:
-            try:
-                selected_quiz_id = int(quiz_id_raw)
-
-                if selected_quiz_id <= 0:
-                    raise ValueError
-
-            except (ValueError, TypeError):
-                return "Invalid quiz ID.", 400
-
-            # Verify that this quiz belongs to the logged-in teacher
-            cursor.execute(
-                """
-                SELECT quiz_id, title
-                FROM quizzes
-                WHERE quiz_id = %s
-                  AND teacher_id = %s
-                """,
-                (selected_quiz_id, teacher_id)
+        # Validate the requested quiz before displaying its results.
+        if selected_quiz_id is not None:
+            selected_quiz = next(
+                (
+                    quiz for quiz in quizzes
+                    if int(quiz["quiz_id"]) == selected_quiz_id
+                ),
+                None
             )
 
-            selected_quiz = cursor.fetchone()
-
-            if not selected_quiz:
+            if selected_quiz is None:
                 return "Quiz not found or access denied.", 404
 
-        # -------------------------------------------------
-        # 3. Fetch submitted results
-        # -------------------------------------------------
+        # Keep this query aligned with the existing database schema.
         query = """
             SELECT
                 r.result_id,
@@ -2352,23 +2334,31 @@ def view_results():
 
                 COALESCE(
                     NULLIF(TRIM(s.full_name), ''),
-                    NULLIF(TRIM(qa.guest_name), ''),
+                    NULLIF(TRIM(qa.student_name), ''),
                     'Guest Student'
                 ) AS full_name,
 
                 COALESCE(
+                    NULLIF(TRIM(qa.roll_number), ''),
                     NULLIF(TRIM(s.roll_number), ''),
-                    NULLIF(TRIM(qa.guest_roll_number), ''),
                     'N/A'
                 ) AS roll_number,
 
-                CASE
-                    WHEN qa.student_id IS NULL THEN 'Guest'
-                    ELSE 'Registered'
-                END AS attempt_type,
+                COALESCE(
+                    NULLIF(TRIM(qa.attempt_mode), ''),
+                    CASE
+                        WHEN qa.student_id IS NULL THEN 'Guest'
+                        ELSE 'Registered'
+                    END
+                ) AS attempt_type,
 
-                COALESCE(r.score, 0) AS score,
-                COALESCE(r.percentage, 0) AS percentage,
+                COALESCE(r.score, qa.score, 0) AS score,
+
+                COALESCE(
+                    r.percentage,
+                    qa.percentage,
+                    0
+                ) AS percentage,
 
                 COALESCE(
                     qa.submitted_at,
@@ -2392,7 +2382,7 @@ def view_results():
 
         params = [teacher_id]
 
-        # Only filter by quiz when the teacher selects one
+        # Selecting a quiz limits results to that quiz only.
         if selected_quiz_id is not None:
             query += " AND q.quiz_id = %s"
             params.append(selected_quiz_id)
@@ -2409,26 +2399,21 @@ def view_results():
         cursor.execute(query, tuple(params))
         results = cursor.fetchall()
 
-        # -------------------------------------------------
-        # 4. Calculate summary statistics
-        # -------------------------------------------------
         percentages = [
-            float(result["percentage"])
-            for result in results
-            if result["percentage"] is not None
+            float(row["percentage"])
+            for row in results
+            if row["percentage"] is not None
         ]
 
         total_submissions = len(results)
 
-        average_percentage = (
-            round(sum(percentages) / len(percentages), 1)
-            if percentages else 0
-        )
+        average_percentage = round(
+            sum(percentages) / len(percentages), 1
+        ) if percentages else 0
 
-        highest_percentage = (
-            round(max(percentages), 1)
-            if percentages else 0
-        )
+        highest_percentage = round(
+            max(percentages), 1
+        ) if percentages else 0
 
         return render_template(
             "view_results.html",
@@ -2444,7 +2429,6 @@ def view_results():
     finally:
         cursor.close()
         conn.close()
-
 # ============================================================
 # SHOW QR
 # ============================================================
@@ -2650,127 +2634,46 @@ def manage_quizzes():
 # DELETE QUIZ
 # ============================================================
 
-@teacher.route(
-    "/delete_quiz/<int:quiz_id>"
-)
+@teacher.route("/delete_quiz/<int:quiz_id>", methods=["POST", "GET"])
 def delete_quiz(quiz_id):
-
+    """Delete a teacher-owned quiz and its dependent records safely."""
     if not teacher_logged_in():
-
         return redirect("/")
 
+    if request.method == "GET":
+        return render_template("confirm_delete_quiz.html", quiz_id=quiz_id)
+
     db = get_db_connection()
-
     cursor = db.cursor()
-
     try:
-
         cursor.execute(
-            """
-            SELECT
-                quiz_id
-
-            FROM quizzes
-
-            WHERE quiz_id=%s
-
-            AND teacher_id=%s
-            """,
-            (
-                quiz_id,
-                session["teacher_id"]
-            )
+            "SELECT quiz_id FROM quizzes WHERE quiz_id=%s AND teacher_id=%s",
+            (quiz_id, session["teacher_id"]),
         )
+        if not cursor.fetchone():
+            flash("Quiz not found or access denied.", "error")
+            return redirect("/manage_quizzes")
 
-        quiz = cursor.fetchone()
-
-        if not quiz:
-
-            return redirect(
-                "/manage_quizzes"
-            )
-
+        # Child records must be deleted before parent attempts/quizzes.
+        cursor.execute("DELETE FROM student_answers WHERE quiz_id=%s", (quiz_id,))
+        cursor.execute("DELETE FROM results WHERE quiz_id=%s", (quiz_id,))
+        cursor.execute("DELETE FROM quiz_attempts WHERE quiz_id=%s", (quiz_id,))
+        cursor.execute("DELETE FROM questions WHERE quiz_id=%s", (quiz_id,))
         cursor.execute(
-            """
-            DELETE FROM student_answers
-
-            WHERE quiz_id=%s
-            """,
-            (
-                quiz_id,
-            )
+            "DELETE FROM quizzes WHERE quiz_id=%s AND teacher_id=%s",
+            (quiz_id, session["teacher_id"]),
         )
-
-        cursor.execute(
-            """
-            DELETE FROM quiz_attempts
-
-            WHERE quiz_id=%s
-            """,
-            (
-                quiz_id,
-            )
-        )
-
-        cursor.execute(
-            """
-            DELETE FROM results
-
-            WHERE quiz_id=%s
-            """,
-            (
-                quiz_id,
-            )
-        )
-
-        cursor.execute(
-            """
-            DELETE FROM questions
-
-            WHERE quiz_id=%s
-            """,
-            (
-                quiz_id,
-            )
-        )
-
-        cursor.execute(
-            """
-            DELETE FROM quizzes
-
-            WHERE quiz_id=%s
-
-            AND teacher_id=%s
-            """,
-            (
-                quiz_id,
-                session["teacher_id"]
-            )
-        )
-
         db.commit()
-
-        print(
-            f"🗑️ Quiz {quiz_id} deleted."
-        )
-
-    except Exception as e:
-
+        flash("Quiz and its recorded attempts/results were deleted.", "success")
+    except Exception:
         db.rollback()
-
-        print(
-            "❌ DELETE QUIZ ERROR:",
-            e
-        )
-
+        current_app.logger.exception("DELETE QUIZ ERROR for quiz_id=%s", quiz_id)
+        flash("Quiz could not be deleted. Check the server logs for the database error.", "error")
     finally:
-
         cursor.close()
         db.close()
 
-    return redirect(
-        "/manage_quizzes"
-    )
+    return redirect("/manage_quizzes")
 
 
 # ============================================================
@@ -3078,7 +2981,18 @@ def quiz_progress(quiz_id):
 
                 COUNT(
                     DISTINCT sa.attempt_id
-                ) AS response_count
+                ) AS response_count,
+
+                COUNT(DISTINCT CASE
+                    WHEN UPPER(TRIM(sa.selected_option)) = UPPER(TRIM(q.correct_option))
+                    THEN sa.attempt_id END
+                ) AS correct_count,
+
+                COUNT(DISTINCT CASE
+                    WHEN sa.selected_option IS NOT NULL
+                     AND UPPER(TRIM(sa.selected_option)) <> UPPER(TRIM(q.correct_option))
+                    THEN sa.attempt_id END
+                ) AS incorrect_count
 
             FROM questions q
 
@@ -3138,18 +3052,13 @@ def quiz_progress(quiz_id):
                 percentage = 0
 
             question_progress.append({
-
-                "question_id":
-                    item["question_id"],
-
-                "question":
-                    item["question"],
-
-                "response_count":
-                    response_count,
-
-                "percentage":
-                    percentage
+                "question_id": item["question_id"],
+                "question": item["question"],
+                "response_count": response_count,
+                "correct_count": int(item.get("correct_count") or 0),
+                "incorrect_count": int(item.get("incorrect_count") or 0),
+                "unanswered_count": max(total_students - response_count, 0),
+                "percentage": percentage
             })
 
         # ====================================================

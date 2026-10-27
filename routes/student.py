@@ -264,6 +264,16 @@ def _quiz_unavailable_page(quiz, message):
     )
 
 
+
+
+def _quiz_countdown_page(quiz):
+    """Show a live countdown without creating an attempt before the start time."""
+    return render_template(
+        "quiz_countdown.html",
+        quiz=quiz,
+        start_time=quiz.get("available_from"),
+    )
+
 # ============================================================
 # SESSION HELPERS
 # ============================================================
@@ -786,6 +796,9 @@ def start_quiz(quiz_id):
             url_for("student.available_quizzes")
         )
 
+    if _quiz_status(quiz) == "upcoming":
+        return _quiz_countdown_page(quiz)
+
     if not _can_access_quiz(quiz):
         flash(
             "This quiz is not currently available.",
@@ -932,6 +945,9 @@ def guest_start_quiz(quiz_id):
 
     if not quiz:
         return "Quiz not found.", 404
+
+    if _quiz_status(quiz) == "upcoming":
+        return _quiz_countdown_page(quiz)
 
     if request.method == "GET":
         return render_template(
