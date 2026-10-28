@@ -1133,16 +1133,16 @@ def quiz():
                     "message": "Your quiz has been submitted successfully."
                 })
 
-        return render_template(
-            "quiz.html",
-            quiz=quiz_data,
-            questions=[],
-            result=None,
-            review=None,
-            show_result=False,
-            submission_complete=True,
-            unavailable=False,
-        )
+            return render_template(
+                "quiz.html",
+                quiz=quiz_data,
+                questions=[],
+                result=None,
+                review=None,
+                show_result=False,
+                submission_complete=True,
+                unavailable=False,
+            )
 
     questions = _get_attempt_questions(attempt["quiz_id"])
     if not questions:
