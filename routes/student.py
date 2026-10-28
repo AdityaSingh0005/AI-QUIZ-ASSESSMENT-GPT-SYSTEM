@@ -1116,33 +1116,36 @@ def quiz():
             return ajax_error("Quiz not found.", 404)
         return "Quiz not found.", 404
 
-    if not _is_guest():
-        logged_in_id = session.get("student_id")
+        if not _is_guest():
+            logged_in_id = session.get("student_id")
         if not logged_in_id or attempt["student_id"] != logged_in_id:
             _clear_active_quiz_session()
             if is_ajax:
                 return ajax_error("Please log in again.", 401)
             return redirect(url_for("auth.login"))
 
-        if attempt["status"] == "submitted":
-            if is_ajax:
-                return jsonify({
-                    "ok": True,
-                    "submitted": True,
-                    "redirect_url": url_for("student.quiz"),
-                    "message": "Your quiz has been submitted successfully."
-                })
+    # Handle submitted attempts for both logged-in students and guests.
+    if attempt["status"] == "submitted":
+        if is_ajax:
+            return jsonify({
+                "ok": True,
+                "submitted": True,
+                "redirect_url": url_for("student.quiz"),
+                "message": "Your quiz has been submitted successfully."
+            })
 
-            return render_template(
-                "quiz.html",
-                quiz=quiz_data,
-                questions=[],
-                result=None,
-                review=None,
-                show_result=False,
-                submission_complete=True,
-                unavailable=False,
-            )
+        return render_template(
+            "quiz.html",
+            quiz=quiz_data,
+            questions=[],
+            result=None,
+            review=None,
+            show_result=False,
+            submission_complete=True,
+            unavailable=False,
+        )
+
+    questions = _get_attempt_questions(attempt["quiz_id"])
 
     questions = _get_attempt_questions(attempt["quiz_id"])
     if not questions:
