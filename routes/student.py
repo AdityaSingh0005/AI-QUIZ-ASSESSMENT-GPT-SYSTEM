@@ -3,7 +3,9 @@ import time
 from datetime import datetime
 
 import psycopg2
+from psycopg2.pool import ThreadedConnectionPool
 from psycopg2.extras import RealDictCursor
+from threading import Lock
 
 from flask import (
     Blueprint,
@@ -20,14 +22,20 @@ from flask import (
 student = Blueprint("student", __name__)
 
 
+
 # ============================================================
 # DATABASE HELPERS
 # ============================================================
 
-def _db_connection():
-    """Create a PostgreSQL connection using the application's
-    configured database URL or Render's DATABASE_URL.
-    """
+_connection_pool = None
+_connection_pool_lock = Lock()
+_connection_pool_url = None
+
+
+def _get_connection_pool():
+    """Return a reusable, thread-safe PostgreSQL connection pool."""
+    global _connection_pool, _connection_pool_url
+
     database_url = (
         current_app.config.get("DATABASE_URL")
         or current_app.config.get("SQLALCHEMY_DATABASE_URI")
@@ -39,29 +47,69 @@ def _db_connection():
             "Database URL missing. Configure DATABASE_URL."
         )
 
-    connect_args = {}
+    with _connection_pool_lock:
+        if (
+            _connection_pool is None
+            or _connection_pool_url != database_url
+        ):
+            if _connection_pool is not None:
+                _connection_pool.closeall()
 
-    if database_url.startswith(("postgres://", "postgresql://")):
-        connect_args["sslmode"] = os.getenv(
-            "DB_SSLMODE", "require"
-        )
+            connect_args = {}
 
-    return psycopg2.connect(
-        database_url,
-        cursor_factory=RealDictCursor,
-        **connect_args
-    )
+            if database_url.startswith(
+                ("postgres://", "postgresql://")
+            ):
+                connect_args["sslmode"] = os.getenv(
+                    "DB_SSLMODE", "require"
+                )
+
+            _connection_pool = ThreadedConnectionPool(
+                minconn=1,
+                maxconn=int(os.getenv("DB_POOL_MAX", "10")),
+                dsn=database_url,
+                cursor_factory=RealDictCursor,
+                **connect_args
+            )
+
+            _connection_pool_url = database_url
+
+    return _connection_pool
+
+
+def _db_connection():
+    """Borrow a PostgreSQL connection from the reusable pool."""
+    pool = _get_connection_pool()
+    return pool.getconn()
 
 
 def _close_db(connection):
-    if connection:
+    """Return a connection to the pool after cleaning its transaction."""
+    if connection is None:
+        return
+
+    try:
+        pool = _get_connection_pool()
+
+        if connection.closed:
+            pool.putconn(connection, close=True)
+            return
+
+        # Ensure no unfinished transaction leaks into the next request.
+        if connection.get_transaction_status() != psycopg2.extensions.TRANSACTION_STATUS_IDLE:
+            connection.rollback()
+
+        pool.putconn(connection)
+
+    except Exception:
+        current_app.logger.exception(
+            "Could not return database connection to the pool."
+        )
+
         try:
             connection.close()
         except Exception:
-            current_app.logger.exception(
-                "Could not close database connection."
-            )
-
+            pass
 
 def _get_quiz(quiz_id):
     connection = _db_connection()
@@ -330,11 +378,7 @@ def _get_attempt_answers(attempt_id):
 # ANSWER SAVING
 # ============================================================
 
-def _save_answer(
-    attempt,
-    question_id,
-    selected_option,
-):
+def _save_answer(attempt, question_id, selected_option):
     if selected_option not in ("A", "B", "C", "D"):
         return False
 
@@ -342,6 +386,7 @@ def _save_answer(
 
     try:
         with connection.cursor() as cursor:
+            # Verify that the question belongs to this quiz.
             cursor.execute(
                 """
                 SELECT question_id
@@ -349,15 +394,14 @@ def _save_answer(
                 WHERE question_id = %s
                   AND quiz_id = %s
                 """,
-                (
-                    question_id,
-                    attempt["quiz_id"],
-                ),
+                (question_id, attempt["quiz_id"]),
             )
 
             if not cursor.fetchone():
+                connection.rollback()
                 return False
 
+            # Lock the attempt and prevent saving after submission.
             cursor.execute(
                 """
                 SELECT student_id, quiz_id, status
@@ -378,56 +422,27 @@ def _save_answer(
                 connection.rollback()
                 return False
 
+            # Insert a new answer or update the existing answer.
             cursor.execute(
                 """
-                SELECT question_id
-                FROM student_answers
-                WHERE attempt_id = %s
-                  AND question_id = %s
+                INSERT INTO student_answers
+                    (student_id, quiz_id, question_id,
+                     selected_option, attempt_id)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (attempt_id, question_id)
+                    WHERE attempt_id IS NOT NULL
+                      AND question_id IS NOT NULL
+                DO UPDATE SET
+                    selected_option = EXCLUDED.selected_option
                 """,
                 (
-                    attempt["attempt_id"],
+                    current_attempt["student_id"],
+                    current_attempt["quiz_id"],
                     question_id,
+                    selected_option,
+                    attempt["attempt_id"],
                 ),
             )
-
-            existing = cursor.fetchone()
-
-            if existing:
-                cursor.execute(
-                    """
-                    UPDATE student_answers
-                    SET selected_option = %s
-                    WHERE attempt_id = %s
-                      AND question_id = %s
-                    """,
-                    (
-                        selected_option,
-                        attempt["attempt_id"],
-                        question_id,
-                    ),
-                )
-            else:
-                cursor.execute(
-                    """
-                    INSERT INTO student_answers
-                    (
-                        student_id,
-                        quiz_id,
-                        question_id,
-                        selected_option,
-                        attempt_id
-                    )
-                    VALUES (%s, %s, %s, %s, %s)
-                    """,
-                    (
-                        current_attempt["student_id"],
-                        current_attempt["quiz_id"],
-                        question_id,
-                        selected_option,
-                        attempt["attempt_id"],
-                    ),
-                )
 
         connection.commit()
         return True
@@ -441,8 +456,6 @@ def _save_answer(
 
     finally:
         _close_db(connection)
-
-
 # ============================================================
 # ATTEMPT SUBMISSION AND RESULT CALCULATION
 # ============================================================
