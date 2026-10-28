@@ -1124,14 +1124,25 @@ def quiz():
                 return ajax_error("Please log in again.", 401)
             return redirect(url_for("auth.login"))
 
-    if attempt["status"] == "submitted":
-        if is_ajax:
-            return jsonify({"ok": True, "submitted": True,
-                            "redirect_url": url_for("student.quiz")})
-        review = _build_result_review(attempt_id)
-        return render_template("quiz.html", quiz=quiz_data, questions=[],
-                               result=attempt, review=review,
-                               show_result=True, unavailable=False)
+        if attempt["status"] == "submitted":
+            if is_ajax:
+                return jsonify({
+                    "ok": True,
+                    "submitted": True,
+                    "redirect_url": url_for("student.quiz"),
+                    "message": "Your quiz has been submitted successfully."
+                })
+
+        return render_template(
+            "quiz.html",
+            quiz=quiz_data,
+            questions=[],
+            result=None,
+            review=None,
+            show_result=False,
+            submission_complete=True,
+            unavailable=False,
+        )
 
     questions = _get_attempt_questions(attempt["quiz_id"])
     if not questions:

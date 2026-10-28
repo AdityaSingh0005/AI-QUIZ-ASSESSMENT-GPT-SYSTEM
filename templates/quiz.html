@@ -81,6 +81,38 @@
       <div class="notice">{{ unavailable_message or "This quiz is unavailable or contains no questions." }}</div>
       <a class="btn btn-primary" href="{{ url_for('student.available_quizzes') }}">Back to Available Quizzes</a>
 
+
+        {% elif submission_complete %}
+      <div class="header">
+        <div>
+          <h1>{{ quiz.title }}</h1>
+          <p class="muted">Your quiz has been submitted successfully.</p>
+        </div>
+      </div>
+
+      <section class="card">
+        <div class="notice">
+          Your responses have been recorded. Results and answer review
+          are not available at this time.
+        </div>
+
+        <div class="controls">
+          {% if session.get("student_id") %}
+            <a class="btn btn-primary"
+               href="{{ url_for('student.my_results') }}">
+              My Results
+            </a>
+          {% endif %}
+
+          <a class="btn btn-secondary"
+             href="{{ url_for('student.available_quizzes') }}">
+            Back to Quizzes
+          </a>
+        </div>
+      </section>
+
+    
+
     {% elif show_result %}
       <div class="header">
         <div>
