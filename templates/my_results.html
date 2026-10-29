@@ -41,7 +41,7 @@
             </strong>
 
             <span>
-                ASSESSMENT SYSTEM
+                {{ r.quiz_title or 'Untitled Quiz' }}
             </span>
 
         </div>
@@ -193,7 +193,10 @@
                                 <div>
 
                                     <strong>
-                                        {{ r.title }}
+                                        
+                                    {{ r.quiz_title or 'Untitled Quiz' }}
+
+
                                     </strong>
 
                                     <span>
