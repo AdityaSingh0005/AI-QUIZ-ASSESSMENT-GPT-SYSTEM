@@ -2315,6 +2315,50 @@ def view_results():
 
     teacher_id = session["teacher_id"]
     quiz_id_raw = request.args.get("quiz_id", "").strip()
+    
+    percentage_filter = request.args.get("percentage_filter", "all").strip()
+
+    min_percentage_raw = request.args.get("min_percentage", "").strip()
+    max_percentage_raw = request.args.get("max_percentage", "").strip()
+
+    min_percentage = None
+    max_percentage = None
+
+    if percentage_filter not in {"all", "75_plus", "below_75", "90_plus", "custom"}:
+        return "Invalid percentage filter.", 400
+
+    if percentage_filter == "custom":
+        try:
+            min_percentage = float(min_percentage_raw) if min_percentage_raw else None
+            max_percentage = float(max_percentage_raw) if max_percentage_raw else None
+
+            if (
+                min_percentage is None
+                and max_percentage is None
+            ):
+                return "Enter at least one percentage limit.", 400
+
+            if (
+                min_percentage is not None
+                and not 0 <= min_percentage <= 100
+            ):
+                return "Minimum percentage must be between 0 and 100.", 400
+
+            if (
+                max_percentage is not None
+                and not 0 <= max_percentage <= 100
+            ):
+                return "Maximum percentage must be between 0 and 100.", 400
+
+            if (
+                min_percentage is not None
+                and max_percentage is not None
+                and min_percentage > max_percentage
+            ):
+                return "Minimum percentage cannot exceed maximum percentage.", 400
+
+        except ValueError:
+            return "Enter valid percentage values.", 400
 
     selected_quiz_id = None
     selected_quiz = None
@@ -2431,6 +2475,40 @@ def view_results():
         cursor.execute(query, tuple(params))
         results = cursor.fetchall()
 
+        if percentage_filter == "75_plus":
+            results = [
+                row for row in results
+                if float(row["percentage"] or 0) >= 75
+            ]
+
+        elif percentage_filter == "below_75":
+            results = [
+                row for row in results
+                if float(row["percentage"] or 0) < 75
+            ]
+
+        elif percentage_filter == "90_plus":
+            results = [
+                row for row in results
+                if float(row["percentage"] or 0) >= 90
+            ]
+
+        elif percentage_filter == "custom":
+            filtered_results = []
+
+            for row in results:
+                percentage = float(row["percentage"] or 0)
+
+                if (
+                    (min_percentage is None or percentage >= min_percentage)
+                    and
+                    (max_percentage is None or percentage <= max_percentage)
+                ):
+                    filtered_results.append(row)
+
+            results = filtered_results
+            
+            
         percentages = [
             float(row["percentage"])
             for row in results
@@ -2455,7 +2533,10 @@ def view_results():
             selected_quiz_id=selected_quiz_id,
             total_submissions=total_submissions,
             average_percentage=average_percentage,
-            highest_percentage=highest_percentage
+            highest_percentage=highest_percentage,
+            percentage_filter=percentage_filter,
+            min_percentage=min_percentage,
+            max_percentage=max_percentage
         )
 
     finally:

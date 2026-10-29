@@ -463,6 +463,56 @@
                 {% endfor %}
             </select>
         </div>
+        
+    <div class="field">
+        <label for="percentage_filter">FILTER BY PERCENTAGE</label>
+        <select id="percentage_filter" name="percentage_filter">
+            <option value="all" {% if percentage_filter == 'all' %}selected{% endif %}>
+                All Results
+            </option>
+            <option value="75_plus" {% if percentage_filter == '75_plus' %}selected{% endif %}>
+                75% and Above
+            </option>
+            <option value="below_75" {% if percentage_filter == 'below_75' %}selected{% endif %}>
+                Below 75%
+            </option>
+            <option value="90_plus" {% if percentage_filter == '90_plus' %}selected{% endif %}>
+                90% and Above
+            </option>
+            <option value="custom" {% if percentage_filter == 'custom' %}selected{% endif %}>
+                Custom Percentage Range
+            </option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="min_percentage">Minimum Percentage</label>
+        <input
+            type="number"
+            id="min_percentage"
+            name="min_percentage"
+            min="0"
+            max="100"
+            step="0.1"
+            value="{{ min_percentage if min_percentage is not none else '' }}"
+            placeholder="e.g. 60"
+        >
+    </div>
+
+    <div class="field">
+        <label for="max_percentage">Maximum Percentage</label>
+        <input
+            type="number"
+            id="max_percentage"
+            name="max_percentage"
+            min="0"
+            max="100"
+            step="0.1"
+            value="{{ max_percentage if max_percentage is not none else '' }}"
+            placeholder="e.g. 85"
+        >
+    </div>
+
 
         <button type="submit" class="btn btn-primary">
             Apply Filter
