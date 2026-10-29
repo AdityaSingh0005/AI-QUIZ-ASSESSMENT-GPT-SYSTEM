@@ -1,651 +1,890 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <title>Quiz Result | AI Quiz Assessment System</title>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
 
-<title>Quiz Result | AI Quiz Assessment System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
 
-<link rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* =========================
+           RESULT PAGE
+        ========================= */
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet">
+        .result-page-container {
+            width: min(1100px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 36px 0 50px;
+        }
 
-<style>
+        .result-header {
+            margin-bottom: 28px;
+        }
 
-.question-review-section {
-    margin-top: 30px;
-}
+        .result-header h1 {
+            margin: 16px 0 8px;
+        }
 
-.review-header {
-    margin-bottom: 20px;
-}
+        .result-header p {
+            margin: 0;
+            color: #72798a;
+            line-height: 1.7;
+        }
 
-.review-header h2 {
-    margin: 12px 0 8px;
-    color: #252d40;
-    font-size: 28px;
-    font-weight: 800;
-}
+        .premium-result-card {
+            position: relative;
+            overflow: hidden;
+            padding: 34px;
+            border-radius: 24px;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 12px 35px rgba(15, 23, 42, 0.07);
+        }
 
-.review-header p {
-    color: #72798a;
-    margin: 0;
-}
+        .result-glow {
+            position: absolute;
+            top: -100px;
+            right: -80px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(
+                circle,
+                rgba(99, 102, 241, 0.12),
+                transparent 70%
+            );
+            pointer-events: none;
+        }
 
+        .premium-success-icon {
+            position: relative;
+            margin-bottom: 18px;
+            font-size: 42px;
+        }
 
-.review-question-card {
-    margin-bottom: 20px;
-    padding: 24px;
-    border-radius: 18px;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
-}
+        .result-complete-label {
+            display: block;
+            color: #737b8d;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+        }
 
+        .result-score-section {
+            margin-top: 24px;
+        }
 
-.review-question-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 15px;
-    margin-bottom: 18px;
-}
+        .result-score-section > span {
+            display: block;
+            margin-bottom: 8px;
+            color: #737b8d;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
 
-.review-question-number {
-    font-size: 13px;
-    font-weight: 800;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-}
+        .result-score {
+            display: flex;
+            align-items: baseline;
+            gap: 7px;
+            color: #252d40;
+        }
 
+        .result-score strong {
+            font-size: clamp(36px, 5vw, 48px);
+            font-weight: 800;
+            line-height: 1.2;
+        }
 
-.review-status {
-    padding: 7px 12px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 800;
-}
+        .result-score small {
+            color: #737b8d;
+            font-size: 23px;
+            font-weight: 600;
+        }
 
-.review-status.correct {
-    color: #166534;
-    background: #dcfce7;
-}
+        /* Percentage appears only once in the ring. */
 
-.review-status.incorrect {
-    color: #991b1b;
-    background: #fee2e2;
-}
+        .result-percentage-card {
+            display: grid;
+            grid-template-columns: 150px minmax(0, 1fr);
+            align-items: center;
+            gap: 26px;
+            margin-top: 28px;
+            padding: 24px;
+            border: 1px solid #e8eaf2;
+            border-radius: 18px;
+            background: #f8f9ff;
+        }
 
-.review-status.unanswered {
-    color: #92400e;
-    background: #fef3c7;
-}
+        .percentage-ring {
+            display: grid;
+            place-items: center;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: conic-gradient(
+                #6366f1 {{ percentage }}%,
+                #e5e7eb {{ percentage }}%
+            );
+        }
 
+        .percentage-ring > div {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 112px;
+            height: 112px;
+            border-radius: 50%;
+            background: #ffffff;
+        }
 
-.review-question-text {
-    margin: 0 0 22px;
-    font-size: 19px;
-    line-height: 1.6;
-    color: #252d40;
-}
+        .percentage-ring strong {
+            color: #252d40;
+            font-size: 25px;
+            font-weight: 800;
+            line-height: 1.3;
+        }
 
+        .percentage-ring span {
+            margin-top: 3px;
+            color: #737b8d;
+            font-size: 12px;
+            font-weight: 600;
+        }
 
-.review-answer-block {
-    margin-top: 15px;
-}
+        .percentage-info {
+            min-width: 0;
+        }
 
-.review-label {
-    display: block;
-    margin-bottom: 7px;
-    font-size: 10px;
-    font-weight: 800;
-    color: #8a91a3;
-    letter-spacing: .7px;
-}
+        .percentage-info > span {
+            display: block;
+            margin-bottom: 10px;
+            color: #737b8d;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
 
+        .percentage-info h2 {
+            margin: 0 0 8px;
+            color: #252d40;
+            font-size: 23px;
+            font-weight: 800;
+        }
 
-.review-answer {
-    padding: 13px 15px;
-    border-radius: 11px;
-    background: #f8f9ff;
-    color: #374151;
-    line-height: 1.5;
-}
+        .percentage-info p {
+            margin: 0;
+            color: #72798a;
+            font-size: 14px;
+            line-height: 1.7;
+        }
 
-.review-answer strong {
-    margin-right: 5px;
-}
+        /* =========================
+           PERFORMANCE MESSAGE
+        ========================= */
 
+        .performance-message {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-top: 24px;
+            padding: 22px;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            background: #ffffff;
+        }
 
-.review-answer.correct-answer {
-    background: #ecfdf5;
-    color: #166534;
-    border: 1px solid #bbf7d0;
-}
+        .performance-icon {
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            font-size: 24px;
+        }
 
+        .excellent-icon {
+            background: #fef3c7;
+        }
 
-.review-answer.not-answered {
-    background: #fff7ed;
-    color: #9a3412;
-    border: 1px solid #fed7aa;
-}
+        .good-icon {
+            background: #dcfce7;
+        }
 
+        .improve-icon {
+            background: #dbeafe;
+        }
 
-.review-explanation {
-    margin-top: 20px;
-    padding: 17px;
-    border-radius: 13px;
-    background: #f8f9ff;
-    border: 1px solid #e5e7eb;
-}
+        .performance-message > div:last-child {
+            min-width: 0;
+        }
 
-.review-explanation-title {
-    margin-bottom: 7px;
-    font-weight: 800;
-    color: #374151;
-}
+        .performance-message span {
+            display: block;
+            margin-bottom: 6px;
+            color: #737b8d;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
 
-.review-explanation p {
-    margin: 0;
-    color: #5f6675;
-    line-height: 1.65;
-}
+        .performance-message h2 {
+            margin: 0 0 7px;
+            color: #252d40;
+            font-size: 21px;
+            font-weight: 800;
+        }
 
+        .performance-message p {
+            margin: 0;
+            color: #72798a;
+            font-size: 14px;
+            line-height: 1.7;
+        }
 
-@media (max-width: 650px) {
+        /* =========================
+           RESULT ACTIONS
+        ========================= */
 
-    .review-question-card {
-        padding: 18px;
-    }
+        .result-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            margin-top: 26px;
+        }
 
-    .review-question-top {
-        align-items: flex-start;
-        flex-direction: column;
-    }
+        .result-actions a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 46px;
+            padding: 12px 18px;
+            border-radius: 11px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 700;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
 
-    .review-question-text {
-        font-size: 17px;
-    }
+        .result-actions a:hover {
+            transform: translateY(-2px);
+        }
 
-}
+        .result-primary-button {
+            color: #ffffff;
+            background: #4f46e5;
+        }
 
-</style>
+        .result-secondary-button {
+            color: #374151;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+        }
+
+        /* =========================
+           QUESTION REVIEW
+        ========================= */
+
+        .question-review-section {
+            margin-top: 42px;
+        }
+
+        .review-header {
+            margin-bottom: 22px;
+        }
+
+        .review-header h2 {
+            margin: 12px 0 8px;
+            color: #252d40;
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .review-header p {
+            margin: 0;
+            color: #72798a;
+            line-height: 1.7;
+        }
+
+        .review-question-card {
+            margin-bottom: 20px;
+            padding: 24px;
+            border-radius: 18px;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
+        }
+
+        .review-question-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 18px;
+        }
+
+        .review-question-number {
+            color: #6b7280;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .review-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 7px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .review-status.correct {
+            color: #166534;
+            background: #dcfce7;
+        }
+
+        .review-status.incorrect {
+            color: #991b1b;
+            background: #fee2e2;
+        }
+
+        .review-status.unanswered {
+            color: #92400e;
+            background: #fef3c7;
+        }
+
+        .review-question-text {
+            margin: 0 0 22px;
+            color: #252d40;
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.65;
+            overflow-wrap: anywhere;
+        }
+
+        .review-answer-block {
+            margin-top: 16px;
+        }
+
+        .review-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #8a91a3;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+        }
+
+        .review-answer {
+            padding: 13px 15px;
+            border-radius: 11px;
+            background: #f8f9ff;
+            color: #374151;
+            line-height: 1.65;
+            overflow-wrap: anywhere;
+        }
+
+        .review-answer strong {
+            margin-right: 5px;
+        }
+
+        .review-answer.correct-answer {
+            color: #166534;
+            background: #ecfdf5;
+            border: 1px solid #bbf7d0;
+        }
+
+        .review-answer.not-answered {
+            color: #9a3412;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+        }
+
+        .review-explanation {
+            margin-top: 20px;
+            padding: 17px;
+            border-radius: 13px;
+            background: #f8f9ff;
+            border: 1px solid #e5e7eb;
+        }
+
+        .review-explanation-title {
+            margin-bottom: 8px;
+            color: #374151;
+            font-weight: 800;
+        }
+
+        .review-explanation p {
+            margin: 0;
+            color: #5f6675;
+            line-height: 1.7;
+            overflow-wrap: anywhere;
+        }
+
+        /* =========================
+           MOTIVATION
+        ========================= */
+
+        .result-motivation {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-top: 30px;
+            padding: 24px;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            background: #ffffff;
+        }
+
+        .motivation-icon {
+            flex-shrink: 0;
+            font-size: 26px;
+        }
+
+        .result-motivation span {
+            display: block;
+            margin-bottom: 7px;
+            color: #737b8d;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .result-motivation h3 {
+            margin: 0 0 8px;
+            color: #252d40;
+            font-size: 19px;
+            font-weight: 800;
+        }
+
+        .result-motivation p {
+            margin: 0;
+            color: #72798a;
+            line-height: 1.7;
+        }
+
+        /* =========================
+           RESPONSIVE DESIGN
+        ========================= */
+
+        @media (max-width: 650px) {
+            .result-page-container {
+                width: calc(100% - 24px);
+                padding-top: 24px;
+            }
+
+            .premium-result-card {
+                padding: 22px;
+                border-radius: 18px;
+            }
+
+            .result-percentage-card {
+                grid-template-columns: 1fr;
+                justify-items: center;
+                gap: 18px;
+                padding: 20px;
+                text-align: center;
+            }
+
+            .percentage-info {
+                width: 100%;
+            }
+
+            .percentage-info > span {
+                margin-bottom: 8px;
+            }
+
+            .performance-message {
+                padding: 17px;
+            }
+
+            .performance-message h2 {
+                font-size: 19px;
+            }
+
+            .result-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .result-actions a {
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            .review-question-card {
+                padding: 18px;
+            }
+
+            .review-question-top {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .review-question-text {
+                font-size: 16px;
+            }
+
+            .review-header h2 {
+                font-size: 24px;
+            }
+
+            .result-motivation {
+                padding: 18px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .result-actions a {
+                transition: none;
+            }
+        }
+    </style>
 </head>
 
 <body>
-
 <div class="dashboard-page result-page">
 
-
-<!-- =====================================================
-     NAVBAR
-====================================================== -->
-
-<nav class="top-navbar">
-
-    <div class="student-navbar-brand">
-
-        <span class="student-brand-icon">
-            🧠
-        </span>
-
-        <div>
-            <strong>AI Quiz</strong>
-            <small>Assessment System</small>
-        </div>
-
-    </div>
-
-
-    <div class="navbar-actions">
-
-        <a href="/student_dashboard"
-           class="student-nav-link">
-
-            <span>⌂</span>
-            Dashboard
-
-        </a>
-
-
-        <a href="/my_results"
-           class="student-nav-link">
-
-            <span>▣</span>
-            Results
-
-        </a>
-
-
-        <a href="/logout"
-           class="student-logout-link">
-
-            <span>↪</span>
-            Logout
-
-        </a>
-
-    </div>
-
-</nav>
-
-
-
-<!-- =====================================================
-     RESULT MAIN
-====================================================== -->
-
-<main class="result-page-container">
-
-
-    <!-- HEADER -->
-
-    <section class="result-header">
-
-        <div class="result-header-badge">
-            <span>✦</span>
-            ASSESSMENT COMPLETE
-        </div>
-
-
-        <h1>
-            Quiz Completed!
-        </h1>
-
-
-        <p>
-            Great job! Here's a summary of your performance.
-        </p>
-
-    </section>
-
-
-
-    <!-- RESULT CARD -->
-
-    <section class="premium-result-card">
-
-
-        <!-- DECORATIVE GLOW -->
-
-        <div class="result-glow"></div>
-
-
-
-        <!-- SUCCESS ICON -->
-
-        <div class="premium-success-icon">
-            🎉
-        </div>
-
-
-        <span class="result-complete-label">
-            YOUR PERFORMANCE
-        </span>
-
-
-
-        <!-- SCORE -->
-
-        <div class="result-score-section">
-
-            <span>
-                FINAL SCORE
-            </span>
-
-
-            <div class="result-score">
-
-                <strong>
-                    {{ score }}
-                </strong>
-
-                <small>
-                    / {{ total }}
-                </small>
-
+    <!-- NAVBAR -->
+    <nav class="top-navbar">
+        <div class="student-navbar-brand">
+            <span class="student-brand-icon">🧠</span>
+            <div>
+                <strong>AI Quiz</strong>
+                <small>Assessment System</small>
             </div>
-
         </div>
 
-
-
-        <!-- PERCENTAGE -->
-
-        <div class="result-percentage-card">
-
-            <div class="percentage-ring">
-
-                <div>
-
-                    <strong>
-                        {{ percentage }}%
-                    </strong>
-
-                    <span>
-                        Accuracy
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <div class="percentage-info">
-
-    <span>
-        PERFORMANCE SUMMARY
-    </span>
-
-    <p>
-        Your overall accuracy in this assessment.
-    </p>
-
-</div>
-
-
-        <!-- PERFORMANCE MESSAGE -->
-
-        <div class="performance-message">
-
-            {% if percentage >= 80 %}
-
-                <div class="performance-icon excellent-icon">
-                    🌟
-                </div>
-
-                <div>
-
-                    <span>
-                        OUTSTANDING
-                    </span>
-
-                    <h2>
-                        Excellent Performance!
-                    </h2>
-
-                    <p>
-                        Excellent work! Your understanding
-                        of the topic is impressive.
-                    </p>
-
-                </div>
-
-
-            {% elif percentage >= 50 %}
-
-                <div class="performance-icon good-icon">
-                    👍
-                </div>
-
-                <div>
-
-                    <span>
-                        GOOD PROGRESS
-                    </span>
-
-                    <h2>
-                        Good Performance!
-                    </h2>
-
-                    <p>
-                        Nice work! Keep practicing and
-                        push your score even higher.
-                    </p>
-
-                </div>
-
-
-            {% else %}
-
-                <div class="performance-icon improve-icon">
-                    📚
-                </div>
-
-                <div>
-
-                    <span>
-                        KEEP LEARNING
-                    </span>
-
-                    <h2>
-                        Need More Practice
-                    </h2>
-
-                    <p>
-                        Don't worry. Review the concepts,
-                        practice again and keep improving.
-                    </p>
-
-                </div>
-
-            {% endif %}
-
-        </div>
-
-
-
-        <!-- ACTIONS -->
-
-        <div class="result-actions">
-
-            <a href="/student_dashboard"
-               class="result-primary-button">
-
-                <span>
-                    Back to Dashboard
-                </span>
-
-                <strong>
-                    →
-                </strong>
-
+        <div class="navbar-actions">
+            <a href="/student_dashboard" class="student-nav-link">
+                <span>⌂</span>
+                Dashboard
             </a>
 
-
-            <a href="/available_quizzes"
-               class="result-secondary-button">
-
-                Take Another Quiz
-
+            <a href="/my_results" class="student-nav-link">
+                <span>▣</span>
+                Results
             </a>
 
+            <a href="/logout" class="student-logout-link">
+                <span>↪</span>
+                Logout
+            </a>
         </div>
+    </nav>
 
+    <!-- RESULT MAIN -->
+    <main class="result-page-container">
 
-    </section>
+        <!-- HEADER -->
+        <section class="result-header">
+            <div class="result-header-badge">
+                <span>✦</span>
+                ASSESSMENT COMPLETE
+            </div>
 
-    <!-- =====================================================
-     QUESTION REVIEW
-====================================================== -->
+            <h1>Quiz Completed!</h1>
 
-<section class="question-review-section">
+            <p>
+                Great job! Here's a summary of your performance.
+            </p>
+        </section>
 
-    <div class="review-header">
+        <!-- RESULT CARD -->
+        <section class="premium-result-card">
 
-        <div class="result-header-badge">
-            <span>✓</span>
-            QUESTION REVIEW
-        </div>
+            <div class="result-glow"></div>
 
-        <h2>
-            Review Your Answers
-        </h2>
+            <div class="premium-success-icon">🎉</div>
 
-        <p>
-            Check your answers, correct answers and
-            explanations for every question.
-        </p>
-
-    </div>
-
-
-    {% for item in review %}
-
-    <article
-        class="review-question-card
-        {% if item.is_correct %}
-            review-correct
-        {% elif item.selected_option %}
-            review-incorrect
-        {% else %}
-            review-unanswered
-        {% endif %}"
-    >
-
-        <!-- QUESTION HEADER -->
-
-        <div class="review-question-top">
-
-            <span class="review-question-number">
-                Question {{ item.question_number }}
+            <span class="result-complete-label">
+                YOUR PERFORMANCE
             </span>
 
-            {% if item.is_correct %}
+            <!-- SCORE -->
+            <div class="result-score-section">
+                <span>FINAL SCORE</span>
 
-                <span class="review-status correct">
-                    ✓ Correct
-                </span>
+                <div class="result-score">
+                    <strong>{{ score }}</strong>
+                    <small>/ {{ total }}</small>
+                </div>
+            </div>
 
-            {% elif item.selected_option %}
+            <!-- PERCENTAGE: DISPLAYED ONLY ONCE -->
+            <div class="result-percentage-card">
 
-                <span class="review-status incorrect">
-                    ✕ Incorrect
-                </span>
+                <div class="percentage-ring">
+                    <div>
+                        <strong>{{ percentage }}%</strong>
+                        <span>Accuracy</span>
+                    </div>
+                </div>
 
-            {% else %}
+                <div class="percentage-info">
+                    <span>PERFORMANCE SUMMARY</span>
 
-                <span class="review-status unanswered">
-                    — Not Answered
-                </span>
+                    <h2>
+                        {% if percentage >= 80 %}
+                            Excellent work!
+                        {% elif percentage >= 50 %}
+                            Good progress!
+                        {% else %}
+                            Keep learning!
+                        {% endif %}
+                    </h2>
 
-            {% endif %}
+                    <p>
+                        Your overall accuracy in this assessment.
+                    </p>
+                </div>
 
-        </div>
+            </div>
 
+            <!-- PERFORMANCE MESSAGE -->
+            <div class="performance-message">
 
-        <!-- QUESTION -->
+                {% if percentage >= 80 %}
 
-        <h3 class="review-question-text">
-            {{ item.question }}
-        </h3>
+                    <div class="performance-icon excellent-icon">
+                        🌟
+                    </div>
 
+                    <div>
+                        <span>OUTSTANDING</span>
 
-        <!-- YOUR ANSWER -->
+                        <h2>Excellent Performance!</h2>
 
-        <div class="review-answer-block">
+                        <p>
+                            Excellent work! Your understanding
+                            of the topic is impressive.
+                        </p>
+                    </div>
 
-            <span class="review-label">
-                YOUR ANSWER
-            </span>
+                {% elif percentage >= 50 %}
 
-            {% if item.selected_option %}
+                    <div class="performance-icon good-icon">
+                        👍
+                    </div>
 
-                <div class="review-answer">
+                    <div>
+                        <span>GOOD PROGRESS</span>
 
-                    <strong>
-                        {{ item.selected_option }}.
-                    </strong>
+                        <h2>Good Performance!</h2>
 
-                    <span>
-                        {{ item.selected_text }}
+                        <p>
+                            Nice work! Keep practicing and
+                            push your score even higher.
+                        </p>
+                    </div>
+
+                {% else %}
+
+                    <div class="performance-icon improve-icon">
+                        📚
+                    </div>
+
+                    <div>
+                        <span>KEEP LEARNING</span>
+
+                        <h2>Need More Practice</h2>
+
+                        <p>
+                            Don't worry. Review the concepts,
+                            practice again and keep improving.
+                        </p>
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+            <!-- ACTIONS -->
+            <div class="result-actions">
+
+                <a href="/student_dashboard"
+                   class="result-primary-button">
+                    <span>Back to Dashboard</span>
+                    <strong>→</strong>
+                </a>
+
+                <a href="/available_quizzes"
+                   class="result-secondary-button">
+                    Take Another Quiz
+                </a>
+
+            </div>
+
+        </section>
+
+        <!-- QUESTION REVIEW -->
+        <section class="question-review-section">
+
+            <div class="review-header">
+
+                <div class="result-header-badge">
+                    <span>✓</span>
+                    QUESTION REVIEW
+                </div>
+
+                <h2>Review Your Answers</h2>
+
+                <p>
+                    Check your answers, correct answers and
+                    explanations for every question.
+                </p>
+
+            </div>
+
+            {% for item in review %}
+
+            <article class="review-question-card
+                {% if item.is_correct %}
+                    review-correct
+                {% elif item.selected_option %}
+                    review-incorrect
+                {% else %}
+                    review-unanswered
+                {% endif %}">
+
+                <!-- QUESTION HEADER -->
+                <div class="review-question-top">
+
+                    <span class="review-question-number">
+                        Question {{ item.question_number }}
                     </span>
 
+                    {% if item.is_correct %}
+
+                        <span class="review-status correct">
+                            ✓ Correct
+                        </span>
+
+                    {% elif item.selected_option %}
+
+                        <span class="review-status incorrect">
+                            ✕ Incorrect
+                        </span>
+
+                    {% else %}
+
+                        <span class="review-status unanswered">
+                            — Not Answered
+                        </span>
+
+                    {% endif %}
+
                 </div>
 
-            {% else %}
+                <!-- QUESTION -->
+                <h3 class="review-question-text">
+                    {{ item.question }}
+                </h3>
 
-                <div class="review-answer not-answered">
-                    Not Answered
+                <!-- YOUR ANSWER -->
+                <div class="review-answer-block">
+
+                    <span class="review-label">
+                        YOUR ANSWER
+                    </span>
+
+                    {% if item.selected_option %}
+
+                        <div class="review-answer">
+                            <strong>
+                                {{ item.selected_option }}.
+                            </strong>
+
+                            <span>{{ item.selected_text }}</span>
+                        </div>
+
+                    {% else %}
+
+                        <div class="review-answer not-answered">
+                            Not Answered
+                        </div>
+
+                    {% endif %}
+
                 </div>
 
-            {% endif %}
+                <!-- CORRECT ANSWER -->
+                <div class="review-answer-block">
 
-        </div>
+                    <span class="review-label">
+                        CORRECT ANSWER
+                    </span>
 
+                    {% if item.correct_option %}
 
-        <!-- CORRECT ANSWER -->
+                        <div class="review-answer correct-answer">
+                            <strong>
+                                {{ item.correct_option }}.
+                            </strong>
 
-        <div class="review-answer-block">
+                            <span>{{ item.correct_text }}</span>
+                        </div>
 
-            <span class="review-label">
-                CORRECT ANSWER
-            </span>
+                    {% else %}
 
-            <div class="review-answer correct-answer">
+                        <div class="review-answer not-answered">
+                            Correct answer is unavailable.
+                        </div>
 
-                <strong>
-                    {{ item.correct_option }}.
-                </strong>
+                    {% endif %}
 
-                <span>
-                    {{ item.correct_text }}
-                </span>
+                </div>
 
+                <!-- EXPLANATION -->
+                <div class="review-explanation">
+
+                    <div class="review-explanation-title">
+                        💡 Why is this correct?
+                    </div>
+
+                    <p>{{ item.explanation }}</p>
+
+                </div>
+
+            </article>
+
+            {% endfor %}
+
+        </section>
+
+        <!-- MOTIVATION -->
+        <section class="result-motivation">
+
+            <div class="motivation-icon">✦</div>
+
+            <div>
+                <span>KEEP MOVING FORWARD</span>
+
+                <h3>Every attempt makes you better.</h3>
+
+                <p>
+                    Learn from every question and continue
+                    building your knowledge.
+                </p>
             </div>
 
-        </div>
+        </section>
 
-
-        <!-- EXPLANATION -->
-
-        <div class="review-explanation">
-
-            <div class="review-explanation-title">
-                💡 Why is this correct?
-            </div>
-
-            <p>
-                {{ item.explanation }}
-            </p>
-
-        </div>
-
-    </article>
-
-    {% endfor %}
-
-</section>
-
-
-    <!-- MOTIVATION -->
-
-    <section class="result-motivation">
-
-        <div class="motivation-icon">
-            ✦
-        </div>
-
-
-        <div>
-
-            <span>
-                KEEP MOVING FORWARD
-            </span>
-
-            <h3>
-                Every attempt makes you better.
-            </h3>
-
-            <p>
-                Learn from every question and continue
-                building your knowledge.
-            </p>
-
-        </div>
-
-    </section>
-
-
-</main>
-
+    </main>
 
 </div>
 
@@ -654,5 +893,5 @@
 <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
 
 </body>
-
 </html>
+
