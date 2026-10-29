@@ -104,10 +104,14 @@
             </a>
           {% endif %}
 
-          <a class="btn btn-secondary"
-             href="{{ url_for('student.available_quizzes') }}">
-            Back to Quizzes
-          </a>
+          {% if session.get("student_id") %} <a class="btn btn-secondary"
+  href="{{ url_for('student.available_quizzes') }}">
+Back to Quizzes </a>
+{% else %} <a class="btn btn-secondary"
+  href="{{ url_for('auth.login_page') }}">
+Back to Home </a>
+{% endif %}
+
         </div>
       </section>
 
