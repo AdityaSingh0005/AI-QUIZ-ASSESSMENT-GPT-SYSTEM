@@ -2524,6 +2524,11 @@ def view_results():
         highest_percentage = round(
             max(percentages), 1
         ) if percentages else 0
+        
+        for row in results:
+            row["submitted_at"] = to_ist_datetime(
+                row.get("submitted_at")
+            )
 
         return render_template(
             "view_results.html",
