@@ -472,6 +472,11 @@
            href="{{ url_for('teacher.view_results') }}">
             Reset
         </a>
+
+                <a class="btn btn-secondary"
+           href="{{ url_for('teacher.export_results', quiz_id=selected_quiz_id) if selected_quiz_id else url_for('teacher.export_results') }}">
+            Download CSV
+        </a>
     </form>
 </section>
 
