@@ -218,6 +218,27 @@ def parse_ist_datetime(
 
     return utc_datetime
 
+# ============================================================
+# HELPER: CONVERT STORED DATETIME TO IST FOR DISPLAY
+# ============================================================
+
+def to_ist_datetime(value):
+    if value is None:
+        return None
+
+    if not isinstance(value, datetime):
+        return value
+
+    ist = timezone(
+        timedelta(hours=5, minutes=30)
+    )
+
+    # Database timestamps are expected to be timezone-aware.
+    # Treat a naive timestamp as UTC for consistent display.
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+
+    return value.astimezone(ist)
 
 # ============================================================
 # HELPER: QUIZ STATUS
@@ -1837,6 +1858,15 @@ def quiz_generated(quiz_id):
             quiz.get("available_from"),
             quiz.get("available_until")
         )
+        
+        # Convert schedule to IST only after calculating status.
+        quiz["available_from"] = to_ist_datetime(
+            quiz.get("available_from")
+        )
+
+        quiz["available_until"] = to_ist_datetime(
+            quiz.get("available_until")
+        )
 
         # ====================================================
         # QUESTIONS
@@ -2609,6 +2639,14 @@ def manage_quizzes():
             quiz.get("available_from"),
             quiz.get("available_until")
         )
+        
+        quiz["available_from"] = to_ist_datetime(
+            quiz.get("available_from")
+        )
+
+        quiz["available_until"] = to_ist_datetime(
+            quiz.get("available_until")
+        )
 
         quiz["calculated_duration_minutes"] = (
             calculate_duration_minutes(
@@ -2631,7 +2669,144 @@ def manage_quizzes():
         quizzes=quizzes
     )
 
+# ============================================================
+# EDIT QUIZ SCHEDULE
+# ============================================================
 
+@teacher.route(
+    "/edit_quiz_schedule/<int:quiz_id>",
+    methods=["GET", "POST"]
+)
+def edit_quiz_schedule(quiz_id):
+
+    if not teacher_logged_in():
+        return redirect("/")
+
+    teacher_id = session["teacher_id"]
+
+    db = get_db_connection()
+    cursor = db.cursor(
+        cursor_factory=RealDictCursor
+    )
+
+    try:
+        cursor.execute(
+            """
+            SELECT
+                quiz_id,
+                title,
+                available_from,
+                available_until
+            FROM quizzes
+            WHERE quiz_id = %s
+              AND teacher_id = %s
+            """,
+            (quiz_id, teacher_id)
+        )
+
+        quiz = cursor.fetchone()
+
+        if not quiz:
+            flash("Quiz not found.", "error")
+            return redirect("/manage_quizzes")
+
+        if request.method == "POST":
+            try:
+                available_from = parse_ist_datetime(
+                    request.form.get("available_from")
+                )
+
+                available_until = parse_ist_datetime(
+                    request.form.get("available_until")
+                )
+
+                if available_until <= available_from:
+                    raise ValueError(
+                        "End time must be later than start time."
+                    )
+
+            except ValueError as exc:
+                flash(str(exc), "error")
+                return redirect(
+                    request.url
+                )
+
+            cursor.execute(
+                """
+                UPDATE quizzes
+                SET available_from = %s,
+                    available_until = %s
+                WHERE quiz_id = %s
+                  AND teacher_id = %s
+                """,
+                (
+                    available_from,
+                    available_until,
+                    quiz_id,
+                    teacher_id
+                )
+            )
+
+            db.commit()
+
+            flash(
+                "Quiz schedule updated successfully.",
+                "success"
+            )
+
+            return redirect("/manage_quizzes")
+
+        ist = timezone(
+            timedelta(hours=5, minutes=30)
+        )
+
+        def format_datetime_local(value):
+            if value is None:
+                return ""
+
+            if value.tzinfo is None:
+                value = value.replace(
+                    tzinfo=timezone.utc
+                )
+
+            return value.astimezone(ist).strftime(
+                "%Y-%m-%dT%H:%M"
+            )
+
+        quiz["available_from_local"] = (
+            format_datetime_local(
+                quiz.get("available_from")
+            )
+        )
+
+        quiz["available_until_local"] = (
+            format_datetime_local(
+                quiz.get("available_until")
+            )
+        )
+
+        return render_template(
+            "edit_quiz_schedule.html",
+            quiz=quiz
+        )
+
+    except Exception:
+        db.rollback()
+        current_app.logger.exception(
+            "Unable to edit quiz schedule."
+        )
+
+        flash(
+            "Unable to update quiz schedule. Please try again.",
+            "error"
+        )
+
+        return redirect("/manage_quizzes")
+
+    finally:
+        cursor.close()
+        db.close()
+        
 # ============================================================
 # DELETE QUIZ
 # ============================================================

@@ -580,6 +580,11 @@
                                 Open
                             </a>
 
+                            <a class="btn btn-primary"
+   href="{{ url_for('teacher.edit_quiz_schedule', quiz_id=quiz.quiz_id) }}">
+    Edit Schedule
+</a>
+
                             <form
                                 method="POST"
                                 action="{{ url_for('teacher.delete_quiz', quiz_id=quiz.quiz_id) }}"

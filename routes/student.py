@@ -744,7 +744,25 @@ def student_dashboard():
     finally:
         _close_db(connection)
 
+# ============================================================
+# HELPER: CONVERT STORED DATETIME TO IST FOR DISPLAY
+# ============================================================
 
+def _to_ist_display_datetime(value):
+    if value is None:
+        return None
+
+    if not isinstance(value, datetime):
+        return value
+
+    from datetime import timezone, timedelta
+
+    ist = timezone(timedelta(hours=5, minutes=30))
+
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+
+    return value.astimezone(ist)
 # ============================================================
 # AVAILABLE QUIZZES
 # ============================================================
@@ -768,9 +786,18 @@ def available_quizzes():
                 for quiz in cursor.fetchall()
             ]
 
-        # Calculate status for every quiz.
+               # Calculate status using the original database timestamps.
         for quiz in quizzes:
             actual_status = _quiz_status(quiz)
+
+            # Convert timestamps only for display.
+            quiz["available_from"] = _to_ist_display_datetime(
+                quiz.get("available_from")
+            )
+
+            quiz["available_until"] = _to_ist_display_datetime(
+                quiz.get("available_until")
+            )
 
             if actual_status == "upcoming":
                 quiz["status"] = "upcoming"
