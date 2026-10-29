@@ -1124,7 +1124,7 @@ def quiz():
                 return ajax_error("Please log in again.", 401)
             return redirect(url_for("auth.login"))
 
-    # Handle submitted attempts for both logged-in students and guests.
+        # Show marks after submission, without revealing answers.
     if attempt["status"] == "submitted":
         if is_ajax:
             return jsonify({
@@ -1134,15 +1134,24 @@ def quiz():
                 "message": "Your quiz has been submitted successfully."
             })
 
+        total_questions = len(
+            _get_attempt_questions(attempt["quiz_id"])
+        )
+
         return render_template(
             "quiz.html",
             quiz=quiz_data,
             questions=[],
-            result=None,
+            result={
+                "score": attempt.get("score") or 0,
+                "percentage": attempt.get("percentage") or 0,
+                "submitted_at": attempt.get("submitted_at"),
+            },
             review=None,
             show_result=False,
             submission_complete=True,
             unavailable=False,
+            total_questions=total_questions,
         )
 
     questions = _get_attempt_questions(attempt["quiz_id"])

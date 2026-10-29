@@ -92,9 +92,20 @@
 
       <section class="card">
         <div class="notice">
-          Your responses have been recorded. Results and answer review
-          are not available at this time.
+          Your responses have been recorded successfully.
+          Correct answers and explanations are hidden.
         </div>
+
+        <div class="result-score">
+  <div class="muted">Your Score</div>
+  <div class="score-number">
+    {{ result.score or 0 }} / {{ total_questions or quiz.total_questions or 0 }}
+  </div>
+  <div>
+    Percentage:
+    <strong>{{ "%.2f"|format(result.percentage or 0) }}%</strong>
+  </div>
+</div>
 
         <div class="controls">
           {% if session.get("student_id") %}
