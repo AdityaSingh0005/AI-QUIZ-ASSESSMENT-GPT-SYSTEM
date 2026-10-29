@@ -13693,3 +13693,105 @@ VERY SMALL PHONES
         padding: 10px 12px;
     }
 }
+
+/* MOBILE MY RESULTS CARDS */
+.mobile-results-list {
+    display: none;
+}
+
+@media (max-width: 700px) {
+    .mobile-results-list {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+        width: 100%;
+    }
+
+    .performance-table-wrapper {
+        display: none;
+    }
+
+    .mobile-result-card {
+        min-width: 0;
+        padding: 18px;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        background: #ffffff;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .mobile-result-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .mobile-result-title {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-width: 0;
+    }
+
+    .mobile-result-title strong {
+        overflow-wrap: anywhere;
+        color: #1f2937;
+        font-size: 15px;
+    }
+
+    .mobile-result-title span,
+    .mobile-result-detail span,
+    .mobile-result-date > span:first-child {
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    .mobile-result-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 18px;
+    }
+
+    .mobile-result-detail {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px;
+        border-radius: 10px;
+        background: #f8fafc;
+    }
+
+    .mobile-result-detail strong {
+        color: #111827;
+        font-size: 16px;
+    }
+
+    .mobile-result-date {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        margin-top: 14px;
+        overflow-wrap: anywhere;
+        font-size: 12px;
+        color: #374151;
+    }
+
+    .mobile-result-actions {
+        margin-top: 16px;
+    }
+
+    .mobile-result-actions .view-answers-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 46px;
+        box-sizing: border-box;
+        color: #ffffff !important;
+        background: #2563eb;
+        border-radius: 9px;
+        text-decoration: none !important;
+    }
+}

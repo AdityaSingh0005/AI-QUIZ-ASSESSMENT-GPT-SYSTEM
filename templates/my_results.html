@@ -140,6 +140,53 @@
 
         {% if results %}
 
+        <!-- MOBILE RESULT CARDS -->
+<div class="mobile-results-list">
+    {% for r in results %}
+    <div class="mobile-result-card">
+
+        <div class="mobile-result-header">
+            <div class="quiz-history-icon">📝</div>
+            <div class="mobile-result-title">
+                <strong>{{ r.quiz_title or 'Untitled Quiz' }}</strong>
+                <span>Assessment</span>
+            </div>
+        </div>
+
+        <div class="mobile-result-details">
+            <div class="mobile-result-detail">
+                <span>Score</span>
+                <strong>{{ r.score }} / {{ r.total_questions or 0 }}</strong>
+            </div>
+
+            <div class="mobile-result-detail">
+                <span>Performance</span>
+                <strong>{{ r.percentage }}%</strong>
+            </div>
+        </div>
+
+        <div class="mobile-result-date">
+            <span>Date</span>
+            <span>{{ r.submitted_at }}</span>
+        </div>
+
+        <div class="mobile-result-actions">
+            {% if r.attempt_id %}
+            <a
+                href="{{ url_for('student.review_attempt', attempt_id=r.attempt_id) }}"
+                class="view-answers-btn"
+            >
+                View Answers
+            </a>
+            {% else %}
+            <span>Review unavailable</span>
+            {% endif %}
+        </div>
+
+    </div>
+    {% endfor %}
+</div>
+
         <div class="performance-table-wrapper">
 
             <table class="performance-table">
