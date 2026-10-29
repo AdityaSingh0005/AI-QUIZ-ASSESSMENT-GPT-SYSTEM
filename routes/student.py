@@ -667,6 +667,7 @@ def _ensure_question_explanations():
     return True
 
 
+
 def _build_result_review(attempt_id):
     connection = _db_connection()
 
@@ -687,20 +688,56 @@ def _build_result_review(attempt_id):
                     sa.selected_option
                 FROM quiz_attempts a
                 JOIN questions q
-                  ON q.quiz_id = a.quiz_id
+                    ON q.quiz_id = a.quiz_id
                 LEFT JOIN student_answers sa
-                  ON sa.question_id = q.question_id
-                 AND sa.attempt_id = a.attempt_id
+                    ON sa.question_id = q.question_id
+                   AND sa.attempt_id = a.attempt_id
                 WHERE a.attempt_id = %s
                 ORDER BY q.question_id
                 """,
                 (attempt_id,),
             )
 
-            return cursor.fetchall()
+            rows = cursor.fetchall()
+
+        review = []
+
+        for number, row in enumerate(rows, start=1):
+            selected = (
+                (row.get("selected_option") or "").strip().upper()
+            )
+            correct = (
+                (row.get("correct_option") or "").strip().upper()
+            )
+
+            options = {
+                "A": row.get("option_a"),
+                "B": row.get("option_b"),
+                "C": row.get("option_c"),
+                "D": row.get("option_d"),
+            }
+
+            review.append({
+                "question_id": row["question_id"],
+                "question_number": number,
+                "question": row.get("question"),
+                "difficulty": row.get("difficulty"),
+                "selected_option": selected or None,
+                "selected_text": options.get(selected),
+                "correct_option": correct or None,
+                "correct_text": options.get(correct),
+                "explanation": (
+                    row.get("explanation")
+                    or "No explanation is available for this question."
+                ),
+                "is_correct": bool(selected and correct and selected == correct),
+            })
+
+        return review
 
     finally:
         _close_db(connection)
+
 
 
 # ============================================================
@@ -1346,6 +1383,7 @@ def submit_quiz():
 # STUDENT RESULTS
 # ============================================================
 
+
 @student.route("/my_results")
 def my_results():
     student_id = session.get("student_id")
@@ -1361,12 +1399,13 @@ def my_results():
                 """
                 SELECT
                     r.*,
-                    q.title AS quiz_title
+                    q.title AS quiz_title,
+                    q.total_questions AS total_questions
                 FROM results r
                 LEFT JOIN quizzes q
-                  ON q.quiz_id = r.quiz_id
+                    ON q.quiz_id = r.quiz_id
                 WHERE r.student_id = %s
-                ORDER BY r.submitted_at DESC
+                ORDER BY r.submitted_at DESC, r.result_id DESC
                 """,
                 (student_id,),
             )
@@ -1380,6 +1419,60 @@ def my_results():
 
     finally:
         _close_db(connection)
+
+
+@student.route("/review_attempt/<int:attempt_id>")
+def review_attempt(attempt_id):
+    student_id = session.get("student_id")
+
+    if not student_id:
+        return redirect(url_for("auth.login"))
+
+    connection = _db_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    a.attempt_id,
+                    a.student_id,
+                    a.quiz_id,
+                    a.status,
+                    a.score,
+                    a.percentage,
+                    a.submitted_at,
+                    q.title AS quiz_title,
+                    q.total_questions
+                FROM quiz_attempts a
+                JOIN quizzes q
+                    ON q.quiz_id = a.quiz_id
+                WHERE a.attempt_id = %s
+                  AND a.student_id = %s
+                  AND a.status = 'submitted'
+                """,
+                (attempt_id, student_id),
+            )
+            attempt = cursor.fetchone()
+
+        if not attempt:
+            return "Attempt not found or access denied.", 404
+
+    finally:
+        _close_db(connection)
+
+    review = _build_result_review(attempt_id)
+
+    return render_template(
+        "result.html",
+        score=attempt["score"] or 0,
+        total=attempt["total_questions"] or len(review),
+        percentage=attempt["percentage"] or 0,
+        review=review,
+        quiz_title=attempt["quiz_title"],
+        submitted_at=attempt["submitted_at"],
+        show_result=True,
+    )
 
 
 # ============================================================

@@ -164,6 +164,13 @@
                             Date
                         </th>
 
+                        
+                        <th>
+                            Actions
+                        </th>
+
+
+
                     </tr>
 
                 </thead>
@@ -203,7 +210,7 @@
                         <td>
 
                             <span class="score-value">
-                                {{ r.score }}
+                                {{ r.score }} / {{ r.total_questions or 0 }}
                             </span>
 
                         </td>
@@ -244,6 +251,20 @@
                             </span>
 
                         </td>
+                    
+                        <td>
+                            {% if r.attempt_id %}
+                                <a
+                                    href="{{ url_for('student.review_attempt', attempt_id=r.attempt_id) }}"
+                                    class="view-answers-btn"
+                                >
+                                    View Answers
+                                </a>
+                            {% else %}
+                                <span>Review unavailable</span>
+                            {% endif %}
+                        </td>
+
 
                     </tr>
 
