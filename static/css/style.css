@@ -13624,3 +13624,72 @@ VERY SMALL PHONES
     }
 
 }
+
+
+.view-answers-btn {
+    display: inline-block;
+    padding: 9px 14px;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.view-answers-btn:hover {
+    background: #1d4ed8;
+}
+
+/* =========================================
+   MY RESULTS — MOBILE VIEW ANSWERS BUTTON
+   ========================================= */
+
+.view-answers-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    position: relative;
+    z-index: 2;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.view-answers-btn:hover {
+    background: #1d4ed8;
+}
+
+@media (max-width: 700px) {
+    .performance-table-wrapper {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .performance-table {
+        min-width: 680px;
+    }
+
+    .performance-table tbody td:last-child {
+        min-width: 125px;
+        white-space: nowrap;
+    }
+
+    .performance-table .view-answers-btn {
+        display: inline-flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        min-height: 44px;
+        padding: 10px 12px;
+    }
+}
