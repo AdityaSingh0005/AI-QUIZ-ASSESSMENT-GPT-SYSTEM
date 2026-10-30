@@ -1,62 +1,235 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Internal Assessments</title>
-    <style>
-        body { margin: 0; background: #f4f6fb; font-family: Inter, Arial, sans-serif; color: #182238; }
-        .wrap { width: min(1100px, 94%); margin: 35px auto; }
-        .top { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
-        .btn { background: #4f46e5; color: white; padding: 11px 15px; border-radius: 10px; text-decoration: none; font-weight: 700; }
-        .card { background: white; border: 1px solid #e5eaf2; border-radius: 16px; padding: 18px; margin-top: 14px; display: flex; justify-content: space-between; gap: 15px; align-items: center; flex-wrap: wrap; }
-        .muted { color: #718096; font-size: 12px; }
-        .badge { padding: 6px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; background: #fff7e6; color: #9a6700; }
-        .final { background: #ecfdf3; color: #067647; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Internal Assessments | Teacher Workspace</title>
+  <meta name="theme-color" content="#f6f7fb">
+  <style>
+    :root{
+      --bg:#f6f7fb;--surface:#fff;--surface-soft:#fafbff;--ink:#172033;
+      --muted:#69758b;--line:#e8ebf2;--primary:#5146e5;--primary-dark:#4035c9;
+      --primary-soft:#efeeff;--green:#12805c;--green-soft:#e9f8f1;
+      --amber:#a96508;--amber-soft:#fff5e5;--shadow:0 12px 34px rgba(28,38,75,.06);
+      --radius:20px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    a{color:inherit}
+    .page{width:min(1180px,calc(100% - 44px));margin:34px auto 52px}
+    .header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:28px}
+    .eyebrow{display:flex;align-items:center;gap:9px;color:var(--primary);font-size:11px;font-weight:850;letter-spacing:.13em;text-transform:uppercase;margin:0 0 12px}
+    .eyebrow-mark{width:25px;height:25px;display:grid;place-items:center;border-radius:8px;background:var(--primary-soft)}
+    h1{font-size:clamp(27px,4vw,36px);letter-spacing:-.045em;line-height:1.12;margin:0;font-weight:800}
+    .subtitle{color:var(--muted);font-size:14px;line-height:1.65;margin:10px 0 0}
+    .primary-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:12px 17px;border-radius:12px;background:var(--primary);color:white;text-decoration:none;font-weight:750;font-size:13px;box-shadow:0 7px 16px rgba(81,70,229,.19);transition:.18s ease;white-space:nowrap}
+    .primary-btn:hover{background:var(--primary-dark);transform:translateY(-1px);box-shadow:0 10px 20px rgba(81,70,229,.23)}
+    .primary-btn:focus-visible,.back-link:focus-visible,.search:focus-visible{outline:3px solid #c7c4ff;outline-offset:3px}
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:26px 0}
+    .stat{background:var(--surface);border:1px solid var(--line);border-radius:17px;padding:17px 19px;box-shadow:0 3px 12px rgba(28,38,75,.025)}
+    .stat-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .stat-label{font-size:12px;color:var(--muted);font-weight:650}
+    .stat-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:var(--primary-soft);color:var(--primary)}
+    .stat-number{font-size:27px;font-weight:820;letter-spacing:-.04em;margin-top:8px}
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:30px 0 14px}
+    .section-title{font-size:16px;font-weight:800;letter-spacing:-.02em;margin:0}
+    .section-note{font-size:12px;color:var(--muted);margin:5px 0 0}
+    .search-wrap{position:relative;width:min(300px,100%)}
+    .search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#8993a6;pointer-events:none}
+    .search{width:100%;height:42px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:0 13px 0 39px;font:inherit;font-size:12px;color:var(--ink);outline:none}
+    .search:focus{border-color:#b9b5ff;box-shadow:0 0 0 3px rgba(81,70,229,.08)}
+    .assessment-list{display:grid;gap:12px}
+    .assessment-link{text-decoration:none;display:block;border-radius:18px}
+    .assessment{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:20px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:0 3px 12px rgba(28,38,75,.025);transition:.18s ease}
+    .assessment-link:hover .assessment{transform:translateY(-2px);border-color:#d8d5ff;box-shadow:var(--shadow)}
+    .assessment-main{min-width:0}
+    .assessment-title-row{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+    .assessment h3{font-size:15px;line-height:1.4;letter-spacing:-.02em;margin:0;font-weight:800;overflow-wrap:anywhere}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;font-size:9px;letter-spacing:.07em;font-weight:850}
+    .badge.draft{background:var(--amber-soft);color:var(--amber)}
+    .badge.finalized{background:var(--green-soft);color:var(--green)}
+    .badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+    .cohort{font-size:12px;color:var(--muted);margin:7px 0 14px}
+    .meta{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap}
+    .meta-item{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:#58647a;font-weight:620}
+    .meta-item svg{color:#8b95a8}
+    .assessment-side{display:flex;align-items:center;gap:18px}
+    .scale{text-align:right}
+    .scale-label{display:block;font-size:10px;color:#8993a6;margin-bottom:4px}
+    .scale-value{font-size:18px;font-weight:850;letter-spacing:-.03em}
+    .open-link{display:inline-flex;align-items:center;gap:7px;color:var(--primary);font-size:12px;font-weight:800;white-space:nowrap}
+    .empty{background:linear-gradient(135deg,#fff 0%,#fafaff 100%);border:1px dashed #d8dbea;border-radius:22px;padding:48px 22px;text-align:center}
+    .empty-icon{width:58px;height:58px;display:grid;place-items:center;margin:0 auto 16px;border-radius:18px;background:var(--primary-soft);color:var(--primary)}
+    .empty h3{font-size:17px;margin:0 0 8px;letter-spacing:-.02em}
+    .empty p{max-width:430px;margin:0 auto 20px;color:var(--muted);font-size:13px;line-height:1.65}
+    .flash{padding:12px 15px;border-radius:12px;margin:12px 0;font-size:12px;font-weight:650;border:1px solid transparent}
+    .flash.success{background:var(--green-soft);border-color:#c9efdd;color:#08734f}
+    .flash.error,.flash.danger{background:#fff0ef;border-color:#ffd7d3;color:#b42318}
+    .flash.warning{background:var(--amber-soft);border-color:#f8e2bd;color:#965c08}
+    .footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:26px;padding-top:18px;border-top:1px solid var(--line)}
+    .back-link{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#647087;font-size:12px;font-weight:700}
+    .back-link:hover{color:var(--primary)}
+    .footer-note{font-size:10px;color:#98a1b1}
+    .hidden{display:none!important}
+    @media(max-width:720px){
+      .page{width:min(100% - 28px,600px);margin:22px auto 36px}
+      .header{align-items:flex-start;flex-direction:column}
+      .header .primary-btn{width:100%}
+      .stats{gap:9px}
+      .stat{padding:14px}
+      .stat-number{font-size:23px}
+      .toolbar{align-items:flex-start;flex-direction:column}
+      .search-wrap{width:100%}
+      .assessment{padding:17px;grid-template-columns:1fr;gap:16px}
+      .assessment-side{justify-content:space-between;border-top:1px solid var(--line);padding-top:13px}
+      .scale{text-align:left}
+      .footer{align-items:flex-start;flex-direction:column}
+    }
+    @media(max-width:420px){.stats{grid-template-columns:1fr}.stat{display:flex;align-items:center;justify-content:space-between}.stat-number{margin:0}.meta{gap:9px 13px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
+  </style>
 </head>
 <body>
-<main class="wrap">
-    <div class="top">
-        <div>
-            <h1>Internal Assessments</h1>
-            <p class="muted">Semester-wise quiz marks and final internal score.</p>
-        </div>
-        <a class="btn" href="/internal_assessment/new">+ Create assessment</a>
+<main class="page">
+  <header class="header">
+    <div>
+      <p class="eyebrow"><span class="eyebrow-mark">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+      </span> Teacher workspace</p>
+      <h1>Internal assessments</h1>
+      <p class="subtitle">Bring semester quizzes together and track every student's internal marks in one place.</p>
+    </div>
+    <a class="primary-btn" href="/internal_assessment/new">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+      Create assessment
+    </a>
+  </header>
+
+  {% with messages=get_flashed_messages(with_categories=true) %}
+    {% for category,message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% set total_assessments = assessments|length %}
+  {% set draft_count = assessments|selectattr('status','equalto','draft')|list|length %}
+  {% set finalized_count = assessments|selectattr('status','equalto','finalized')|list|length %}
+
+  <section class="stats" aria-label="Assessment overview">
+    <article class="stat">
+      <div class="stat-top"><span class="stat-label">Total assessments</span><span class="stat-icon">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      </span></div>
+      <div class="stat-number">{{ total_assessments }}</div>
+    </article>
+    <article class="stat">
+      <div class="stat-top"><span class="stat-label">In progress</span><span class="stat-icon" style="background:var(--amber-soft);color:var(--amber)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      </span></div>
+      <div class="stat-number">{{ draft_count }}</div>
+    </article>
+    <article class="stat">
+      <div class="stat-top"><span class="stat-label">Finalized</span><span class="stat-icon" style="background:var(--green-soft);color:var(--green)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="10"/></svg>
+      </span></div>
+      <div class="stat-number">{{ finalized_count }}</div>
+    </article>
+  </section>
+
+  <section>
+    <div class="toolbar">
+      <div><h2 class="section-title">Your assessments</h2><p class="section-note">Select an assessment to review students, quiz marks and final scores.</p></div>
+      {% if assessments %}
+      <label class="search-wrap">
+        <span class="search-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        </span>
+        <input id="assessmentSearch" class="search" type="search" placeholder="Search by title, department or semester..." autocomplete="off" aria-label="Search assessments">
+      </label>
+      {% endif %}
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-            <p>{{ message }}</p>
-        {% endfor %}
-    {% endwith %}
-
     {% if assessments %}
+      <div class="assessment-list" id="assessmentList">
         {% for a in assessments %}
-        <a href="/internal_assessment/{{ a.assessment_id }}" style="color: inherit; text-decoration: none;">
-            <section class="card">
-                <div>
-                    <h3 style="margin: 0 0 7px;">{{ a.title }}</h3>
-                    <div class="muted">{{ a.department }} · Semester {{ a.semester }}{% if a.section %} · Section {{ a.section }}{% endif %}</div>
-                    <div class="muted" style="margin-top: 6px;">{{ a.quiz_count }} quizzes · {{ a.student_count }} students · Final marks / {{ a.final_out_of }}</div>
-                </div>
-                <div>
-                    <span class="badge {% if a.status == 'finalized' %}final{% endif %}">{{ a.status | upper }}</span>
-                    <div style="margin-top: 10px; color: #4f46e5; font-weight: 700;">Open →</div>
-                </div>
-            </section>
+        <a class="assessment-link" href="/internal_assessment/{{ a.assessment_id }}"
+           data-search="{{ (a.title ~ ' ' ~ (a.department or '') ~ ' ' ~ (a.semester or '') ~ ' ' ~ (a.section or '') ~ ' ' ~ a.status)|lower }}">
+          <article class="assessment">
+            <div class="assessment-main">
+              <div class="assessment-title-row">
+                <h3>{{ a.title }}</h3>
+                <span class="badge {% if a.status=='finalized' %}finalized{% else %}draft{% endif %}">
+                  <span class="badge-dot"></span>{{ a.status|upper }}
+                </span>
+              </div>
+              <p class="cohort">{{ a.department or 'Department not specified' }} · Semester {{ a.semester or '—' }}{% if a.section %} · Section {{ a.section }}{% else %} · All sections{% endif %}</p>
+              <div class="meta">
+                <span class="meta-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  {{ a.quiz_count }} quizzes
+                </span>
+                <span class="meta-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  {{ a.student_count }} students
+                </span>
+                <span class="meta-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg>
+                  Marks out of {{ a.final_out_of }}
+                </span>
+              </div>
+            </div>
+            <div class="assessment-side">
+              <div class="scale"><span class="scale-label">Final scale</span><span class="scale-value">/ {{ a.final_out_of }}</span></div>
+              <span class="open-link">View details
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </span>
+            </div>
+          </article>
         </a>
         {% endfor %}
+      </div>
+      <p id="noSearchResults" class="section-note hidden" style="padding:18px 2px">No assessments match your search.</p>
     {% else %}
-        <section class="card">
-            <div>
-                <h3>No internal assessment yet</h3>
-                <p class="muted">Create your first assessment by selecting semester students and quizzes.</p>
-            </div>
-        </section>
+      <section class="empty">
+        <div class="empty-icon">
+          <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        </div>
+        <h3>Your assessment workspace is ready</h3>
+        <p>Create your first internal assessment by selecting a department, semester and quizzes. Student-wise marks will be calculated in one place.</p>
+        <a class="primary-btn" href="/internal_assessment/new">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+          Create your first assessment
+        </a>
+      </section>
     {% endif %}
+  </section>
 
-    <p style="margin-top: 25px;"><a href="/teacher_dashboard" style="color: #4f46e5;">← Teacher Dashboard</a></p>
+  <footer class="footer">
+    <a class="back-link" href="/teacher_dashboard">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+      Back to teacher dashboard
+    </a>
+    <span class="footer-note">Internal Assessment Management</span>
+  </footer>
 </main>
+<script>
+  (function () {
+    const input = document.getElementById("assessmentSearch");
+    const list = document.getElementById("assessmentList");
+    if (!input || !list) return;
+    const cards = Array.from(list.querySelectorAll(".assessment-link"));
+    const empty = document.getElementById("noSearchResults");
+    input.addEventListener("input", function () {
+      const query = input.value.trim().toLowerCase();
+      let visible = 0;
+      cards.forEach(function (card) {
+        const match = (card.dataset.search || "").includes(query);
+        card.classList.toggle("hidden", !match);
+        if (match) visible += 1;
+      });
+      if (empty) empty.classList.toggle("hidden", visible !== 0);
+    });
+  })();
+</script>
 </body>
 </html>
