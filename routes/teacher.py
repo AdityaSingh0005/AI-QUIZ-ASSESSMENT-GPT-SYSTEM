@@ -3824,19 +3824,57 @@ def internal_assessment_detail(assessment_id):
                         for r in cursor.fetchall()}
 
         cursor.execute("""
-            SELECT qa.student_id, qa.quiz_id, qa.attempt_id, qa.score,
-                   qa.percentage, qa.submitted_at
+            WITH roster AS (
+                SELECT
+                    ias.student_id,
+                    UPPER(BTRIM(COALESCE(s.roll_number, ''))) AS normalized_roll
+                FROM internal_assessment_students ias
+                JOIN students s
+                  ON s.student_id = ias.student_id
+                WHERE ias.assessment_id = %s
+            ),
+            unique_guest_rolls AS (
+                SELECT
+                    normalized_roll,
+                    MIN(student_id) AS student_id
+                FROM roster
+                WHERE normalized_roll <> ''
+                GROUP BY normalized_roll
+                HAVING COUNT(*) = 1
+            )
+            SELECT
+                COALESCE(qa.student_id, ugr.student_id) AS student_id,
+                qa.quiz_id,
+                qa.attempt_id,
+                qa.score,
+                qa.percentage,
+                qa.submitted_at
             FROM quiz_attempts qa
             JOIN internal_assessment_quizzes iaq
-              ON iaq.quiz_id=qa.quiz_id
-            JOIN internal_assessment_students ias
-              ON ias.student_id=qa.student_id
-             AND ias.assessment_id=iaq.assessment_id
-            WHERE iaq.assessment_id=%s
-              AND qa.status='submitted'
-              AND qa.student_id IS NOT NULL
+              ON iaq.quiz_id = qa.quiz_id
+
+            LEFT JOIN roster registered_roster
+              ON registered_roster.student_id = qa.student_id
+
+            LEFT JOIN unique_guest_rolls ugr
+              ON qa.student_id IS NULL
+             AND UPPER(BTRIM(COALESCE(qa.roll_number, ''))) = ugr.normalized_roll
+
+            WHERE iaq.assessment_id = %s
+              AND qa.status = 'submitted'
+              AND (
+                    (
+                        qa.student_id IS NOT NULL
+                        AND registered_roster.student_id IS NOT NULL
+                    )
+                    OR
+                    (
+                        qa.student_id IS NULL
+                        AND ugr.student_id IS NOT NULL
+                    )
+              )
             ORDER BY qa.submitted_at, qa.attempt_id
-        """, (assessment_id,))
+        """, (assessment_id, assessment_id))
         attempts_map = {}
         for attempt in cursor.fetchall():
             key = (int(attempt["student_id"]), int(attempt["quiz_id"]))
@@ -3944,14 +3982,54 @@ def internal_assessment_finalize(assessment_id):
         handling_map = {(int(r["student_id"]), int(r["quiz_id"])): r["handling_status"]
                         for r in cursor.fetchall()}
         cursor.execute("""
-            SELECT qa.student_id, qa.quiz_id, qa.score, qa.percentage
+            WITH roster AS (
+                SELECT
+                    ias.student_id,
+                    UPPER(BTRIM(COALESCE(s.roll_number, ''))) AS normalized_roll
+                FROM internal_assessment_students ias
+                JOIN students s
+                  ON s.student_id = ias.student_id
+                WHERE ias.assessment_id = %s
+            ),
+            unique_guest_rolls AS (
+                SELECT
+                    normalized_roll,
+                    MIN(student_id) AS student_id
+                FROM roster
+                WHERE normalized_roll <> ''
+                GROUP BY normalized_roll
+                HAVING COUNT(*) = 1
+            )
+            SELECT
+                COALESCE(qa.student_id, ugr.student_id) AS student_id,
+                qa.quiz_id,
+                qa.score,
+                qa.percentage
             FROM quiz_attempts qa
-            JOIN internal_assessment_quizzes iaq ON iaq.quiz_id=qa.quiz_id
-            JOIN internal_assessment_students ias
-              ON ias.student_id=qa.student_id AND ias.assessment_id=iaq.assessment_id
-            WHERE iaq.assessment_id=%s AND qa.status='submitted'
-              AND qa.student_id IS NOT NULL
-        """, (assessment_id,))
+            JOIN internal_assessment_quizzes iaq
+              ON iaq.quiz_id = qa.quiz_id
+
+            LEFT JOIN roster registered_roster
+              ON registered_roster.student_id = qa.student_id
+
+            LEFT JOIN unique_guest_rolls ugr
+              ON qa.student_id IS NULL
+             AND UPPER(BTRIM(COALESCE(qa.roll_number, ''))) = ugr.normalized_roll
+
+            WHERE iaq.assessment_id = %s
+              AND qa.status = 'submitted'
+              AND (
+                    (
+                        qa.student_id IS NOT NULL
+                        AND registered_roster.student_id IS NOT NULL
+                    )
+                    OR
+                    (
+                        qa.student_id IS NULL
+                        AND ugr.student_id IS NOT NULL
+                    )
+              )
+        """, (assessment_id, assessment_id))
         attempts_map = {}
         for attempt in cursor.fetchall():
             attempts_map.setdefault((int(attempt["student_id"]), int(attempt["quiz_id"])), []).append(attempt)
