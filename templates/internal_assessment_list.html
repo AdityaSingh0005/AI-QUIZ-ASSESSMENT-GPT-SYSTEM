@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Internal Assessments</title>
+    <style>
+        body { margin: 0; background: #f4f6fb; font-family: Inter, Arial, sans-serif; color: #182238; }
+        .wrap { width: min(1100px, 94%); margin: 35px auto; }
+        .top { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .btn { background: #4f46e5; color: white; padding: 11px 15px; border-radius: 10px; text-decoration: none; font-weight: 700; }
+        .card { background: white; border: 1px solid #e5eaf2; border-radius: 16px; padding: 18px; margin-top: 14px; display: flex; justify-content: space-between; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .muted { color: #718096; font-size: 12px; }
+        .badge { padding: 6px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; background: #fff7e6; color: #9a6700; }
+        .final { background: #ecfdf3; color: #067647; }
+    </style>
+</head>
+<body>
+<main class="wrap">
+    <div class="top">
+        <div>
+            <h1>Internal Assessments</h1>
+            <p class="muted">Semester-wise quiz marks and final internal score.</p>
+        </div>
+        <a class="btn" href="/internal_assessment/new">+ Create assessment</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+    {% endwith %}
+
+    {% if assessments %}
+        {% for a in assessments %}
+        <a href="/internal_assessment/{{ a.assessment_id }}" style="color: inherit; text-decoration: none;">
+            <section class="card">
+                <div>
+                    <h3 style="margin: 0 0 7px;">{{ a.title }}</h3>
+                    <div class="muted">{{ a.department }} · Semester {{ a.semester }}{% if a.section %} · Section {{ a.section }}{% endif %}</div>
+                    <div class="muted" style="margin-top: 6px;">{{ a.quiz_count }} quizzes · {{ a.student_count }} students · Final marks / {{ a.final_out_of }}</div>
+                </div>
+                <div>
+                    <span class="badge {% if a.status == 'finalized' %}final{% endif %}">{{ a.status | upper }}</span>
+                    <div style="margin-top: 10px; color: #4f46e5; font-weight: 700;">Open →</div>
+                </div>
+            </section>
+        </a>
+        {% endfor %}
+    {% else %}
+        <section class="card">
+            <div>
+                <h3>No internal assessment yet</h3>
+                <p class="muted">Create your first assessment by selecting semester students and quizzes.</p>
+            </div>
+        </section>
+    {% endif %}
+
+    <p style="margin-top: 25px;"><a href="/teacher_dashboard" style="color: #4f46e5;">← Teacher Dashboard</a></p>
+</main>
+</body>
+</html>

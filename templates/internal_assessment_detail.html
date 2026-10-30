@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ assessment.title }}</title>
+    <style>
+        :root {
+            --bg: #f4f6fb;
+            --card: #fff;
+            --ink: #182238;
+            --muted: #718096;
+            --line: #e5eaf2;
+            --p: #4f46e5;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--bg); font-family: Inter, Arial, sans-serif; color: var(--ink); }
+        .wrap { width: 96%; max-width: 1500px; margin: 28px auto; }
+        .top, .actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .btn { display: inline-block; padding: 10px 14px; border-radius: 9px; background: var(--p); color: white; text-decoration: none; border: 0; font-weight: 700; cursor: pointer; }
+        .secondary { background: #e9ebff; color: var(--p); }
+        .card { background: white; border: 1px solid var(--line); border-radius: 15px; padding: 17px; margin-top: 14px; }
+        .muted { color: var(--muted); font-size: 12px; line-height: 1.6; }
+        .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 15px; }
+        .stat { background: white; border: 1px solid var(--line); border-radius: 13px; padding: 15px; }
+        .stat small { display: block; color: var(--muted); font-size: 11px; }
+        .stat b { display: block; font-size: 22px; margin-top: 6px; }
+        .tablebox { overflow: auto; background: white; border: 1px solid var(--line); border-radius: 14px; margin-top: 15px; }
+        table { border-collapse: collapse; width: 100%; min-width: 1050px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--line); font-size: 12px; vertical-align: top; }
+        th { background: #f8f9fc; color: #657087; position: sticky; top: 0; }
+        td select { width: 100%; min-width: 110px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+        .marks { font-weight: 800; color: #087443; }
+        .badge { padding: 5px 8px; border-radius: 20px; background: #fff5dc; color: #946200; font-size: 10px; font-weight: 800; }
+        .final { background: #e7f8ed; color: #067647; }
+        .flash { padding: 11px; background: #fff0ef; border-radius: 8px; margin: 10px 0; }
+        .hint { background: #eef2ff; color: #3730a3; padding: 13px; border-radius: 10px; font-size: 12px; line-height: 1.6; margin-top: 14px; }
+        @media(max-width: 700px) {
+            .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+<main class="wrap">
+    <div class="top">
+        <div>
+            <p class="muted" style="color:#4f46e5;font-weight:800;letter-spacing:1px">INTERNAL ASSESSMENT #{{ assessment.assessment_id }}</p>
+            <h1 style="margin:0">{{ assessment.title }}</h1>
+            <p class="muted">{{ assessment.department }} · Semester {{ assessment.semester }}{% if assessment.section %} · Section {{ assessment.section }}{% endif %} · Final marks out of {{ assessment.final_out_of }}</p>
+        </div>
+        <div class="actions">
+            <a class="btn secondary" href="/internal_assessment">← All assessments</a>
+            <span class="badge {% if assessment.status=='finalized' %}final{% endif %}">{{ assessment.status|upper }}</span>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="flash">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <section class="stats">
+        <div class="stat"><small>Students</small><b>{{ rows|length }}</b></div>
+        <div class="stat"><small>Selected quizzes</small><b>{{ quizzes|length }}</b></div>
+        <div class="stat"><small>Quiz attempts completed</small><b>{{ completed_total }}</b></div>
+        <div class="stat"><small>Missing quiz items pending</small><b>{{ pending_total }}</b></div>
+    </section>
+
+    <div class="hint">
+        <b>Absent handling:</b> Pending = student baad mein attempt karega; Zero = is quiz mein 0 marks; Exclude = is student ke calculation se quiz remove. Agar student Pending ke baad quiz attempt kar leta hai, uske submitted attempt marks automatically count honge. Multiple submitted attempts ka average liya jayega. Guest attempts registered student ke marks mein auto-merge nahi honge.
+    </div>
+
+    <section class="card">
+        <b>Calculation method:</b> {{ "Percentage average" if assessment.calculation_method=="percentage_average" else "Total-marks-based average" }} · <b>Final scale:</b> / {{ assessment.final_out_of }} · <b>Attempt rule:</b> All submitted attempts ka average.
+    </section>
+
+    {% if assessment.status == 'draft' %}
+    <form method="POST" action="/internal_assessment/{{ assessment.assessment_id }}">
+        <div class="actions" style="margin-top:18px">
+            <h2 style="font-size:18px">Student-wise quiz handling</h2>
+            <button class="btn" type="submit">Save absent handling</button>
+        </div>
+    {% endif %}
+
+    <div class="tablebox">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    {% for q in quizzes %}
+                    <th>{{ q.title }}<br><span class="muted">Max {{ q.total_questions or 0 }}</span></th>
+                    {% endfor %}
+                    <th>Average %</th>
+                    <th>Final marks / {{ assessment.final_out_of }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td>
+                        <b>{{ row.full_name }}</b><br>
+                        <span class="muted">{{ row.roll_number }} · {{ row.section or '' }}</span>
+                    </td>
+                    {% for q in quizzes %}
+                        {% set item = row.quiz_data[q.quiz_id] %}
+                        <td>
+                            {% if item.attempts %}
+                                <div class="marks">{{ "%.1f"|format(item.average_percentage) }}%</div>
+                                <span class="muted">{{ item.attempts|length }} submitted attempt(s)</span>
+                            {% else %}
+                                <span class="badge">No attempt</span>
+                            {% endif %}
+                            
+                            {% if assessment.status == 'draft' %}
+                                <select name="handling_{{ row.student_id }}_{{ q.quiz_id }}">
+                                    <option value="pending" {% if item.handling_status=='pending' %}selected{% endif %}>Auto / Pending</option>
+                                    <option value="zero" {% if item.handling_status=='zero' %}selected{% endif %}>Give Zero</option>
+                                    <option value="exclude" {% if item.handling_status=='exclude' %}selected{% endif %}>Exclude</option>
+                                </select>
+                            {% else %}
+                                <div class="muted">Handling: {% if item.handling_status=='pending' and item.attempts %}ATTEMPT MARKS{% else %}{{ item.handling_status|upper }}{% endif %}</div>
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                    <td>
+                        {% if assessment.status=='finalized' and finalized_results.get(row.student_id) %}
+                            {{ finalized_results[row.student_id].average_percentage }}%
+                        {% elif row.calculation.average_percentage is not none %}
+                            {{ row.calculation.average_percentage }}%
+                        {% elif row.calculation.pending %}
+                            <span class="badge">Pending</span>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if assessment.status=='finalized' and finalized_results.get(row.student_id) %}
+                            <b class="marks">{{ finalized_results[row.student_id].final_marks }}</b>
+                        {% elif row.calculation.final_marks is not none %}
+                            <b class="marks">{{ row.calculation.final_marks }}</b>
+                        {% elif row.calculation.pending %}
+                            <span class="badge">Pending</span>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if assessment.status=='draft' %}
+    </form>
+    <form method="POST" action="/internal_assessment/{{ assessment.assessment_id }}/finalize" onsubmit="return confirm('Finalize karne ke baad marks lock ho jayenge. Kya aap sure hain?')">
+        <div class="actions" style="margin:18px 0">
+            <span class="muted">Finalize tabhi hoga jab kisi student ke liye Pending item na bacha ho.</span>
+            <button class="btn" type="submit">Finalize & lock marks</button>
+        </div>
+    </form>
+    {% else %}
+    <section class="card">
+        <h3 style="margin-top:0">Finalized results</h3>
+        <p class="muted">Marks snapshot save ho chuka hai. Is assessment ke quiz attempts badalne par final marks automatically change nahi honge.</p>
+        <a class="btn secondary" href="/export_internal_assessment/{{ assessment.assessment_id }}">Download CSV</a>
+    </section>
+    {% endif %}
+
+    <p style="margin-top:22px"><a href="/teacher_dashboard" style="color:#4f46e5">← Teacher Dashboard</a></p>
+</main>
+</body>
+</html>

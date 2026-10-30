@@ -1,0 +1,233 @@
+[1mdiff --git a/templates/available_quizzes.html b/templates/available_quizzes.html[m
+[1mindex 0042612..b978e4b 100644[m
+[1m--- a/templates/available_quizzes.html[m
+[1m+++ b/templates/available_quizzes.html[m
+[36m@@ -4,29 +4,27 @@[m
+ <head>[m
+     <meta charset="UTF-8">[m
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">[m
+[32m+[m[32m    <meta name="theme-color" content="#080d1b">[m
+[32m+[m[32m    <title>Assessments | QuizSphere</title>[m
+ [m
+ [m
+[31m-<title>Available Quizzes | QuizSphere</title>[m
+[31m-<meta name="theme-color" content="#0b1020">[m
+[31m-[m
+ <link rel="preconnect" href="https://fonts.googleapis.com">[m
+ <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>[m
+ <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">[m
+ [m
+ <style>[m
+     :root {[m
+[31m-        --bg: #0b1020;[m
+[31m-        --surface: #111a2e;[m
+[31m-        --card: #141f35;[m
+[31m-        --card-hover: #192640;[m
+[31m-        --border: rgba(148, 163, 184, .14);[m
+[31m-        --text: #f1f5f9;[m
+[31m-        --muted: #94a3b8;[m
+[31m-        --blue: #6485ff;[m
+[31m-        --blue-light: #8ba3ff;[m
+[31m-        --green: #34d399;[m
+[31m-        --amber: #fbbf24;[m
+[31m-        --red: #fb7185;[m
+[32m+[m[32m        --bg: #080d1b;[m
+[32m+[m[32m        --panel: #10182a;[m
+[32m+[m[32m        --panel2: #131e33;[m
+[32m+[m[32m        --border: rgba(164, 180, 214, .13);[m
+[32m+[m[32m        --text: #f3f6ff;[m
+[32m+[m[32m        --muted: #93a1bb;[m
+[32m+[m[32m        --blue: #8095ff;[m
+[32m+[m[32m        --blue2: #5c72f4;[m
+[32m+[m[32m        --green: #4adea1;[m
+[32m+[m[32m        --amber: #f9c66b;[m
+[32m+[m[32m        --red: #fb8396;[m
+         --radius: 20px;[m
+     }[m
+ [m
+[36m@@ -41,260 +39,283 @@[m
+     body {[m
+         margin: 0;[m
+         min-height: 100vh;[m
+[32m+[m[32m        color: var(--text);[m
+         background:[m
+[31m-            radial-gradient(ellipse at 8% 0%, rgba(79, 70, 229, .13), transparent 36%),[m
+[31m-            radial-gradient(ellipse at 100% 12%, rgba(37, 99, 235, .10), transparent 32%),[m
+[32m+[m[32m            radial-gradient(ellipse at 12% 0%, rgba(77, 94, 219, .13), transparent 33%),[m
+[32m+[m[32m            radial-gradient(ellipse at 95% 15%, rgba(27, 143, 173, .07), transparent 29%),[m
+             var(--bg);[m
+[31m-        color: var(--text);[m
+         font-family: "DM Sans", sans-serif;[m
+         -webkit-font-smoothing: antialiased;[m
+     }[m
+ [m
+[31m-    button, input {[m
+[31m-        font: inherit;[m
+[31m-    }[m
+[31m-[m
+     a {[m
+         color: inherit;[m
+         text-decoration: none;[m
+     }[m
+ [m
+[32m+[m[32m    button, input {[m
+[32m+[m[32m        font: inherit;[m
+[32m+[m[32m    }[m
+[32m+[m
+     button:focus-visible,[m
+[31m-    input:focus-visible,[m
+[31m-    a:focus-visible {[m
+[31m-        outline: 2px solid var(--blue-light);[m
+[32m+[m[32m    a:focus-visible,[m
+[32m+[m[32m    input:focus-visible {[m
+[32m+[m[32m        outline: 2px solid var(--blue);[m
+         outline-offset: 4px;[m
+     }[m
+ [m
+[31m-    .app {[m
+[31m-        max-width: 1440px;[m
+[31m-        margin: 0 auto;[m
+[31m-        padding: 0 44px 64px;[m
+[32m+[m[32m    .shell {[m
+[32m+[m[32m        max-width: 1500px;[m
+[32m+[m[32m        margin: auto;[m
+[32m+[m[32m        padding: 0 42px 42px;[m
+     }[m
+ [m
+[31m-    /* Top navigation */[m
+[32m+[m[32m    /* Navigation */[m
+ [m
+[31m-    .topbar {[m
+[31m-        min-height: 82px;[m
+[32m+[m[32m    .navbar {[m
+[32m+[m[32m        height: 82px;[m
+         display: flex;[m
+[31m-        justify-content: space-between;[m
+         align-items: center;[m
+[32m+[m[32m        justify-content: space-between;[m
+         gap: 20px;[m
+         border-bottom: 1px solid var(--border);[m
+[31m-        margin-bottom: 46px;[m
+[32m+[m[32m        margin-bottom: 34px;[m
+     }[m
+ [m
+     .brand {[m
+[31m-        display: inline-flex;[m
+[32m+[m[32m        display: flex;[m
+         align-items: center;[m
+         gap: 12px;[m
+[31m-        font-family: "Plus Jakarta Sans", sans-serif;[m
+[31m-        font-weight: 800;[m
+[31m-        font-size: 19px;[m
+[32m+[m[32m        font: 800 19px "Plus Jakarta Sans", sans-serif;[m
+         letter-spacing: -.6px;[m
+     }[m
+ [m
+     .brand-icon {[m
+[31m-        width: 40px;[m
+[31m-        height: 40px;[m
+[32m+[m[32m        width: 42px;[m
+[32m+[m[32m        height: 42px;[m
+         display: grid;[m
+         place-items: center;[m
+[31m-        border-radius: 13px;[m
+[31m-        background: linear-gradient(135deg, #7190ff, #5546dc);[m
+[32m+[m[32m        border-radius: 14px;[m
+         color: white;[m
+[31m-        box-shadow: 0 7px 24px rgba(99, 102, 241, .24);[m
+[32m+[m[32m        background: linear-gradient(140deg, #8ba0ff, #535ce1);[m
+[32m+[m[32m        box-shadow: 0 7px 25px rgba(88, 100, 236, .23);[m
+     }[m
+ [m
+     .brand-icon svg {[m
+[31m-        width: 22px;[m
+[31m-        height: 22px;[m
+[32m+[m[32m        width: 23px;[m
+[32m+[m[32m        height: 23px;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    .brand-sub {[m
+[32m+[m[32m        display: block;[m
+[32m+[m[32m        margin-top: 2px;[m
+[32m+[m[32m        color: #8190ac;[m
+[32m+[m[32m        font: 600 10px "DM Sans", sans-serif;[m
+[32m+[m[32m        letter-spacing: 1.1px;[m
+[32m+[m[32m        text-transform: uppercase;[m
+     }[m
+ [m
+[31m-    .nav-right {[m
+[32m+[m[32m    .nav-actions {[m
+         display: flex;[m
+         align-items: center;[m
+[31m-        gap: 12px;[m
+[32m+[m[32m        gap: 17px;[m
+     }[m
+ [m
+[31m-    .secure-label {[m
+[32m+[m[32m    .secure {[m
+         display: flex;[m
+         align-items: center;[m
+         gap: 8px;[m
+         color: var(--muted);[m
+[31m-        font-size: 13px;[m
+[32m+[m[32m        font-size: 12px;[m
+     }[m
+ [m
+     .secure-dot {[m
+         width: 7px;[m
+         height: 7px;[m
+[31m-        border-radius: 50%;[m
+         background: var(--green);[m
+[31m-        box-shadow: 0 0 12px rgba(52, 211, 153, .5);[m
+[32m+[m[32m        border-radius: 50%;[m
+[32m+[m[32m        box-shadow: 0 0 12px rgba(74, 222, 161, .5);[m
+     }[m
+ [m
+[31m-    .nav-button {[m
+[32m+[m[32m    .nav-link {[m
+         display: inline-flex;[m
+[31m-        justify-content: center;[m
+         align-items: center;[m
+[31m-        gap: 8px;[m
+[31m-        padding: 10px 15px;[m
+[32m+[m[32m        gap: 9px;[m
+[32m+[m[32m        padding: 11px 15px;[m
+         border: 1px solid var(--border);[m
+[31m-        border-radius: 11px;[m
+[31m-        background: rgba(255,255,255,.035);[m
+[31m-        color: #e2e8f0;[m
+[31m-        font-size: 13px;[m
+[32m+[m[32m        border-radius: 12px;[m
+[32m+[m[32m        background: rgba(255,255,255,.025);[m
+[32m+[m[32m        color: #dce5f8;[m
+[32m+[m[32m        font-size: 12px;[m
+         font-weight: 700;[m
+[31m-        transition: .2s ease;[m
+[32m+[m[32m        transition: .2s;[m
+     }[m
+ [m
+[31m-    .nav-button:hover {[m
+[31m-        background: rgba(255,255,255,.08);[m
+[31m-        border-color: rgba(148,163,184,.3);[m
+[32m+[m[32m    .nav-link:hover {[m
+[32m+[m[32m        background: rgba(255,255,255,.075);[m
+[32m+[m[32m        border-color: rgba(164,180,214,.3);[m
+     }[m
+ [m
+[31m-    .nav-button svg {[m
+[32m+[m[32m    .nav-link svg {[m
+         width: 16px;[m
+         height: 16px;[m
+     }[m
+ [m
+[31m-    /* Page heading */[m
+[32m+[m[32m    /* Hero */[m
+ [m
+     .hero {[m
+[31m-        display: flex;[m
+[31m-        align-items: flex-end;[m
+[31m-        justify-content: space-between;[m
+[31m-        gap: 28px;[m
+[31m-        margin-bottom: 30px;[m
+[32m+[m[32m        display: grid;[m
+[32m+[m[32m        grid-template-columns: minmax(0, 1fr) auto;[m

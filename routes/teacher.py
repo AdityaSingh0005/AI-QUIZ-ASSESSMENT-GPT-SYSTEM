@@ -19,6 +19,8 @@ from utils.ai_generator import (
 
 from psycopg2.extras import RealDictCursor
 
+import json
+
 from datetime import (
     datetime,
     timedelta,
@@ -3512,3 +3514,536 @@ def export_results():
         cursor.close()
         conn.close()
 
+
+
+# ============================================================
+# INTERNAL ASSESSMENT
+# ============================================================
+
+def _internal_assessment_teacher():
+    return session.get("teacher_id")
+
+
+def _calculate_internal_assessment(student_rows, quiz_rows, method, final_out_of):
+    """Calculate one student's semester score from quiz-level average attempts."""
+    included = []
+    pending = []
+    details = []
+
+    for quiz in quiz_rows:
+        qid = int(quiz["quiz_id"])
+        item = student_rows.get(qid, {})
+        attempts = item.get("attempts", [])
+        handling = item.get("handling_status", "pending")
+
+        if handling == "exclude":
+            details.append({
+                "quiz_id": qid, "title": quiz["title"],
+                "status": "excluded", "percentage": None
+            })
+            continue
+
+        if handling == "zero":
+            included.append({
+                "percentage": 0.0, "average_score": 0.0,
+                "max_marks": float(quiz.get("total_questions") or 0)
+            })
+            details.append({
+                "quiz_id": qid, "title": quiz["title"],
+                "status": "zero", "percentage": 0.0,
+                "attempt_count": len(attempts)
+            })
+            continue
+
+        if not attempts:
+            pending.append(quiz["title"])
+            details.append({
+                "quiz_id": qid, "title": quiz["title"],
+                "status": "pending", "percentage": None
+            })
+            continue
+
+        scores = [float(a["score"] or 0) for a in attempts]
+        max_marks = float(quiz.get("total_questions") or 0)
+        percentages = [
+            float(a["percentage"]) if a["percentage"] is not None
+            else ((float(a["score"] or 0) / max_marks) * 100 if max_marks > 0 else 0.0)
+            for a in attempts
+        ]
+        avg_percentage = sum(percentages) / len(percentages)
+        avg_score = sum(scores) / len(scores)
+
+        included.append({
+            "percentage": avg_percentage,
+            "average_score": avg_score,
+            "max_marks": max_marks
+        })
+        details.append({
+            "quiz_id": qid, "title": quiz["title"],
+            "status": "attempted", "percentage": round(avg_percentage, 2),
+            "average_score": round(avg_score, 2),
+            "max_marks": max_marks, "attempt_count": len(attempts)
+        })
+
+    if pending:
+        return {
+            "pending": pending, "average_percentage": None,
+            "final_marks": None, "details": details
+        }
+
+    if not included:
+        return {
+            "pending": [], "average_percentage": None,
+            "final_marks": None, "details": details,
+            "error": "No quiz is included in this student's calculation."
+        }
+
+    if method == "total_marks_average":
+        total_max = sum(x["max_marks"] for x in included)
+        average_percentage = (
+            sum(x["average_score"] for x in included) / total_max * 100
+            if total_max > 0 else 0.0
+        )
+    else:
+        average_percentage = sum(x["percentage"] for x in included) / len(included)
+
+    return {
+        "pending": [],
+        "average_percentage": round(average_percentage, 3),
+        "final_marks": round(average_percentage * int(final_out_of) / 100, 2),
+        "details": details
+    }
+
+
+@teacher.route("/internal_assessment", methods=["GET"])
+def internal_assessment_list():
+    if not teacher_logged_in():
+        return redirect("/")
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cursor.execute("""
+            SELECT ia.*,
+                   COUNT(DISTINCT iaq.quiz_id) AS quiz_count,
+                   COUNT(DISTINCT ias.student_id) AS student_count
+            FROM internal_assessments ia
+            LEFT JOIN internal_assessment_quizzes iaq
+                ON iaq.assessment_id = ia.assessment_id
+            LEFT JOIN internal_assessment_students ias
+                ON ias.assessment_id = ia.assessment_id
+            WHERE ia.teacher_id = %s
+            GROUP BY ia.assessment_id
+            ORDER BY ia.created_at DESC
+        """, (session["teacher_id"],))
+        assessments = cursor.fetchall()
+        return render_template("internal_assessment_list.html", assessments=assessments)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@teacher.route("/internal_assessment/new", methods=["GET", "POST"])
+def internal_assessment_new():
+    if not teacher_logged_in():
+        return redirect("/")
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        teacher_id = session["teacher_id"]
+        if request.method == "POST":
+            title = (request.form.get("title") or "").strip()
+            department = (request.form.get("department") or "").strip()
+            semester = (request.form.get("semester") or "").strip()
+            section = (request.form.get("section") or "").strip()
+            method = request.form.get("calculation_method")
+            final_out_of = request.form.get("final_out_of")
+            try:
+                final_out_of = int(final_out_of)
+            except (TypeError, ValueError):
+                final_out_of = 0
+
+            try:
+                quiz_ids = sorted({int(x) for x in request.form.getlist("quiz_ids")})
+            except ValueError:
+                quiz_ids = []
+
+            if not title or not department or not semester or not quiz_ids:
+                flash("Title, department, semester aur kam se kam ek quiz select karein.", "error")
+            elif method not in ("percentage_average", "total_marks_average"):
+                flash("Calculation method select karein.", "error")
+            elif final_out_of not in (30, 40):
+                flash("Final marks 30 ya 40 mein se select karein.", "error")
+            else:
+                cursor.execute("""
+                    SELECT quiz_id FROM quizzes
+                    WHERE teacher_id = %s AND quiz_id = ANY(%s)
+                """, (teacher_id, quiz_ids))
+                owned_ids = {int(r["quiz_id"]) for r in cursor.fetchall()}
+                if owned_ids != set(quiz_ids):
+                    flash("Selected quizzes mein invalid quiz mila. Dobara select karein.", "error")
+                else:
+                    student_sql = """
+                        SELECT student_id FROM students
+                        WHERE department = %s AND semester = %s
+                    """
+                    params = [department, semester]
+                    if section:
+                        student_sql += " AND section = %s"
+                        params.append(section)
+                    student_sql += " ORDER BY roll_number"
+                    cursor.execute(student_sql, tuple(params))
+                    student_ids = [int(r["student_id"]) for r in cursor.fetchall()]
+
+                    if not student_ids:
+                        flash("Is department/semester/section mein koi registered student nahi mila.", "error")
+                    else:
+                        cursor.execute("""
+                            INSERT INTO internal_assessments
+                                (teacher_id, title, department, semester, section,
+                                 calculation_method, final_out_of)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s)
+                            RETURNING assessment_id
+                        """, (teacher_id, title, department, semester, section or None,
+                              method, final_out_of))
+                        assessment_id = cursor.fetchone()["assessment_id"]
+                        for qid in quiz_ids:
+                            cursor.execute("""
+                                INSERT INTO internal_assessment_quizzes
+                                    (assessment_id, quiz_id) VALUES (%s,%s)
+                            """, (assessment_id, qid))
+                        for sid in student_ids:
+                            cursor.execute("""
+                                INSERT INTO internal_assessment_students
+                                    (assessment_id, student_id) VALUES (%s,%s)
+                            """, (assessment_id, sid))
+                        conn.commit()
+                        flash("Internal Assessment create ho gaya. Ab missing quiz attempts ko Pending, Zero ya Exclude set kar sakte hain.", "success")
+                        return redirect(f"/internal_assessment/{assessment_id}")
+
+        cursor.execute("""
+            SELECT quiz_id, title, total_questions, created_at
+            FROM quizzes WHERE teacher_id=%s ORDER BY created_at DESC
+        """, (teacher_id,))
+        quizzes = cursor.fetchall()
+        cursor.execute("""
+            SELECT DISTINCT department, semester, section
+            FROM students
+            WHERE department IS NOT NULL AND semester IS NOT NULL
+            ORDER BY department, semester, section
+        """)
+        cohorts = cursor.fetchall()
+        return render_template("internal_assessment_new.html", quizzes=quizzes, cohorts=cohorts)
+    except Exception:
+        conn.rollback()
+        current_app.logger.exception("Internal assessment creation failed")
+        flash("Internal Assessment create nahi ho saka. Database migration run hui hai ya nahi check karein.", "error")
+        return redirect("/internal_assessment/new")
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@teacher.route("/internal_assessment/<int:assessment_id>", methods=["GET", "POST"])
+def internal_assessment_detail(assessment_id):
+    if not teacher_logged_in():
+        return redirect("/")
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        teacher_id = session["teacher_id"]
+        cursor.execute("""
+            SELECT * FROM internal_assessments
+            WHERE assessment_id=%s AND teacher_id=%s
+        """, (assessment_id, teacher_id))
+        assessment = cursor.fetchone()
+        if not assessment:
+            flash("Internal Assessment nahi mila.", "error")
+            return redirect("/internal_assessment")
+
+        if request.method == "POST":
+            if assessment["status"] == "finalized":
+                flash("Finalized assessment lock hai. Iske marks change nahi kiye ja sakte.", "error")
+                return redirect(f"/internal_assessment/{assessment_id}")
+
+            cursor.execute("""
+                SELECT student_id FROM internal_assessment_students
+                WHERE assessment_id=%s
+            """, (assessment_id,))
+            student_ids = [int(r["student_id"]) for r in cursor.fetchall()]
+            cursor.execute("""
+                SELECT quiz_id FROM internal_assessment_quizzes
+                WHERE assessment_id=%s
+            """, (assessment_id,))
+            quiz_ids = [int(r["quiz_id"]) for r in cursor.fetchall()]
+
+            for sid in student_ids:
+                for qid in quiz_ids:
+                    value = request.form.get(f"handling_{sid}_{qid}", "pending")
+                    if value not in ("pending", "zero", "exclude"):
+                        value = "pending"
+                    cursor.execute("""
+                        INSERT INTO internal_assessment_student_quizzes
+                            (assessment_id, student_id, quiz_id, handling_status)
+                        VALUES (%s,%s,%s,%s)
+                        ON CONFLICT (assessment_id, student_id, quiz_id)
+                        DO UPDATE SET handling_status=EXCLUDED.handling_status,
+                                      updated_at=CURRENT_TIMESTAMP
+                    """, (assessment_id, sid, qid, value))
+            conn.commit()
+            flash("Student-wise absent handling save ho gaya.", "success")
+            return redirect(f"/internal_assessment/{assessment_id}")
+
+        cursor.execute("""
+            SELECT q.quiz_id, q.title, q.total_questions
+            FROM internal_assessment_quizzes iaq
+            JOIN quizzes q ON q.quiz_id=iaq.quiz_id
+            WHERE iaq.assessment_id=%s
+            ORDER BY q.created_at, q.quiz_id
+        """, (assessment_id,))
+        quizzes = cursor.fetchall()
+
+        cursor.execute("""
+            SELECT s.student_id, s.full_name, s.roll_number, s.department,
+                   s.semester, s.section
+            FROM internal_assessment_students ias
+            JOIN students s ON s.student_id=ias.student_id
+            WHERE ias.assessment_id=%s
+            ORDER BY s.roll_number
+        """, (assessment_id,))
+        students = cursor.fetchall()
+
+        cursor.execute("""
+            SELECT student_id, quiz_id, handling_status
+            FROM internal_assessment_student_quizzes
+            WHERE assessment_id=%s
+        """, (assessment_id,))
+        handling_map = {(int(r["student_id"]), int(r["quiz_id"])): r["handling_status"]
+                        for r in cursor.fetchall()}
+
+        cursor.execute("""
+            SELECT qa.student_id, qa.quiz_id, qa.attempt_id, qa.score,
+                   qa.percentage, qa.submitted_at
+            FROM quiz_attempts qa
+            JOIN internal_assessment_quizzes iaq
+              ON iaq.quiz_id=qa.quiz_id
+            JOIN internal_assessment_students ias
+              ON ias.student_id=qa.student_id
+             AND ias.assessment_id=iaq.assessment_id
+            WHERE iaq.assessment_id=%s
+              AND qa.status='submitted'
+              AND qa.student_id IS NOT NULL
+            ORDER BY qa.submitted_at, qa.attempt_id
+        """, (assessment_id,))
+        attempts_map = {}
+        for attempt in cursor.fetchall():
+            key = (int(attempt["student_id"]), int(attempt["quiz_id"]))
+            attempts_map.setdefault(key, []).append(attempt)
+
+        rows = []
+        pending_total = 0
+        completed_total = 0
+        for student in students:
+            sid = int(student["student_id"])
+            per_quiz = {}
+            calc_input = {}
+            for quiz in quizzes:
+                qid = int(quiz["quiz_id"])
+                attempts = attempts_map.get((sid, qid), [])
+                handling = handling_map.get((sid, qid), "pending")
+                attempt_percentages = [
+                    float(a["percentage"] if a["percentage"] is not None
+                          else ((float(a["score"] or 0) / float(quiz.get("total_questions") or 1)) * 100))
+                    for a in attempts
+                ]
+                per_quiz[qid] = {
+                    "attempts": attempts,
+                    "handling_status": handling,
+                    "average_percentage": (
+                        sum(attempt_percentages) / len(attempt_percentages)
+                        if attempt_percentages else None
+                    )
+                }
+                if attempts:
+                    completed_total += 1
+                elif handling == "pending":
+                    pending_total += 1
+            calculation = _calculate_internal_assessment(
+                per_quiz, quizzes,
+                assessment["calculation_method"],
+                assessment["final_out_of"]
+            )
+            row = dict(student)
+            row["quiz_data"] = per_quiz
+            row["calculation"] = calculation
+            rows.append(row)
+
+        finalized_results = {}
+        if assessment["status"] == "finalized":
+            cursor.execute("""
+                SELECT student_id, average_percentage, final_marks, calculation_details
+                FROM internal_assessment_results
+                WHERE assessment_id=%s
+            """, (assessment_id,))
+            finalized_results = {int(r["student_id"]): r for r in cursor.fetchall()}
+
+        return render_template(
+            "internal_assessment_detail.html",
+            assessment=assessment, quizzes=quizzes, rows=rows,
+            pending_total=pending_total, completed_total=completed_total,
+            finalized_results=finalized_results
+        )
+    except Exception:
+        conn.rollback()
+        current_app.logger.exception("Internal assessment detail failed")
+        flash("Assessment data load nahi ho saka. Server logs check karein.", "error")
+        return redirect("/internal_assessment")
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@teacher.route("/internal_assessment/<int:assessment_id>/finalize", methods=["POST"])
+def internal_assessment_finalize(assessment_id):
+    if not teacher_logged_in():
+        return redirect("/")
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cursor.execute("""
+            SELECT * FROM internal_assessments
+            WHERE assessment_id=%s AND teacher_id=%s FOR UPDATE
+        """, (assessment_id, session["teacher_id"]))
+        assessment = cursor.fetchone()
+        if not assessment:
+            flash("Assessment nahi mila.", "error")
+            return redirect("/internal_assessment")
+        if assessment["status"] == "finalized":
+            flash("Assessment pehle se finalized hai.", "info")
+            return redirect(f"/internal_assessment/{assessment_id}")
+
+        cursor.execute("""
+            SELECT q.quiz_id, q.title, q.total_questions
+            FROM internal_assessment_quizzes iaq
+            JOIN quizzes q ON q.quiz_id=iaq.quiz_id
+            WHERE iaq.assessment_id=%s
+        """, (assessment_id,))
+        quizzes = cursor.fetchall()
+        cursor.execute("""
+            SELECT student_id FROM internal_assessment_students
+            WHERE assessment_id=%s
+        """, (assessment_id,))
+        student_ids = [int(r["student_id"]) for r in cursor.fetchall()]
+        cursor.execute("""
+            SELECT student_id, quiz_id, handling_status
+            FROM internal_assessment_student_quizzes
+            WHERE assessment_id=%s
+        """, (assessment_id,))
+        handling_map = {(int(r["student_id"]), int(r["quiz_id"])): r["handling_status"]
+                        for r in cursor.fetchall()}
+        cursor.execute("""
+            SELECT qa.student_id, qa.quiz_id, qa.score, qa.percentage
+            FROM quiz_attempts qa
+            JOIN internal_assessment_quizzes iaq ON iaq.quiz_id=qa.quiz_id
+            JOIN internal_assessment_students ias
+              ON ias.student_id=qa.student_id AND ias.assessment_id=iaq.assessment_id
+            WHERE iaq.assessment_id=%s AND qa.status='submitted'
+              AND qa.student_id IS NOT NULL
+        """, (assessment_id,))
+        attempts_map = {}
+        for attempt in cursor.fetchall():
+            attempts_map.setdefault((int(attempt["student_id"]), int(attempt["quiz_id"])), []).append(attempt)
+
+        unresolved = []
+        final_rows = []
+        for sid in student_ids:
+            per_quiz = {}
+            for quiz in quizzes:
+                qid = int(quiz["quiz_id"])
+                per_quiz[qid] = {
+                    "attempts": attempts_map.get((sid, qid), []),
+                    "handling_status": handling_map.get((sid, qid), "pending")
+                }
+            result = _calculate_internal_assessment(
+                per_quiz, quizzes, assessment["calculation_method"], assessment["final_out_of"]
+            )
+            if result.get("pending") or result.get("error"):
+                unresolved.append(sid)
+            else:
+                final_rows.append((sid, result))
+
+        if unresolved:
+            flash(f"{len(unresolved)} student(s) ke liye quiz abhi Pending hai ya koi quiz included nahi. Finalize se pehle Pending ko Zero/Exclude karein ya student ka quiz attempt complete karwayein.", "error")
+            conn.rollback()
+            return redirect(f"/internal_assessment/{assessment_id}")
+
+        cursor.execute("DELETE FROM internal_assessment_results WHERE assessment_id=%s", (assessment_id,))
+        for sid, result in final_rows:
+            cursor.execute("""
+                INSERT INTO internal_assessment_results
+                    (assessment_id, student_id, average_percentage, final_marks, calculation_details)
+                VALUES (%s,%s,%s,%s,%s::jsonb)
+            """, (assessment_id, sid, result["average_percentage"], result["final_marks"],
+                  json.dumps(result["details"])))
+        cursor.execute("""
+            UPDATE internal_assessments
+            SET status='finalized', finalized_at=CURRENT_TIMESTAMP
+            WHERE assessment_id=%s
+        """, (assessment_id,))
+        conn.commit()
+        flash("Assessment finalize ho gaya. Final marks snapshot save ho chuka hai.", "success")
+        return redirect(f"/internal_assessment/{assessment_id}")
+    except Exception:
+        conn.rollback()
+        current_app.logger.exception("Internal assessment finalization failed")
+        flash("Assessment finalize nahi ho saka.", "error")
+        return redirect(f"/internal_assessment/{assessment_id}")
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@teacher.route("/export_internal_assessment/<int:assessment_id>", methods=["GET"])
+def export_internal_assessment(assessment_id):
+    if not teacher_logged_in():
+        return redirect("/")
+    import csv
+    import io
+    from flask import make_response
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cursor.execute("""
+            SELECT ia.title, ia.final_out_of, ia.status,
+                   s.full_name, s.roll_number,
+                   iar.average_percentage, iar.final_marks
+            FROM internal_assessments ia
+            JOIN internal_assessment_results iar
+              ON iar.assessment_id=ia.assessment_id
+            JOIN students s ON s.student_id=iar.student_id
+            WHERE ia.assessment_id=%s AND ia.teacher_id=%s
+              AND ia.status='finalized'
+            ORDER BY s.roll_number
+        """, (assessment_id, session["teacher_id"]))
+        rows = cursor.fetchall()
+        if not rows:
+            flash("Finalized assessment results nahi mile.", "error")
+            return redirect(f"/internal_assessment/{assessment_id}")
+        output = io.StringIO()
+        output.write("\\ufeff")
+        writer = csv.writer(output)
+        writer.writerow(["Assessment", "Student Name", "Roll Number",
+                         "Average Percentage", "Final Marks", "Maximum Marks"])
+        for row in rows:
+            writer.writerow([row["title"], row["full_name"], row["roll_number"],
+                             row["average_percentage"], row["final_marks"], row["final_out_of"]])
+        response = make_response(output.getvalue())
+        response.headers["Content-Type"] = "text/csv; charset=utf-8"
+        response.headers["Content-Disposition"] = 'attachment; filename="internal_assessment_results.csv"'
+        return response
+    finally:
+        cursor.close()
+        conn.close()

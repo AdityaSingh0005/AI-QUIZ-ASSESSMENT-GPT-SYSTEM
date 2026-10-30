@@ -1,0 +1,110 @@
+﻿                </thead>
+
+
+                <tbody>
+
+                    {% for r in results %}
+
+                    <tr>
+
+                        <td>
+
+                            <div class="quiz-name-cell">
+
+                                <div class="quiz-history-icon">
+                                    ðŸ“
+                                </div>
+
+                                <div>
+
+                                    <strong>
+                                        
+                                    {{ r.quiz_title or 'Untitled Quiz' }}
+
+
+                                    </strong>
+
+                                    <span>
+                                        Assessment
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+
+                        <td>
+
+                            <span class="score-value">
+                                {{ r.score }} / {{ r.total_questions or 0 }}
+                            </span>
+
+                        </td>
+
+
+                        <td>
+
+                            {% if r.percentage >= 80 %}
+
+                            <span class="performance-badge excellent-badge">
+                                <span>âœ¦</span>
+                                {{ r.percentage }}%
+                            </span>
+
+                            {% elif r.percentage >= 50 %}
+
+                            <span class="performance-badge good-badge">
+                                <span>âœ“</span>
+                                {{ r.percentage }}%
+                            </span>
+
+                            {% else %}
+
+                            <span class="performance-badge poor-badge">
+                                <span>â†—</span>
+                                {{ r.percentage }}%
+                            </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            <span class="result-date">
+                                {{ r.submitted_at }}
+                            </span>
+
+                        </td>
+                    
+                        <td>
+                            {% if r.attempt_id %}
+                                <a
+                                    href="{{ url_for('student.review_attempt', attempt_id=r.attempt_id) }}"
+                                    class="view-answers-btn"
+                                >
+                                    View Answers
+                                </a>
+                            {% else %}
+                                <span>Review unavailable</span>
+                            {% endif %}
+                        </td>
+
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+        <!-- EMPTY STATE -->
+

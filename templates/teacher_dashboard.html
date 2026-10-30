@@ -1,105 +1,491 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Teacher Dashboard | AI Quiz System</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#f5f7fc;--card:#fff;--text:#172033;--muted:#7b8499;--line:#e7ebf3;--p:#4f46e5;--p2:#7c3aed;--green:#15803d;--shadow:0 14px 40px #18234112}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text)}a{text-decoration:none;color:inherit}button{font:inherit}
-.page{min-height:100vh;background:radial-gradient(circle at 8% 0%,#6366f10f,transparent 28%),var(--bg)}
-.nav{height:74px;position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:0 max(4%,calc((100% - 1320px)/2));background:#fffffff0;backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:12px}.brand-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:15px;color:white;font-size:22px;background:linear-gradient(135deg,var(--p),var(--p2));box-shadow:0 8px 22px #4f46e533}.brand h2{font-size:15px;margin:0;font-weight:800}.brand small{display:block;color:var(--muted);font-size:10px;margin-top:4px}
-.nav-right{display:flex;align-items:center;gap:12px}.profile{display:flex;align-items:center;gap:9px;border:1px solid var(--line);background:#f8f9fd;border-radius:30px;padding:6px 13px 6px 6px;font-size:12px;font-weight:700;color:#475066}.avatar{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;color:white;background:linear-gradient(135deg,#6366f1,#a855f7);font-weight:800}.logout{font-size:12px;font-weight:800;color:#c2414b;padding:10px 13px;border-radius:10px}.logout:hover{background:#fff0f1}
-.container{width:min(1320px,92%);margin:auto;padding:32px 0 64px}.hero{position:relative;overflow:hidden;border-radius:28px;padding:36px 40px;color:white;background:radial-gradient(circle at 86% 12%,#ffffff2b,transparent 24%),linear-gradient(120deg,#312e81,#4f46e5 48%,#7c3aed);box-shadow:0 22px 50px #4f46e526}.hero:after{content:"";position:absolute;width:300px;height:300px;border:45px solid #ffffff12;border-radius:50%;right:-90px;bottom:-200px}.hero-content{position:relative;z-index:1}.eyebrow{display:inline-flex;gap:8px;align-items:center;border:1px solid #ffffff35;background:#ffffff18;padding:7px 12px;border-radius:30px;font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}.hero h1{font-size:clamp(27px,4vw,38px);letter-spacing:-1.1px;margin:17px 0 9px;font-weight:800}.hero p{max-width:700px;line-height:1.75;color:#e5e7ff;font-size:13px;margin:0}.hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:23px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:11px;padding:11px 15px;font-size:12px;font-weight:800;cursor:pointer;transition:.2s}.btn:hover{transform:translateY(-2px)}.btn-light{background:white;color:#4338ca}.btn-glass{border:1px solid #ffffff50;background:#ffffff15;color:white}.btn-primary{background:var(--p);color:white}
-.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:20px}.stat{background:white;border:1px solid var(--line);border-radius:20px;padding:22px;display:flex;align-items:center;gap:15px;transition:.2s}.stat:hover{transform:translateY(-3px);box-shadow:var(--shadow)}.stat-icon{width:50px;height:50px;flex:0 0 50px;border-radius:16px;display:grid;place-items:center;background:#f0efff;font-size:22px}.stat:nth-child(2) .stat-icon{background:#eafaf1}.stat:nth-child(3) .stat-icon{background:#fff5e7}.stat label{display:block;color:var(--muted);font-size:11px;margin-bottom:5px}.stat strong{font-size:25px;font-weight:800}
-.section-head{display:flex;justify-content:space-between;align-items:end;gap:16px;margin:37px 0 16px}.section-head h2{margin:0;font-size:20px;font-weight:800;letter-spacing:-.4px}.section-head p{margin:6px 0 0;color:var(--muted);font-size:12px}.text-link{font-size:12px;font-weight:800;color:var(--p);white-space:nowrap}
-.actions{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}.action{position:relative;background:white;border:1px solid var(--line);border-radius:19px;padding:20px;transition:.22s;min-height:160px}.action:hover{transform:translateY(-4px);border-color:#c8c7ff;box-shadow:var(--shadow)}.action-icon{width:45px;height:45px;border-radius:14px;display:grid;place-items:center;background:#f0efff;font-size:21px;margin-bottom:15px}.action h3{font-size:13px;margin:0 0 7px;font-weight:800}.action p{font-size:11px;color:var(--muted);line-height:1.6;margin:0}.arrow{position:absolute;right:17px;top:18px;color:#9ba2b3}
-.monitor{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px}.selector,.panel,.table-wrap,.ai-box{background:white;border:1px solid var(--line);border-radius:21px}.selector{padding:15px;max-height:480px;overflow:auto}.selector-title{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.7px;text-transform:uppercase;padding:7px 8px 13px}.quiz-item{display:block;width:100%;text-align:left;border:1px solid transparent;background:transparent;padding:13px;border-radius:14px;margin-bottom:5px;cursor:pointer}.quiz-item:hover{background:#f8f8ff}.quiz-item.active{background:#f0efff;border-color:#dedbff}.quiz-item strong{display:block;font-size:12px;line-height:1.5;margin-bottom:7px;color:#242b40}.quiz-meta{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--muted)}
-.panel{padding:25px;min-height:420px}.panel-head{display:flex;justify-content:space-between;gap:15px;align-items:flex-start}.panel-head h3{font-size:18px;margin:0 0 6px;overflow-wrap:anywhere}.muted{font-size:11px;color:var(--muted)}.live-badge{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;background:#eafaf1;color:var(--green);font-size:10px;font-weight:800;padding:8px 11px;border-radius:30px}.dot{width:7px;height:7px;background:#22c55e;border-radius:50%;box-shadow:0 0 0 4px #22c55e1a}
-.progress-summary{display:grid;grid-template-columns:minmax(0,1fr) 125px;align-items:center;gap:24px;margin:30px 0}.progress-label{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:#687187;font-weight:700;margin-bottom:10px}.track{height:12px;background:#edf0f7;border-radius:30px;overflow:hidden}.fill{height:100%;width:0;background:linear-gradient(90deg,#4f46e5,#a855f7);border-radius:30px;transition:width .4s}.progress-number{text-align:center}.progress-number strong{display:block;color:var(--p);font-size:34px}.progress-number span{font-size:10px;color:var(--muted)}.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.metric{background:#f8f9fd;border:1px solid #edf0f5;padding:15px;border-radius:15px}.metric span{display:block;font-size:9px;letter-spacing:.5px;color:var(--muted);font-weight:800;margin-bottom:7px}.metric strong{font-size:20px}
-.question-progress{margin-top:26px}.question-progress h4{font-size:12px;margin:0 0 14px}.question-row{display:grid;grid-template-columns:35px minmax(0,1fr) 45px;gap:10px;align-items:center;margin:0 0 11px}.qnum,.qcount{font-size:10px;color:var(--muted)}.qcount{text-align:right}.mini-track{height:7px;background:#edf0f5;border-radius:10px;overflow:hidden}.mini-fill{height:100%;background:#6366f1;border-radius:30px}.panel-actions{display:flex;justify-content:flex-end;margin-top:22px}.empty{min-height:220px;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:12px;padding:25px}.empty b{display:block;color:var(--text);font-size:15px;margin-bottom:7px}
-.table-wrap{overflow:hidden}.table-head,.table-row{display:grid;grid-template-columns:minmax(200px,2fr) .7fr .8fr .8fr 1.35fr;gap:12px;align-items:center;padding:15px 20px}.table-head{background:#fafbfe;color:var(--muted);font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}.table-row{border-top:1px solid #f0f2f7;font-size:11px}.table-row strong{display:block;line-height:1.5;overflow-wrap:anywhere}.table-row small{display:block;color:var(--muted);margin-top:4px}.row-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.view-link{color:var(--p);font-weight:800}.result-link{color:#087443;font-weight:800}
-.ai-box{display:flex;align-items:center;gap:15px;padding:19px 21px;margin-top:24px}.ai-icon{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:#eafaf1;font-size:22px}.ai-copy{flex:1}.ai-copy h3{font-size:13px;margin:0 0 5px}.ai-copy p{font-size:11px;color:var(--muted);margin:0;line-height:1.5}.ai-online{display:flex;align-items:center;gap:7px;color:var(--green);font-size:10px;font-weight:800;background:#eafaf1;padding:8px 11px;border-radius:30px}
-@media(max-width:1100px){.actions{grid-template-columns:repeat(3,minmax(0,1fr))}.monitor{grid-template-columns:260px minmax(0,1fr)}}
-@media(max-width:800px){.actions{grid-template-columns:repeat(2,minmax(0,1fr))}.monitor{grid-template-columns:1fr}.selector{max-height:250px}.stats{gap:10px}.stat{padding:16px}.panel{padding:19px}.table-wrap{overflow-x:auto}.table-head,.table-row{min-width:780px}}
-@media(max-width:560px){.nav{height:66px;padding:0 4%}.brand small,.profile .name{display:none}.container{padding-top:20px}.hero{padding:27px 23px;border-radius:22px}.stats{grid-template-columns:1fr}.actions{grid-template-columns:1fr 1fr;gap:10px}.action{padding:16px;min-height:155px}.section-head{align-items:flex-start}.section-head h2{font-size:18px}.progress-summary{grid-template-columns:1fr}.progress-number{text-align:left}.metrics{grid-template-columns:1fr 1fr}.metrics .metric:last-child{grid-column:1/-1}.panel-head{flex-direction:column}.ai-online{display:none}.nav-right{gap:2px}.hero-actions .btn{flex:1}}
-@media(max-width:370px){.actions,.metrics{grid-template-columns:1fr}.metrics .metric:last-child{grid-column:auto}}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard | AI Quiz System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f5f7fc;
+            --card: #fff;
+            --text: #172033;
+            --muted: #7b8499;
+            --line: #e7ebf3;
+            --p: #4f46e5;
+            --p2: #7c3aed;
+            --green: #15803d;
+            --shadow: 0 14px 40px #18234112;
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { margin: 0; font-family: Inter, system-ui, sans-serif; background: var(--bg); color: var(--text); }
+        a { text-decoration: none; color: inherit; }
+        button { font: inherit; }
+        .page { min-height: 100vh; background: radial-gradient(circle at 8% 0%, #6366f10f, transparent 28%), var(--bg); }
+        .nav { height: 74px; position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; padding: 0 max(4%, calc((100% - 1320px) / 2)); background: #fffffff0; backdrop-filter: blur(16px); border-bottom: 1px solid var(--line); }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 15px; color: white; font-size: 22px; background: linear-gradient(135deg, var(--p), var(--p2)); box-shadow: 0 8px 22px #4f46e533; }
+        .brand h2 { font-size: 15px; margin: 0; font-weight: 800; }
+        .brand small { display: block; color: var(--muted); font-size: 10px; margin-top: 4px; }
+        .nav-right { display: flex; align-items: center; gap: 12px; }
+        .profile { display: flex; align-items: center; gap: 9px; border: 1px solid var(--line); background: #f8f9fd; border-radius: 30px; padding: 6px 13px 6px 6px; font-size: 12px; font-weight: 700; color: #475066; }
+        .avatar { width: 31px; height: 31px; border-radius: 50%; display: grid; place-items: center; color: white; background: linear-gradient(135deg, #6366f1, #a855f7); font-weight: 800; }
+        .logout { font-size: 12px; font-weight: 800; color: #c2414b; padding: 10px 13px; border-radius: 10px; }
+        .logout:hover { background: #fff0f1; }
+        .container { width: min(1320px, 92%); margin: auto; padding: 32px 0 64px; }
+        .hero { position: relative; overflow: hidden; border-radius: 28px; padding: 36px 40px; color: white; background: radial-gradient(circle at 86% 12%, #ffffff2b, transparent 24%), linear-gradient(120deg, #312e81, #4f46e5 48%, #7c3aed); box-shadow: 0 22px 50px #4f46e526; }
+        .hero:after { content: ""; position: absolute; width: 300px; height: 300px; border: 45px solid #ffffff12; border-radius: 50%; right: -90px; bottom: -200px; }
+        .hero-content { position: relative; z-index: 1; }
+        .eyebrow { display: inline-flex; gap: 8px; align-items: center; border: 1px solid #ffffff35; background: #ffffff18; padding: 7px 12px; border-radius: 30px; font-size: 10px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; }
+        .hero h1 { font-size: clamp(27px, 4vw, 38px); letter-spacing: -1.1px; margin: 17px 0 9px; font-weight: 800; }
+        .hero p { max-width: 700px; line-height: 1.75; color: #e5e7ff; font-size: 13px; margin: 0; }
+        .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 23px; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 11px; padding: 11px 15px; font-size: 12px; font-weight: 800; cursor: pointer; transition: .2s; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-light { background: white; color: #4338ca; }
+        .btn-glass { border: 1px solid #ffffff50; background: #ffffff15; color: white; }
+        .btn-primary { background: var(--p); color: white; }
+        .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+        .stat { background: white; border: 1px solid var(--line); border-radius: 20px; padding: 22px; display: flex; align-items: center; gap: 15px; transition: .2s; }
+        .stat:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+        .stat-icon { width: 50px; height: 50px; flex: 0 0 50px; border-radius: 16px; display: grid; place-items: center; background: #f0efff; font-size: 22px; }
+        .stat:nth-child(2) .stat-icon { background: #eafaf1; }
+        .stat:nth-child(3) .stat-icon { background: #fff5e7; }
+        .stat label { display: block; color: var(--muted); font-size: 11px; margin-bottom: 5px; }
+        .stat strong { font-size: 25px; font-weight: 800; }
+        .section-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin: 37px 0 16px; }
+        .section-head h2 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.4px; }
+        .section-head p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+        .text-link { font-size: 12px; font-weight: 800; color: var(--p); white-space: nowrap; }
+        .actions { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+        .action { position: relative; background: white; border: 1px solid var(--line); border-radius: 19px; padding: 20px; transition: .22s; min-height: 160px; }
+        .action:hover { transform: translateY(-4px); border-color: #c8c7ff; box-shadow: var(--shadow); }
+        .action-icon { width: 45px; height: 45px; border-radius: 14px; display: grid; place-items: center; background: #f0efff; font-size: 21px; margin-bottom: 15px; }
+        .action h3 { font-size: 13px; margin: 0 0 7px; font-weight: 800; }
+        .action p { font-size: 11px; color: var(--muted); line-height: 1.6; margin: 0; }
+        .arrow { position: absolute; right: 17px; top: 18px; color: #9ba2b3; }
+        .monitor { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; }
+        .selector, .panel, .table-wrap, .ai-box { background: white; border: 1px solid var(--line); border-radius: 21px; }
+        .selector { padding: 15px; max-height: 480px; overflow: auto; }
+        .selector-title { font-size: 10px; color: var(--muted); font-weight: 800; letter-spacing: .7px; text-transform: uppercase; padding: 7px 8px 13px; }
+        .quiz-item { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; padding: 13px; border-radius: 14px; margin-bottom: 5px; cursor: pointer; }
+        .quiz-item:hover { background: #f8f8ff; }
+        .quiz-item.active { background: #f0efff; border-color: #dedbff; }
+        .quiz-item strong { display: block; font-size: 12px; line-height: 1.5; margin-bottom: 7px; color: #242b40; }
+        .quiz-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 10px; color: var(--muted); }
+        .panel { padding: 25px; min-height: 420px; }
+        .panel-head { display: flex; justify-content: space-between; gap: 15px; align-items: flex-start; }
+        .panel-head h3 { font-size: 18px; margin: 0 0 6px; overflow-wrap: anywhere; }
+        .muted { font-size: 11px; color: var(--muted); }
+        .live-badge { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; background: #eafaf1; color: var(--green); font-size: 10px; font-weight: 800; padding: 8px 11px; border-radius: 30px; }
+        .dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 0 4px #22c55e1a; }
+        .progress-summary { display: grid; grid-template-columns: minmax(0, 1fr) 125px; align-items: center; gap: 24px; margin: 30px 0; }
+        .progress-label { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; color: #687187; font-weight: 700; margin-bottom: 10px; }
+        .track { height: 12px; background: #edf0f7; border-radius: 30px; overflow: hidden; }
+        .fill { height: 100%; width: 0; background: linear-gradient(90deg, #4f46e5, #a855f7); border-radius: 30px; transition: width .4s; }
+        .progress-number { text-align: center; }
+        .progress-number strong { display: block; color: var(--p); font-size: 34px; }
+        .progress-number span { font-size: 10px; color: var(--muted); }
+        .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+        .metric { background: #f8f9fd; border: 1px solid #edf0f5; padding: 15px; border-radius: 15px; }
+        .metric span { display: block; font-size: 9px; letter-spacing: .5px; color: var(--muted); font-weight: 800; margin-bottom: 7px; }
+        .metric strong { font-size: 20px; }
+        .question-progress { margin-top: 26px; }
+        .question-progress h4 { font-size: 12px; margin: 0 0 14px; }
+        .question-row { display: grid; grid-template-columns: 35px minmax(0, 1fr) 45px; gap: 10px; align-items: center; margin: 0 0 11px; }
+        .qnum, .qcount { font-size: 10px; color: var(--muted); }
+        .qcount { text-align: right; }
+        .mini-track { height: 7px; background: #edf0f5; border-radius: 10px; overflow: hidden; }
+        .mini-fill { height: 100%; background: #6366f1; border-radius: 30px; }
+        .panel-actions { display: flex; justify-content: flex-end; margin-top: 22px; }
+        .empty { min-height: 220px; display: grid; place-items: center; text-align: center; color: var(--muted); font-size: 12px; padding: 25px; }
+        .empty b { display: block; color: var(--text); font-size: 15px; margin-bottom: 7px; }
+        .table-wrap { overflow: hidden; }
+        .table-head, .table-row { display: grid; grid-template-columns: minmax(200px, 2fr) .7fr .8fr .8fr 1.35fr; gap: 12px; align-items: center; padding: 15px 20px; }
+        .table-head { background: #fafbfe; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; }
+        .table-row { border-top: 1px solid #f0f2f7; font-size: 11px; }
+        .table-row strong { display: block; line-height: 1.5; overflow-wrap: anywhere; }
+        .table-row small { display: block; color: var(--muted); margin-top: 4px; }
+        .row-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .view-link { color: var(--p); font-weight: 800; }
+        .result-link { color: #087443; font-weight: 800; }
+        .ai-box { display: flex; align-items: center; gap: 15px; padding: 19px 21px; margin-top: 24px; }
+        .ai-icon { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: #eafaf1; font-size: 22px; }
+        .ai-copy { flex: 1; }
+        .ai-copy h3 { font-size: 13px; margin: 0 0 5px; }
+        .ai-copy p { font-size: 11px; color: var(--muted); margin: 0; line-height: 1.5; }
+        .ai-online { display: flex; align-items: center; gap: 7px; color: var(--green); font-size: 10px; font-weight: 800; background: #eafaf1; padding: 8px 11px; border-radius: 30px; }
+        @media(max-width: 1100px) {
+            .actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .monitor { grid-template-columns: 260px minmax(0, 1fr)); }
+        }
+        @media(max-width: 800px) {
+            .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .monitor { grid-template-columns: 1fr; }
+            .selector { max-height: 250px; }
+            .stats { gap: 10px; }
+            .stat { padding: 16px; }
+            .panel { padding: 19px; }
+            .table-wrap { overflow-x: auto; }
+            .table-head, .table-row { min-width: 780px; }
+        }
+        @media(max-width: 560px) {
+            .nav { height: 66px; padding: 0 4%; }
+            .brand small, .profile .name { display: none; }
+            .container { padding-top: 20px; }
+            .hero { padding: 27px 23px; border-radius: 22px; }
+            .stats { grid-template-columns: 1fr; }
+            .actions { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .action { padding: 16px; min-height: 155px; }
+            .section-head { align-items: flex-start; }
+            .section-head h2 { font-size: 18px; }
+            .progress-summary { grid-template-columns: 1fr; }
+            .progress-number { text-align: left; }
+            .metrics { grid-template-columns: 1fr 1fr; }
+            .metrics .metric:last-child { grid-column: 1 / -1; }
+            .panel-head { flex-direction: column; }
+            .ai-online { display: none; }
+            .nav-right { gap: 2px; }
+            .hero-actions .btn { flex: 1; }
+        }
+        @media(max-width: 370px) {
+            .actions, .metrics { grid-template-columns: 1fr; }
+            .metrics .metric:last-child { grid-column: auto; }
+        }
+    </style>
 </head>
 <body>
 <div class="page">
-<nav class="nav">
-  <a class="brand" href="/teacher_dashboard"><div class="brand-icon">🧠</div><div><h2>AI Quiz System</h2><small>Intelligent Assessment Platform</small></div></a>
-  <div class="nav-right"><div class="profile"><div class="avatar">{{ (name or 'T')[0]|upper }}</div><span class="name">{{ name }}</span></div><a href="/logout" class="logout">↪ Logout</a></div>
-</nav>
-<main class="container">
-<section class="hero"><div class="hero-content"><span class="eyebrow">✦ Teacher workspace</span><h1>Welcome back, {{ name }} 👋</h1><p>Create AI-powered assessments, track live participation, and review each quiz's performance separately from one professional workspace.</p><div class="hero-actions"><a href="/create_quiz" class="btn btn-light">＋ Create a Quiz</a><a href="/manage_quizzes" class="btn btn-glass">▦ Manage All Quizzes</a></div></div></section>
-<section class="stats" aria-label="Dashboard statistics">
-<div class="stat"><div class="stat-icon">📚</div><div><label>Total Quizzes</label><strong>{{ total_quizzes }}</strong></div></div>
-<div class="stat"><div class="stat-icon">👥</div><div><label>Total Participants</label><strong>{{ total_participants }}</strong></div></div>
-<div class="stat"><div class="stat-icon">📈</div><div><label>Average Score</label><strong>{{ average_score }}%</strong></div></div>
-</section>
-<div class="section-head"><div><h2>Quick actions</h2><p>Everything you need, just one click away.</p></div></div>
-<section class="actions">
-<a class="action" href="/create_quiz"><span class="arrow">↗</span><div class="action-icon">🤖</div><h3>Create Quiz</h3><p>Generate an AI-powered assessment.</p></a>
-<a class="action" href="/manage_quizzes"><span class="arrow">↗</span><div class="action-icon">🗂️</div><h3>Available Quizzes</h3><p>View quiz schedules, status, and manage or delete your quizzes.</p></a>
-<a class="action" href="#live-monitor"><span class="arrow">↗</span><div class="action-icon">🔴</div><h3>Live Progress</h3><p>Monitor student activity and answer progress.</p></a>
-<a class="action" href="/generate_qr_page"><span class="arrow">↗</span><div class="action-icon">📱</div><h3>Generate QR</h3><p>Share a quiz with students using a QR code.</p></a>
-<a class="action" href="/view_results"><span class="arrow">↗</span><div class="action-icon">📊</div><h3>All Results</h3><p>Open the results area and review assessment outcomes.</p></a>
-</section>
-<div class="section-head" id="live-monitor"><div><h2>🔴 Live quiz monitoring</h2><p>Select a quiz to monitor its latest student progress.</p></div></div>
-<section class="monitor">
-<aside class="selector"><div class="selector-title">Your quizzes</div>
-{% if quizzes %}{% for quiz in quizzes %}
-<button type="button" class="quiz-item {% if loop.first %}active{% endif %}" data-quiz-id="{{ quiz.quiz_id }}" onclick="selectQuiz({{ quiz.quiz_id }}, this)"><strong>{{ quiz.title }}</strong><div class="quiz-meta"><span>Quiz #{{ quiz.quiz_id }}</span><span>{{ quiz.participants }} participants</span></div></button>
-{% endfor %}{% else %}<div class="empty"><div><b>No quizzes yet</b>Create your first quiz to start monitoring.</div></div>{% endif %}
-</aside>
-<div class="panel" id="livePanel">
-{% if quizzes %}
-<div class="panel-head"><div><h3 id="liveTitle">{{ quizzes[0].title }}</h3><div class="muted" id="liveId">Quiz #{{ quizzes[0].quiz_id }}</div></div><span class="live-badge"><span class="dot"></span> LIVE MONITOR</span></div>
-<div class="progress-summary"><div><div class="progress-label"><span>Overall answer progress</span><span id="progressText">0%</span></div><div class="track"><div class="fill" id="overallProgress"></div></div></div><div class="progress-number"><strong id="progressNumber">0%</strong><span>overall progress</span></div></div>
-<div class="metrics"><div class="metric"><span>PARTICIPANTS</span><strong id="studentCount">0</strong></div><div class="metric"><span>QUESTIONS</span><strong id="questionCount">0</strong></div><div class="metric"><span>ANSWER EVENTS</span><strong id="answerEvents">0</strong></div></div>
-<div class="question-progress"><h4>Question-wise progress</h4><div id="questionProgressContainer"><div class="muted">Loading live data…</div></div></div>
-<div class="panel-actions"><a id="openLiveBtn" href="/quiz_progress/{{ quizzes[0].quiz_id }}" class="btn btn-primary">Open detailed progress →</a></div>
-{% else %}<div class="empty"><div><b>Nothing to monitor yet</b>Create a quiz and its live progress will appear here.</div></div>{% endif %}
-</div></section>
-<div class="section-head"><div><h2>Recent quizzes</h2><p>Open a quiz, review its results, or manage your assessments.</p></div><a href="/manage_quizzes" class="text-link">Manage all →</a></div>
-<section class="table-wrap"><div class="table-head"><span>Quiz</span><span>Questions</span><span>Participants</span><span>Duration</span><span>Actions</span></div>
-{% if quizzes %}{% for quiz in quizzes %}
-<div class="table-row"><div><strong>{{ quiz.title }}</strong><small>Quiz #{{ quiz.quiz_id }}</small></div><span>{{ quiz.total_questions }}</span><span>{{ quiz.participants }}</span><span>{{ quiz.duration_minutes }} min</span><div class="row-actions"><a class="view-link" href="/quiz_generated/{{ quiz.quiz_id }}">Open</a><a class="result-link" href="/view_results?quiz_id={{ quiz.quiz_id }}">View results ↗</a></div></div>
-{% endfor %}{% else %}<div class="empty"><div><b>No quizzes created yet</b>Your recent assessments will appear here.</div></div>{% endif %}
-</section>
-<section class="ai-box"><div class="ai-icon">🤖</div><div class="ai-copy"><h3>AI Assessment Engine</h3><p>Manage assessments, monitor student participation, and review quiz-level results from your workspace.</p></div><div class="ai-online"><span class="dot"></span> AI READY</div></section>
-</main></div>
+    <nav class="nav">
+        <a class="brand" href="/teacher_dashboard">
+            <div class="brand-icon">🧠</div>
+            <div>
+                <h2>AI Quiz System</h2>
+                <small>Intelligent Assessment Platform</small>
+            </div>
+        </a>
+        <div class="nav-right">
+            <div class="profile">
+                <div class="avatar">{{ (name or 'T')[0] | upper }}</div>
+                <span class="name">{{ name }}</span>
+            </div>
+            <a href="/logout" class="logout">↪ Logout</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="hero">
+            <div class="hero-content">
+                <span class="eyebrow">✦ Teacher workspace</span>
+                <h1>Welcome back, {{ name }} 👋</h1>
+                <p>Create AI-powered assessments, track live participation, and review each quiz's performance separately from one professional workspace.</p>
+                <div class="hero-actions">
+                    <a href="/create_quiz" class="btn btn-light">＋ Create a Quiz</a>
+                    <a href="/manage_quizzes" class="btn btn-glass">▦ Manage All Quizzes</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="stats" aria-label="Dashboard statistics">
+            <div class="stat">
+                <div class="stat-icon">📚</div>
+                <div>
+                    <label>Total Quizzes</label>
+                    <strong>{{ total_quizzes }}</strong>
+                </div>
+            </div>
+            <div class="stat">
+                <div class="stat-icon">👥</div>
+                <div>
+                    <label>Total Participants</label>
+                    <strong>{{ total_participants }}</strong>
+                </div>
+            </div>
+            <div class="stat">
+                <div class="stat-icon">📈</div>
+                <div>
+                    <label>Average Score</label>
+                    <strong>{{ average_score }}%</strong>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-head">
+            <div>
+                <h2>Quick actions</h2>
+                <p>Everything you need, just one click away.</p>
+            </div>
+        </div>
+
+        <section class="actions">
+            <a class="action" href="/create_quiz">
+                <span class="arrow">↗</span>
+                <div class="action-icon">🤖</div>
+                <h3>Create Quiz</h3>
+                <p>Generate an AI-powered assessment.</p>
+            </a>
+            <a class="action" href="/manage_quizzes">
+                <span class="arrow">↗</span>
+                <div class="action-icon">🗂️</div>
+                <h3>Available Quizzes</h3>
+                <p>View quiz schedules, status, and manage or delete your quizzes.</p>
+            </a>
+            <a class="action" href="#live-monitor">
+                <span class="arrow">↗</span>
+                <div class="action-icon">🔴</div>
+                <h3>Live Progress</h3>
+                <p>Monitor student activity and answer progress.</p>
+            </a>
+            <a class="action" href="/generate_qr_page">
+                <span class="arrow">↗</span>
+                <div class="action-icon">📱</div>
+                <h3>Generate QR</h3>
+                <p>Share a quiz with students using a QR code.</p>
+            </a>
+            <a class="action" href="/view_results">
+                <span class="arrow">↗</span>
+                <div class="action-icon">📊</div>
+                <h3>All Results</h3>
+                <p>Open the results area and review assessment outcomes.</p>
+            </a>
+            <a class="action" href="/internal_assessment">
+                <span class="arrow">↗</span>
+                <div class="action-icon">📋</div>
+                <h3>Internal Assessment</h3>
+                <p>Combine semester quizzes and calculate final marks out of 30 or 40.</p>
+            </a>
+        </section>
+
+        <div class="section-head" id="live-monitor">
+            <div>
+                <h2>🔴 Live quiz monitoring</h2>
+                <p>Select a quiz to monitor its latest student progress.</p>
+            </div>
+        </div>
+
+        <section class="monitor">
+            <aside class="selector">
+                <div class="selector-title">Your quizzes</div>
+                {% if quizzes %}
+                    {% for quiz in quizzes %}
+                    <button type="button" class="quiz-item {% if loop.first %}active{% endif %}" data-quiz-id="{{ quiz.quiz_id }}" onclick="selectQuiz({{ quiz.quiz_id }}, this)">
+                        <strong>{{ quiz.title }}</strong>
+                        <div class="quiz-meta">
+                            <span>Quiz #{{ quiz.quiz_id }}</span>
+                            <span>{{ quiz.participants }} participants</span>
+                        </div>
+                    </button>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty">
+                        <div>
+                            <b>No quizzes yet</b>
+                            Create your first quiz to start monitoring.
+                        </div>
+                    </div>
+                {% endif %}
+            </aside>
+
+            <div class="panel" id="livePanel">
+                {% if quizzes %}
+                <div class="panel-head">
+                    <div>
+                        <h3 id="liveTitle">{{ quizzes[0].title }}</h3>
+                        <div class="muted" id="liveId">Quiz #{{ quizzes[0].quiz_id }}</div>
+                    </div>
+                    <span class="live-badge"><span class="dot"></span> LIVE MONITOR</span>
+                </div>
+                <div class="progress-summary">
+                    <div>
+                        <div class="progress-label">
+                            <span>Overall answer progress</span>
+                            <span id="progressText">0%</span>
+                        </div>
+                        <div class="track">
+                            <div class="fill" id="overallProgress"></div>
+                        </div>
+                    </div>
+                    <div class="progress-number">
+                        <strong id="progressNumber">0%</strong>
+                        <span>overall progress</span>
+                    </div>
+                </div>
+                <div class="metrics">
+                    <div class="metric">
+                        <span>PARTICIPANTS</span>
+                        <strong id="studentCount">0</strong>
+                    </div>
+                    <div class="metric">
+                        <span>QUESTIONS</span>
+                        <strong id="questionCount">0</strong>
+                    </div>
+                    <div class="metric">
+                        <span>ANSWER EVENTS</span>
+                        <strong id="answerEvents">0</strong>
+                    </div>
+                </div>
+                <div class="question-progress">
+                    <h4>Question-wise progress</h4>
+                    <div id="questionProgressContainer">
+                        <div class="muted">Loading live data…</div>
+                    </div>
+                </div>
+                <div class="panel-actions">
+                    <a id="openLiveBtn" href="/quiz_progress/{{ quizzes[0].quiz_id }}" class="btn btn-primary">Open detailed progress →</a>
+                </div>
+                {% else %}
+                <div class="empty">
+                    <div>
+                        <b>Nothing to monitor yet</b>
+                        Create a quiz and its live progress will appear here.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <div class="section-head">
+            <div>
+                <h2>Recent quizzes</h2>
+                <p>Open a quiz, review its results, or manage your assessments.</p>
+            </div>
+            <a href="/manage_quizzes" class="text-link">Manage all →</a>
+        </div>
+
+        <section class="table-wrap">
+            <div class="table-head">
+                <span>Quiz</span>
+                <span>Questions</span>
+                <span>Participants</span>
+                <span>Duration</span>
+                <span>Actions</span>
+            </div>
+            {% if quizzes %}
+                {% for quiz in quizzes %}
+                <div class="table-row">
+                    <div>
+                        <strong>{{ quiz.title }}</strong>
+                        <small>Quiz #{{ quiz.quiz_id }}</small>
+                    </div>
+                    <span>{{ quiz.total_questions }}</span>
+                    <span>{{ quiz.participants }}</span>
+                    <span>{{ quiz.duration_minutes }} min</span>
+                    <div class="row-actions">
+                        <a class="view-link" href="/quiz_generated/{{ quiz.quiz_id }}">Open</a>
+                        <a class="result-link" href="/view_results?quiz_id={{ quiz.quiz_id }}">View results ↗</a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty">
+                    <div>
+                        <b>No quizzes created yet</b>
+                        Your recent assessments will appear here.
+                    </div>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="ai-box">
+            <div class="ai-icon">🤖</div>
+            <div class="ai-copy">
+                <h3>AI Assessment Engine</h3>
+                <p>Manage assessments, monitor student participation, and review quiz-level results from your workspace.</p>
+            </div>
+            <div class="ai-online">
+                <span class="dot"></span> AI READY
+            </div>
+        </section>
+    </main>
+</div>
+
 {% include 'footer.html' %}
+
 <script>
 let selectedQuizId = {% if quizzes %}{{ quizzes[0].quiz_id }}{% else %}null{% endif %};
 let progressInterval = null;
 let progressRequestInFlight = false;
-function selectQuiz(quizId, element){
- selectedQuizId=quizId;document.querySelectorAll(".quiz-item").forEach(item=>item.classList.remove("active"));if(element)element.classList.add("active");
- const selected=element?element.querySelector("strong"):null;const title=document.getElementById("liveTitle");if(title&&selected)title.textContent=selected.textContent.trim();
- const id=document.getElementById("liveId");if(id)id.textContent="Quiz #"+quizId;const link=document.getElementById("openLiveBtn");if(link)link.href="/quiz_progress/"+quizId;
- loadLiveProgress();if(progressInterval)clearInterval(progressInterval);progressInterval=setInterval(loadLiveProgress,3000);
+
+function selectQuiz(quizId, element) {
+    selectedQuizId = quizId;
+    document.querySelectorAll(".quiz-item").forEach(item => item.classList.remove("active"));
+    if (element) element.classList.add("active");
+    
+    const selected = element ? element.querySelector("strong") : null;
+    const title = document.getElementById("liveTitle");
+    if (title && selected) title.textContent = selected.textContent.trim();
+    
+    const id = document.getElementById("liveId");
+    if (id) id.textContent = "Quiz #" + quizId;
+    
+    const link = document.getElementById("openLiveBtn");
+    if (link) link.href = "/quiz_progress/" + quizId;
+    
+    loadLiveProgress();
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = setInterval(loadLiveProgress, 3000);
 }
-async function loadLiveProgress(){
- if(!selectedQuizId||progressRequestInFlight)return;progressRequestInFlight=true;
- try{
-  const response=await fetch("/quiz_progress/"+selectedQuizId,{cache:"no-store",headers:{"Accept":"application/json"}});
-  if(!response.ok)throw new Error("Live progress request failed ("+response.status+")");const data=await response.json();if(!data.success)throw new Error(data.error||"Unable to load progress");
-  const setText=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
-  setText("liveTitle",data.title||"Quiz progress");setText("liveId","Quiz #"+selectedQuizId);setText("studentCount",data.total_students??0);setText("questionCount",data.total_questions??0);setText("answerEvents",data.total_answer_events??0);
-  const progress=Math.max(0,Math.min(100,Number(data.overall_progress||0)));setText("progressText",progress+"%");setText("progressNumber",progress+"%");const bar=document.getElementById("overallProgress");if(bar)bar.style.width=progress+"%";
-  const container=document.getElementById("questionProgressContainer");if(!container)return;
-  if(!Array.isArray(data.progress)||data.progress.length===0){container.innerHTML='<div class="muted" style="padding:10px 0">No question responses yet.</div>';return}
-  container.innerHTML=data.progress.map((q,index)=>{const pct=Math.max(0,Math.min(100,Number(q.percentage||0)));const count=Number(q.response_count||0);return '<div class="question-row"><div class="qnum">Q'+(index+1)+'</div><div class="mini-track"><div class="mini-fill" style="width:'+pct+'%"></div></div><div class="qcount">'+count+'</div></div>'}).join("");
- }catch(error){console.error("Live progress error:",error)}finally{progressRequestInFlight=false}
+
+async function loadLiveProgress() {
+    if (!selectedQuizId || progressRequestInFlight) return;
+    progressRequestInFlight = true;
+    try {
+        const response = await fetch("/quiz_progress/" + selectedQuizId, { cache: "no-store", headers: { "Accept": "application/json" } });
+        if (!response.ok) throw new Error("Live progress request failed (" + response.status + ")");
+        
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || "Unable to load progress");
+        
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        };
+        
+        setText("liveTitle", data.title || "Quiz progress");
+        setText("liveId", "Quiz #" + selectedQuizId);
+        setText("studentCount", data.total_students ?? 0);
+        setText("questionCount", data.total_questions ?? 0);
+        setText("answerEvents", data.total_answer_events ?? 0);
+        
+        const progress = Math.max(0, Math.min(100, Number(data.overall_progress || 0)));
+        setText("progressText", progress + "%");
+        setText("progressNumber", progress + "%");
+        
+        const bar = document.getElementById("overallProgress");
+        if (bar) bar.style.width = progress + "%";
+        
+        const container = document.getElementById("questionProgressContainer");
+        if (!container) return;
+        
+        if (!Array.isArray(data.progress) || data.progress.length === 0) {
+            container.innerHTML = '<div class="muted" style="padding:10px 0">No question responses yet.</div>';
+            return;
+        }
+        
+        container.innerHTML = data.progress.map((q, index) => {
+            const pct = Math.max(0, Math.min(100, Number(q.percentage || 0)));
+            const count = Number(q.response_count || 0);
+            return '<div class="question-row"><div class="qnum">Q' + (index + 1) + '</div><div class="mini-track"><div class="mini-fill" style="width:' + pct + '%"></div></div><div class="qcount">' + count + '</div></div>';
+        }).join("");
+    } catch (error) {
+        console.error("Live progress error:", error);
+    } finally {
+        progressRequestInFlight = false;
+    }
 }
-if(selectedQuizId){loadLiveProgress();progressInterval=setInterval(loadLiveProgress,3000)}
-window.addEventListener("beforeunload",()=>{if(progressInterval)clearInterval(progressInterval)});
+
+if (selectedQuizId) {
+    loadLiveProgress();
+    progressInterval = setInterval(loadLiveProgress, 3000);
+}
+
+window.addEventListener("beforeunload", () => {
+    if (progressInterval) clearInterval(progressInterval);
+});
 </script>
-</body></html>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>New Internal Assessment</title>
+    <style>
+        :root {
+            --bg: #f4f6fb;
+            --card: #fff;
+            --ink: #182238;
+            --muted: #718096;
+            --line: #e5eaf2;
+            --p: #4f46e5;
+            --green: #15803d;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--bg); font-family: Inter, Arial, sans-serif; color: var(--ink); }
+        .wrap { width: min(1100px, 94%); margin: 32px auto; }
+        .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .btn { display: inline-block; padding: 11px 15px; border-radius: 10px; background: var(--p); color: #fff; text-decoration: none; border: 0; font-weight: 700; cursor: pointer; }
+        .secondary { background: #eef0ff; color: var(--p); }
+        .card { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 24px; margin-top: 18px; }
+        .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+        .field { display: flex; flex-direction: column; gap: 7px; }
+        .field label { font-size: 12px; font-weight: 700; color: #596579; }
+        .field input, .field select { padding: 12px; border: 1px solid var(--line); border-radius: 9px; font: inherit; background: white; }
+        .wide { grid-column: 1 / -1; }
+        .quizlist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .quiz { display: flex; gap: 10px; padding: 13px; border: 1px solid var(--line); border-radius: 11px; }
+        .quiz small { display: block; color: var(--muted); margin-top: 4px; }
+        .hint { color: var(--muted); font-size: 12px; line-height: 1.6; }
+        .flash { padding: 12px; border-radius: 9px; background: #fff1f0; color: #b42318; margin: 10px 0; }
+        .flash.success { background: #ecfdf3; color: #067647; }
+        @media(max-width: 650px) {
+            .grid, .quizlist { grid-template-columns: 1fr; }
+            .wide { grid-column: auto; }
+        }
+    </style>
+</head>
+<body>
+<main class="wrap">
+    <div class="top">
+        <div>
+            <p style="color: #4f46e5; font-size: 11px; font-weight: 800; letter-spacing: 1px;">TEACHER WORKSPACE</p>
+            <h1 style="margin: 0;">Create Internal Assessment</h1>
+            <p class="hint">Semester ke multiple quizzes ko combine karke student-wise marks calculate karein.</p>
+        </div>
+        <a class="btn secondary" href="/internal_assessment">← All assessments</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <form method="POST">
+        <section class="card">
+            <h2 style="margin-top: 0;">1. Assessment details</h2>
+            <div class="grid">
+                <div class="field wide">
+                    <label>Assessment title</label>
+                    <input name="title" required maxlength="200" placeholder="e.g. MCA Semester 3 Internal Assessment">
+                </div>
+                <div class="field">
+                    <label>Department / Programme</label>
+                    <select name="department" required>
+                        <option value="">Select department</option>
+                        {% for c in cohorts %}
+                            {% if loop.first or c.department != cohorts[loop.index0 - 1].department %}
+                                <option value="{{ c.department }}">{{ c.department }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Semester</label>
+                    <select name="semester" required>
+                        <option value="">Select semester</option>
+                        {% for c in cohorts %}
+                            {% if c.semester %}
+                                <option value="{{ c.semester }}">{{ c.semester }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Section (optional)</label>
+                    <input name="section" placeholder="Leave blank to include all sections">
+                </div>
+                <div class="field">
+                    <label>Final marks out of</label>
+                    <select name="final_out_of" required>
+                        <option value="30">30</option>
+                        <option value="40">40</option>
+                    </select>
+                </div>
+            </div>
+            <p class="hint">Students are added from the selected department and semester when this assessment is created. Section blank rakhne par all sections include honge.</p>
+        </section>
+
+        <section class="card">
+            <h2 style="margin-top: 0;">2. Calculation method</h2>
+            <div class="grid">
+                <label class="quiz">
+                    <input type="radio" name="calculation_method" value="percentage_average" checked>
+                    <span><b>Percentage average</b><small>Har quiz ka percentage niklega, phir selected quizzes ka average.</small></span>
+                </label>
+                <label class="quiz">
+                    <input type="radio" name="calculation_method" value="total_marks_average">
+                    <span><b>Total-marks-based average</b><small>Sabhi included quizzes ke average obtained marks ÷ total maximum marks.</small></span>
+                </label>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2 style="margin-top: 0;">3. Select quizzes</h2>
+            <p class="hint">Sirf aapke own quizzes yahan show honge. Har question currently 1 mark ka maana jayega.</p>
+            {% if quizzes %}
+                <div class="quizlist">
+                    {% for q in quizzes %}
+                    <label class="quiz">
+                        <input type="checkbox" name="quiz_ids" value="{{ q.quiz_id }}">
+                        <span><b>{{ q.title }}</b><small>Quiz #{{ q.quiz_id }} · {{ q.total_questions or 0 }} questions · {{ q.created_at }}</small></span>
+                    </label>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No quizzes available. Pehle quiz create karein.</p>
+            {% endif %}
+        </section>
+
+        <div style="display: flex; justify-content: flex-end; margin: 18px 0;">
+            <button class="btn" type="submit" {% if not quizzes %}disabled{% endif %}>Create assessment →</button>
+        </div>
+    </form>
+</main>
+</body>
+</html>
