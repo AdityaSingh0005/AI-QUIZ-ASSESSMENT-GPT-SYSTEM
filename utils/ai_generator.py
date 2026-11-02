@@ -20,15 +20,15 @@ client = Client(
     headers={
         "Authorization": f"Bearer {OLLAMA_API_KEY}"
     },
-    timeout=75,
+    timeout=180,
 )
 
 
 GENERATION_MODEL = "gpt-oss:20b"
 
-MAX_GENERATION_ATTEMPTS = 2
-MAX_EVALUATION_ATTEMPTS = 3
-MAX_REPLACEMENT_ATTEMPTS = 5
+MAX_GENERATION_ATTEMPTS = 3
+MAX_EVALUATION_ATTEMPTS = 2
+MAX_REPLACEMENT_ATTEMPTS = 3
 
 
 # ============================================================
@@ -134,47 +134,124 @@ def clean_json_content(content):
 # EXTRACT QUESTIONS FROM AI RESPONSE
 # ============================================================
 
-def extract_questions_from_response(content):
+def validate_basic_question_structure(questions, total):
     """
-    Extract questions from either:
+    Validate generated questions and log the exact failure reason.
+    """
 
-    [
-        {...}
+    def fail(reason):
+        print(f"[AI VALIDATION FAILED] {reason}")
+        return False
+
+    if not isinstance(questions, list):
+        return fail("AI response is not a list.")
+
+    if len(questions) != total:
+        return fail(
+            f"Question count mismatch: expected {total}, received {len(questions)}."
+        )
+
+    required_fields = [
+        "question",
+        "option_a",
+        "option_b",
+        "option_c",
+        "option_d",
+        "correct_option",
+        "difficulty",
+        "explanation"
     ]
 
-    OR
+    seen_questions = set()
 
-    {
-        "questions": [
-            {...}
+    for index, question in enumerate(questions, start=1):
+
+        if not isinstance(question, dict):
+            return fail(
+                f"Question {index} is not a valid JSON object."
+            )
+
+        for field in required_fields:
+
+            if field not in question:
+                return fail(
+                    f"Question {index}: missing field '{field}'."
+                )
+
+            value = question.get(field)
+
+            if value is None or not str(value).strip():
+                return fail(
+                    f"Question {index}: field '{field}' is empty."
+                )
+
+        question["question"] = str(
+            question["question"]
+        ).strip()
+
+        question_text = question["question"].lower()
+
+        if question_text in seen_questions:
+            return fail(
+                f"Question {index}: duplicate question detected."
+            )
+
+        seen_questions.add(question_text)
+
+        correct_option = str(
+            question["correct_option"]
+        ).strip().upper()
+
+        if correct_option not in ["A", "B", "C", "D"]:
+            return fail(
+                f"Question {index}: invalid correct_option '{correct_option}'."
+            )
+
+        question["correct_option"] = correct_option
+
+        difficulty = normalize_difficulty(
+            question.get("difficulty")
+        )
+
+        if not difficulty:
+            return fail(
+                f"Question {index}: invalid difficulty "
+                f"'{question.get('difficulty')}'."
+            )
+
+        question["difficulty"] = difficulty
+
+        option_fields = [
+            "option_a",
+            "option_b",
+            "option_c",
+            "option_d"
         ]
-    }
-    """
 
-    cleaned = clean_json_content(content)
+        for field in option_fields:
+            question[field] = str(
+                question[field]
+            ).strip()
 
-    if not cleaned:
-        raise ValueError("AI returned empty JSON content")
+        options = [
+            question[field].casefold()
+            for field in option_fields
+        ]
 
-    data = json.loads(cleaned)
+        if len(set(options)) != 4:
+            return fail(
+                f"Question {index}: duplicate options detected."
+            )
 
-    # Direct list
-    if isinstance(data, list):
-        return data
+        question["explanation"] = str(
+            question["explanation"]
+        ).strip()
 
-    # Object containing questions
-    if isinstance(data, dict):
-
-        questions = data.get("questions")
-
-        if isinstance(questions, list):
-            return questions
-
-    raise ValueError(
-        "AI response does not contain a valid questions list"
+    print(
+        f"[AI VALIDATION] Successfully validated {total} questions."
     )
 
-
+    return True
 # ============================================================
 # BASIC QUESTION VALIDATION
 # ============================================================
@@ -915,7 +992,7 @@ def generate_questions(topic, easy, medium, hard):
     if total > 150:
         raise ValueError("A quiz cannot contain more than 150 questions.")
 
-    batch_size = 10
+    batch_size = 5
     requirements = [("Easy", easy), ("Medium", medium), ("Hard", hard)]
     all_questions = []
     seen_questions = set()
