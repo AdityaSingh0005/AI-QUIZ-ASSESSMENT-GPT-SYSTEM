@@ -193,16 +193,14 @@ def _get_attempt_questions(quiz_id):
         _close_db(connection)
 
 def _get_attempt_question_at(quiz_id, question_index):
-    """Fetch only the requested question and total question count."""
+    """Fetch only the requested question ID."""
     connection = _db_connection()
 
     try:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT
-                    question_id,
-                    COUNT(*) OVER() AS total_questions
+                SELECT question_id
                 FROM questions
                 WHERE quiz_id = %s
                 ORDER BY question_id
@@ -407,66 +405,60 @@ def _save_answer(attempt, question_id, selected_option):
 
     try:
         with connection.cursor() as cursor:
-            # Verify that the question belongs to this quiz.
             cursor.execute(
                 """
-                SELECT question_id
-                FROM questions
-                WHERE question_id = %s
-                  AND quiz_id = %s
-                """,
-                (question_id, attempt["quiz_id"]),
-            )
-
-            if not cursor.fetchone():
-                connection.rollback()
-                return False
-
-            # Lock the attempt and prevent saving after submission.
-            cursor.execute(
-                """
-                SELECT student_id, quiz_id, status
-                FROM quiz_attempts
-                WHERE attempt_id = %s
-                FOR UPDATE
-                """,
-                (attempt["attempt_id"],),
-            )
-
-            current_attempt = cursor.fetchone()
-
-            if not current_attempt:
-                connection.rollback()
-                return False
-
-            if current_attempt["status"] == "submitted":
-                connection.rollback()
-                return False
-
-            # Insert a new answer or update the existing answer.
-            cursor.execute(
-                """
-                INSERT INTO student_answers
-                    (student_id, quiz_id, question_id,
-                     selected_option, attempt_id)
-                VALUES (%s, %s, %s, %s, %s)
+                WITH locked_attempt AS MATERIALIZED (
+                    SELECT
+                        attempt_id,
+                        student_id,
+                        quiz_id,
+                        status
+                    FROM quiz_attempts
+                    WHERE attempt_id = %s
+                    FOR UPDATE
+                ),
+                valid_question AS (
+                    SELECT q.question_id
+                    FROM questions q
+                    JOIN locked_attempt a
+                      ON a.quiz_id = q.quiz_id
+                    WHERE q.question_id = %s
+                      AND a.status <> 'submitted'
+                )
+                INSERT INTO student_answers (
+                    student_id,
+                    quiz_id,
+                    question_id,
+                    selected_option,
+                    attempt_id
+                )
+                SELECT
+                    a.student_id,
+                    a.quiz_id,
+                    q.question_id,
+                    %s,
+                    a.attempt_id
+                FROM locked_attempt a
+                JOIN valid_question q ON TRUE
+                WHERE a.status <> 'submitted'
                 ON CONFLICT (attempt_id, question_id)
                     WHERE attempt_id IS NOT NULL
                       AND question_id IS NOT NULL
                 DO UPDATE SET
                     selected_option = EXCLUDED.selected_option
+                RETURNING question_id
                 """,
                 (
-                    current_attempt["student_id"],
-                    current_attempt["quiz_id"],
+                    attempt["attempt_id"],
                     question_id,
                     selected_option,
-                    attempt["attempt_id"],
                 ),
             )
 
+            saved_answer = cursor.fetchone()
+
         connection.commit()
-        return True
+        return saved_answer is not None
 
     except Exception:
         connection.rollback()
@@ -477,6 +469,7 @@ def _save_answer(attempt, question_id, selected_option):
 
     finally:
         _close_db(connection)
+
 # ============================================================
 # ATTEMPT SUBMISSION AND RESULT CALCULATION
 # ============================================================
@@ -542,21 +535,22 @@ def _mark_attempt_submitted(attempt_id):
             )
 
             cursor.execute(
-                """
-                UPDATE quiz_attempts
-                SET status = 'submitted',
-                    submitted_at = CURRENT_TIMESTAMP,
-                    score = %s,
-                    percentage = %s
-                WHERE attempt_id = %s
-                """,
+    """
+    UPDATE quiz_attempts
+    SET status = 'submitted',
+        submitted_at = CURRENT_TIMESTAMP,
+        score = %s,
+        percentage = %s
+    WHERE attempt_id = %s
+    RETURNING *
+    """,
                 (
                     score,
                     percentage,
                     attempt_id,
                 ),
             )
-
+            submitted_attempt = cursor.fetchone()
             cursor.execute(
                 """
                 SELECT result_id
@@ -608,8 +602,7 @@ def _mark_attempt_submitted(attempt_id):
                 )
 
         connection.commit()
-
-        return _get_attempt(attempt_id)
+        return submitted_attempt
 
     except Exception:
         connection.rollback()
@@ -1134,7 +1127,7 @@ def guest_start_quiz(quiz_id):
         _close_db(connection)
 
     _clear_active_quiz_session()
-    
+
 
 
     session["active_attempt_id"] = attempt["attempt_id"]
@@ -1241,7 +1234,7 @@ def quiz():
             total_questions=total_questions,
         )
 
-    
+
 
         # Load only the current question for AJAX POST requests.
     if request.method == "POST":
@@ -1252,34 +1245,29 @@ def quiz():
 
         expected_index = max(0, expected_index)
 
+        total_questions = int(
+            quiz_data.get("total_questions") or 0
+        )
+
+        if total_questions <= 0:
+            return ajax_error(
+                "Invalid question count for this quiz.", 400
+            )
+
+        expected_index = min(
+            expected_index, total_questions - 1
+        )
+
         question_state = _get_attempt_question_at(
             attempt["quiz_id"], expected_index
         )
 
-        # Recover safely if the stored index is outside the quiz range.
         if not question_state:
-            first_question = _get_attempt_question_at(
-                attempt["quiz_id"], 0
+            return ajax_error(
+                "Unable to load the current question.", 500
             )
 
-            if not first_question or not first_question.get("total_questions"):
-                return ajax_error("This quiz does not contain any questions.", 400)
-
-            total_questions = int(first_question["total_questions"])
-            expected_index = min(expected_index, total_questions - 1)
-
-            question_state = (
-                first_question
-                if expected_index == 0
-                else _get_attempt_question_at(attempt["quiz_id"], expected_index)
-            )
-
-        if not question_state:
-            return ajax_error("Unable to load the current question.", 500)
-
-        total_questions = int(question_state["total_questions"])
         expected_question_id = question_state["question_id"]
-
         questions = None
 
     else:
@@ -1312,7 +1300,7 @@ def quiz():
 
     deadline = _effective_deadline(attempt, quiz_data)
     remaining_seconds = _seconds_left(deadline)
-    
+
     # Server-side question clock: reset only when the server advances to a new question.
     try:
         clock_index = int(session.get("question_started_index", -1))
@@ -1391,10 +1379,8 @@ def quiz():
         return redirect(url_for("student.quiz"))
 
     # GET: render the current question and existing answers.
-    attempt = _get_attempt(attempt_id)
-    if not attempt:
-        _clear_active_quiz_session()
-        return redirect(url_for("student.available_quizzes"))
+        if attempt["status"] == "submitted":
+            return redirect(url_for("student.quiz"))
     if attempt["status"] == "submitted":
         return redirect(url_for("student.quiz"))
     answers = _get_attempt_answers(attempt_id)
@@ -1417,8 +1403,8 @@ def quiz():
 )
 def submit_quiz():
     attempt_id = _active_attempt_id()
-    
-    
+
+
 
     if not attempt_id:
         flash("No active quiz found.", "error")
