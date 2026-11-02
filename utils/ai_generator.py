@@ -26,7 +26,8 @@ client = OpenAI(
     max_retries=0,
 )
 
-MAX_GENERATION_ATTEMPTS = 3
+MAX_GENERATION_ATTEMPTS = 5
+MIN_SECONDS_BETWEEN_GROQ_CALLS = 13.0
 
 # One generation pipeline at a time per Render worker.
 _GENERATION_LOCK = threading.Lock()
@@ -913,6 +914,29 @@ def extract_questions_from_response(content):
     raise ValueError(
         "AI response does not contain a valid questions list."
     )
+def _groq_retry_delay_seconds(error):
+    """Read Groq's Retry-After header or the wait time in its 429 message."""
+    response = getattr(error, "response", None)
+    headers = getattr(response, "headers", {}) or {}
+
+    for key in ("retry-after", "Retry-After"):
+        value = headers.get(key) if hasattr(headers, "get") else None
+        if value:
+            try:
+                return max(1.0, float(value)) + 1.0
+            except (TypeError, ValueError):
+                pass
+
+    message = str(error)
+    match = re.search(r"try again in\s*([0-9]+(?:\.[0-9]+)?)\s*s", message, re.I)
+    if match:
+        return max(1.0, float(match.group(1))) + 1.0
+
+    # A 429 without a readable reset time: wait long enough for the short
+    # token-per-minute window to clear instead of retrying after 2–4 seconds.
+    return 15.0
+
+
 # ============================================================
 # MAIN QUESTION GENERATOR
 # ============================================================
@@ -941,6 +965,7 @@ def generate_questions(topic, easy, medium, hard):
         )
 
     started_at = time.monotonic()
+    last_groq_call_at = None
     try:
         batch_size = 5
         requirements = [("Easy", easy), ("Medium", medium), ("Hard", hard)]
@@ -977,12 +1002,26 @@ Do not include markdown, commentary, or any fields beyond the schema.
                 for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
                     attempt_started = time.monotonic()
                     try:
+                        # Groq's free/on-demand tier has a rolling TPM limit.
+                        # Pace successful requests so a 60-question quiz does
+                        # not fire 12 batches back-to-back into the 8k TPM cap.
+                        if last_groq_call_at is not None:
+                            elapsed_since_call = time.monotonic() - last_groq_call_at
+                            wait_for_pacing = MIN_SECONDS_BETWEEN_GROQ_CALLS - elapsed_since_call
+                            if wait_for_pacing > 0:
+                                print(
+                                    f"[GROQ RATE LIMIT] pacing wait={wait_for_pacing:.1f}s "
+                                    f"before {difficulty} batch"
+                                )
+                                time.sleep(wait_for_pacing)
+
                         print(
                             f"[AI GENERATION] START difficulty={difficulty} "
                             f"batch_size={batch_count} attempt={attempt}/"
                             f"{MAX_GENERATION_ATTEMPTS} model={GENERATION_MODEL}"
                         )
 
+                        last_groq_call_at = time.monotonic()
                         response = client.chat.completions.create(
                             model=GENERATION_MODEL,
                             messages=[{"role": "user", "content": prompt}],
@@ -994,7 +1033,7 @@ Do not include markdown, commentary, or any fields beyond the schema.
                                     "schema": build_quiz_batch_schema(batch_count, difficulty),
                                 },
                             },
-                            max_completion_tokens=5000,
+                            max_completion_tokens=3000,
                         )
 
                         if not response.choices:
@@ -1069,10 +1108,18 @@ Do not include markdown, commentary, or any fields beyond the schema.
                             f"error={str(exc)[:700]}"
                         )
                         if attempt < MAX_GENERATION_ATTEMPTS:
-                            delay = 2 ** attempt  # 2s, then 4s
-                            print(
-                                f"[AI GENERATION] Retrying {difficulty} batch after {delay}s."
-                            )
+                            if type(exc).__name__ == "RateLimitError" or "429" in str(exc):
+                                delay = _groq_retry_delay_seconds(exc)
+                                print(
+                                    f"[GROQ RATE LIMIT] 429 received; waiting {delay:.1f}s "
+                                    f"before retry {attempt + 1}/{MAX_GENERATION_ATTEMPTS}."
+                                )
+                            else:
+                                delay = min(2 ** attempt, 16)
+                                print(
+                                    f"[AI GENERATION] Retrying {difficulty} batch "
+                                    f"after {delay}s."
+                                )
                             time.sleep(delay)
 
                 if batch is None:
