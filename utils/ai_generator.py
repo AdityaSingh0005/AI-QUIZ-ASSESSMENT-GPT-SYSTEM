@@ -963,10 +963,33 @@ Return exactly {batch_count} objects in the array.
                             format="json",
                         )
 
-                        message = response.get("message", {}) if isinstance(response, dict) else {}
-                        content = message.get("content", "") if isinstance(message, dict) else ""
-                        if not str(content).strip():
-                            raise ValueError("Ollama returned an empty message.content")
+                        # ollama.Client.chat() normally returns a ChatResponse
+                        # Pydantic object, not a plain dict. Support both forms.
+                        def _field(value, name, default=None):
+                            if isinstance(value, dict):
+                                return value.get(name, default)
+                            return getattr(value, name, default)
+
+                        message = _field(response, "message", {})
+                        content = _field(message, "content", "")
+                        if not isinstance(content, str) or not content.strip():
+                            # Log response metadata only; never print API keys,
+                            # full prompts, or model reasoning/content.
+                            thinking = _field(message, "thinking", "")
+                            tool_calls = _field(message, "tool_calls", None)
+                            done_reason = _field(response, "done_reason", None)
+                            print(
+                                "[AI RESPONSE EMPTY] "
+                                f"response_type={type(response).__name__} "
+                                f"message_type={type(message).__name__} "
+                                f"thinking_chars={len(thinking) if isinstance(thinking, str) else 0} "
+                                f"tool_calls_present={bool(tool_calls)} "
+                                f"done_reason={done_reason!r}"
+                            )
+                            raise ValueError(
+                                "Ollama ChatResponse contained no final message.content; "
+                                "inspect [AI RESPONSE EMPTY] metadata above."
+                            )
 
                         generated = extract_questions_from_response(content)
                         if not validate_basic_question_structure(generated, batch_count):
