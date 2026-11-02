@@ -1,123 +1,378 @@
-﻿import re
+﻿
+import os
+import re
+import time
 import uuid
+import random
+import itertools
+from html.parser import HTMLParser
+
 from locust import HttpUser, task, between
 
-QUIZ_ID = 26
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+QUIZ_ID = int(os.getenv("QUIZ_ID", "36"))
+
+# Every virtual student gets a unique identity.
+STUDENT_COUNTER = itertools.count(1)
+
+RUN_ID = uuid.uuid4().hex[:8]
 
 
-class QuizStudent(HttpUser):
-    wait_time = between(0.1, 0.3)
+# ============================================================
+# HTML HIDDEN INPUT PARSER
+# Supports CSRF tokens if the application uses them.
+# ============================================================
 
-    def on_start(self):
-        self.finished = False
+class HiddenInputParser(HTMLParser):
 
-        unique_id = uuid.uuid4().hex[:12]
-        self.student_name = f"LOAD_TEST_{unique_id}"
-        self.roll_number = f"LT{unique_id}"
+    def __init__(self):
+        super().__init__()
+        self.hidden_fields = {}
 
-        with self.client.get(
-            f"/guest_start_quiz/{QUIZ_ID}",
-            name="1 - Open guest quiz",
-            catch_response=True,
-        ) as response:
-            if response.status_code != 200:
-                response.failure(
-                    f"Guest page failed: HTTP {response.status_code}"
-                )
-                self.finished = True
-                return
-            response.success()
+    def handle_starttag(self, tag, attrs):
 
-        with self.client.post(
-            f"/guest_start_quiz/{QUIZ_ID}",
-            data={
-                "student_name": self.student_name,
-                "roll_number": self.roll_number,
-            },
-            name="2 - Start quiz",
-            allow_redirects=True,
-            catch_response=True,
-        ) as response:
-            if response.status_code != 200:
-                response.failure(
-                    f"Quiz start failed: HTTP {response.status_code}"
-                )
-                self.finished = True
-                return
-
-            question_ids = re.findall(
-                r'data-question-id=["\'](\d+)["\']',
-                response.text,
-            )
-            self.question_ids = list(dict.fromkeys(question_ids))
-
-            if not self.question_ids or 'id="quizForm"' not in response.text:
-                response.failure(
-                    "Quiz page or question IDs not found in response"
-                )
-                self.finished = True
-                return
-
-            response.success()
-
-    @task
-    def complete_quiz(self):
-        if self.finished:
+        if tag.lower() != "input":
             return
 
+        attrs = dict(attrs)
+
+        if attrs.get("type", "").lower() == "hidden":
+
+            name = attrs.get("name")
+            value = attrs.get("value", "")
+
+            if name:
+                self.hidden_fields[name] = value
+
+
+def extract_hidden_fields(html):
+
+    parser = HiddenInputParser()
+    parser.feed(html)
+
+    return parser.hidden_fields
+
+
+# ============================================================
+# QUESTION ID EXTRACTION
+# Reads IDs from rendered quiz question cards.
+# ============================================================
+
+def extract_question_ids(html):
+
+    pattern = r'data-question-id=["\'](\d+)["\']'
+
+    question_ids = re.findall(pattern, html)
+
+    # Preserve order and remove accidental duplicates.
+    return list(dict.fromkeys(question_ids))
+
+
+# ============================================================
+# VIRTUAL STUDENT
+# ============================================================
+
+class GuestStudent(HttpUser):
+
+    wait_time = between(0.2, 0.6)
+
+    def on_start(self):
+
+        self.student_number = next(STUDENT_COUNTER)
+
+        self.student_name = (
+            f"LocustStudent-{RUN_ID}-{self.student_number}"
+        )
+
+        self.roll_number = (
+            f"LOAD-{RUN_ID}-{self.student_number}"
+        )
+
+        self.completed = False
+
+        self.question_ids = []
+
+        self.quiz_hidden_fields = {}
+
+        self.start_guest_attempt()
+
+    # --------------------------------------------------------
+    # STEP 1: Open guest registration page
+    # --------------------------------------------------------
+
+    def start_guest_attempt(self):
+
+        start_url = f"/guest_start_quiz/{QUIZ_ID}"
+
+        with self.client.get(
+            start_url,
+            name="01 - Open Guest Registration",
+            catch_response=True
+        ) as response:
+
+            if response.status_code != 200:
+
+                response.failure(
+                    f"Guest page failed: {response.status_code}"
+                )
+
+                self.stop()
+                return
+
+            guest_hidden_fields = extract_hidden_fields(
+                response.text
+            )
+
+            response.success()
+
+        # ----------------------------------------------------
+        # STEP 2: Register guest student
+        # ----------------------------------------------------
+
+        payload = {
+            **guest_hidden_fields,
+            "student_name": self.student_name,
+            "roll_number": self.roll_number
+        }
+
+        with self.client.post(
+            start_url,
+            data=payload,
+            name="02 - Guest Registration",
+            allow_redirects=True,
+            catch_response=True
+        ) as response:
+
+            if response.status_code != 200:
+
+                response.failure(
+                    f"Guest registration failed: {response.status_code}"
+                )
+
+                self.stop()
+                return
+
+            # The guest registration should redirect to /quiz.
+            if "/quiz" not in response.url:
+
+                response.failure(
+                    "Registration did not redirect to quiz page."
+                )
+
+                self.stop()
+                return
+
+            response.success()
+
+        # ----------------------------------------------------
+        # STEP 3: Read quiz page and extract question IDs
+        # ----------------------------------------------------
+
+        self.load_quiz()
+
+    # --------------------------------------------------------
+    # LOAD QUIZ
+    # --------------------------------------------------------
+
+    def load_quiz(self):
+
+        with self.client.get(
+            "/quiz",
+            name="03 - Load Quiz",
+            catch_response=True
+        ) as response:
+
+            if response.status_code != 200:
+
+                response.failure(
+                    f"Quiz loading failed: {response.status_code}"
+                )
+
+                self.stop()
+                return
+
+            self.question_ids = extract_question_ids(
+                response.text
+            )
+
+            self.quiz_hidden_fields = extract_hidden_fields(
+                response.text
+            )
+
+            if not self.question_ids:
+
+                response.failure(
+                    "No question IDs found in quiz HTML."
+                )
+
+                self.stop()
+                return
+
+            response.success()
+
+    # --------------------------------------------------------
+    # STEP 4: Attempt all questions and submit
+    # --------------------------------------------------------
+
+    @task
+    def attempt_quiz(self):
+
+        # Prevent this virtual student from starting again.
+        if self.completed:
+            self.stop()
+            return
+
+        total_questions = len(self.question_ids)
+
         for index, question_id in enumerate(self.question_ids):
-            is_last = index == len(self.question_ids) - 1
+
+            is_last_question = (
+                index == total_questions - 1
+            )
+
+            action = (
+                "submit" if is_last_question else "save"
+            )
+
+            selected_option = random.choice(
+                ["A", "B", "C", "D"]
+            )
+
+            payload = {
+                **self.quiz_hidden_fields,
+                "question_id": question_id,
+                "current_index": index,
+                "selected_option": selected_option,
+                "action": action
+            }
 
             with self.client.post(
                 "/quiz",
-                data={
-                    "question_id": question_id,
-                    "current_index": str(index),
-                    "selected_option": ["A", "B", "C", "D"][index % 4],
-                    "action": "submit" if is_last else "save",
-                },
+                data=payload,
                 headers={
                     "X-Requested-With": "XMLHttpRequest",
-                    "Accept": "application/json",
+                    "Accept": "application/json"
                 },
-                name=(
-                    "4 - Submit quiz"
-                    if is_last
-                    else "3 - Save answer and next"
-                ),
-                catch_response=True,
+                name="04 - Save Answer / Submit",
+                catch_response=True
             ) as response:
+
                 if response.status_code != 200:
+
                     response.failure(
-                        f"Question {index + 1}: HTTP {response.status_code}"
+                        f"Question {index + 1}: "
+                        f"HTTP {response.status_code}"
                     )
-                    self.finished = True
+
+                    self.completed = True
+                    self.stop()
                     return
 
                 try:
-                    data = response.json()
-                except ValueError:
+                    result = response.json()
+                except Exception:
+
                     response.failure(
-                        f"Question {index + 1}: response was not JSON"
+                        f"Question {index + 1}: Invalid JSON response"
                     )
-                    self.finished = True
+
+                    self.completed = True
+                    self.stop()
                     return
 
-                if not data.get("ok"):
+                if not result.get("ok"):
+
                     response.failure(
                         f"Question {index + 1}: "
-                        f"{data.get('message', 'Application error')}"
+                        f"{result.get('message', 'Unknown error')}"
                     )
-                    self.finished = True
+
+                    self.completed = True
+                    self.stop()
                     return
 
-                if is_last and not data.get("submitted"):
-                    response.failure(
-                        "Final request succeeded but attempt was not submitted"
-                    )
-                    self.finished = True
-                    return
+                # Verify normal question progression.
+                if not is_last_question:
+
+                    if result.get("submitted"):
+
+                        response.failure(
+                            "Quiz submitted before final question."
+                        )
+
+                        self.completed = True
+                        self.stop()
+                        return
+
+                    expected_index = index + 1
+
+                    if result.get("current_index") != expected_index:
+
+                        response.failure(
+                            f"Incorrect question progression. "
+                            f"Expected {expected_index}, "
+                            f"received {result.get('current_index')}"
+                        )
+
+                        self.completed = True
+                        self.stop()
+                        return
+
+                # Verify final submission.
+                else:
+
+                    if not result.get("submitted"):
+
+                        response.failure(
+                            "Final question did not submit the quiz."
+                        )
+
+                        self.completed = True
+                        self.stop()
+                        return
 
                 response.success()
 
-        self.finished = True
+            # Small pause between answers.
+            time.sleep(random.uniform(0.05, 0.15))
+
+        # ----------------------------------------------------
+        # STEP 5: Open submitted result page
+        # ----------------------------------------------------
+
+        with self.client.get(
+            "/quiz",
+            name="05 - Load Submitted Result",
+            catch_response=True
+        ) as response:
+
+            if response.status_code != 200:
+
+                response.failure(
+                    "Could not load submitted result page."
+                )
+
+            elif "submitted" not in response.text.lower():
+
+                response.failure(
+                    "Submission confirmation not found."
+                )
+
+            else:
+
+                response.success()
+
+        self.completed = True
+
+        print(
+            f"Completed: {self.student_name} | "
+            f"Roll: {self.roll_number} | "
+            f"Questions: {total_questions}"
+        )
+
+        self.stop()
+

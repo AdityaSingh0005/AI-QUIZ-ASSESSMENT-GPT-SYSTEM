@@ -192,6 +192,27 @@ def _get_attempt_questions(quiz_id):
     finally:
         _close_db(connection)
 
+def _get_attempt_question_at(quiz_id, question_index):
+    """Fetch only the requested question and total question count."""
+    connection = _db_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    question_id,
+                    COUNT(*) OVER() AS total_questions
+                FROM questions
+                WHERE quiz_id = %s
+                ORDER BY question_id
+                LIMIT 1 OFFSET %s
+                """,
+                (quiz_id, question_index),
+            )
+            return cursor.fetchone()
+    finally:
+        _close_db(connection)
 
 # ============================================================
 # TIME AND QUIZ AVAILABILITY
@@ -1180,8 +1201,10 @@ def quiz():
             return ajax_error("Quiz not found.", 404)
         return "Quiz not found.", 404
 
-        if not _is_guest():
-            logged_in_id = session.get("student_id")
+    # Verify ownership of logged-in student's attempt.
+    if not _is_guest():
+        logged_in_id = session.get("student_id")
+
         if not logged_in_id or attempt["student_id"] != logged_in_id:
             _clear_active_quiz_session()
             if is_ajax:
@@ -1218,29 +1241,78 @@ def quiz():
             total_questions=total_questions,
         )
 
-    questions = _get_attempt_questions(attempt["quiz_id"])
+    
 
-    questions = _get_attempt_questions(attempt["quiz_id"])
-    if not questions:
-        if is_ajax:
-            return ajax_error("This quiz does not contain any questions.", 400)
-        return _quiz_unavailable_page(quiz_data, "This quiz does not contain any questions.")
+        # Load only the current question for AJAX POST requests.
+    if request.method == "POST":
+        try:
+            expected_index = int(session.get("quiz_current_index", 0))
+        except (TypeError, ValueError):
+            expected_index = 0
+
+        expected_index = max(0, expected_index)
+
+        question_state = _get_attempt_question_at(
+            attempt["quiz_id"], expected_index
+        )
+
+        # Recover safely if the stored index is outside the quiz range.
+        if not question_state:
+            first_question = _get_attempt_question_at(
+                attempt["quiz_id"], 0
+            )
+
+            if not first_question or not first_question.get("total_questions"):
+                return ajax_error("This quiz does not contain any questions.", 400)
+
+            total_questions = int(first_question["total_questions"])
+            expected_index = min(expected_index, total_questions - 1)
+
+            question_state = (
+                first_question
+                if expected_index == 0
+                else _get_attempt_question_at(attempt["quiz_id"], expected_index)
+            )
+
+        if not question_state:
+            return ajax_error("Unable to load the current question.", 500)
+
+        total_questions = int(question_state["total_questions"])
+        expected_question_id = question_state["question_id"]
+
+        questions = None
+
+    else:
+        # GET requests still need the complete question list for rendering.
+        questions = _get_attempt_questions(attempt["quiz_id"])
+
+        if not questions:
+            return _quiz_unavailable_page(
+                quiz_data, "This quiz does not contain any questions."
+            )
+
+        total_questions = len(questions)
+
+        try:
+            expected_index = int(session.get("quiz_current_index", 0))
+        except (TypeError, ValueError):
+            expected_index = 0
+
+        expected_index = max(0, min(expected_index, total_questions - 1))
+        expected_question_id = None
+
+    session["quiz_current_index"] = expected_index
 
     try:
-        question_time_seconds = max(0, int(quiz_data.get("question_time_seconds") or 0))
+        question_time_seconds = max(
+            0, int(quiz_data.get("question_time_seconds") or 0)
+        )
     except (TypeError, ValueError):
         question_time_seconds = 0
 
     deadline = _effective_deadline(attempt, quiz_data)
     remaining_seconds = _seconds_left(deadline)
-
-    try:
-        expected_index = int(session.get("quiz_current_index", 0))
-    except (TypeError, ValueError):
-        expected_index = 0
-    expected_index = max(0, min(expected_index, len(questions) - 1))
-    session["quiz_current_index"] = expected_index
-
+    
     # Server-side question clock: reset only when the server advances to a new question.
     try:
         clock_index = int(session.get("question_started_index", -1))
@@ -1259,7 +1331,6 @@ def quiz():
         posted_question_id = request.form.get("question_id", type=int)
         selected_option = (request.form.get("selected_option") or "").strip().upper()
         action = (request.form.get("action") or "save").strip().lower()
-        expected_question_id = questions[expected_index]["question_id"]
 
         if not posted_question_id or posted_question_id != expected_question_id:
             current_app.logger.warning(
@@ -1297,7 +1368,7 @@ def quiz():
                 flash("Your answer could not be saved. Please try again.", "error")
                 return redirect(url_for("student.quiz"))
 
-        if action == "submit" or expected_index == len(questions) - 1:
+        if action == "submit" or expected_index == total_questions - 1:
             _mark_attempt_submitted(attempt_id)
             session.pop("question_started_at", None)
             session.pop("question_started_index", None)
