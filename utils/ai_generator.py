@@ -2,6 +2,8 @@
 import json
 import os
 import re
+import time
+import threading
 from ollama import Client
 
 
@@ -20,13 +22,19 @@ client = Client(
     headers={
         "Authorization": f"Bearer {OLLAMA_API_KEY}"
     },
-    timeout=180,
+    # Ollama Cloud gpt-oss:20b can take longer on larger batches.
+    timeout=300,
 )
 
 
 GENERATION_MODEL = "gpt-oss:20b"
 
 MAX_GENERATION_ATTEMPTS = 3
+
+# This Render service runs one Gunicorn worker with multiple threads.
+# Serialize model calls so concurrent teacher submissions do not overload
+# the same Ollama Cloud model connection.
+_GENERATION_LOCK = threading.Lock()
 MAX_EVALUATION_ATTEMPTS = 2
 MAX_REPLACEMENT_ATTEMPTS = 3
 
@@ -880,30 +888,45 @@ def extract_questions_from_response(content):
 # ============================================================
 
 def generate_questions(topic, easy, medium, hard):
-    """Generate validated small batches to reduce invalid JSON and worker timeouts."""
+    """Generate exact-count, difficulty-separated batches with safe retries."""
     easy, medium, hard = int(easy), int(medium), int(hard)
     total = easy + medium + hard
+
     if min(easy, medium, hard) < 0:
         raise ValueError("Question counts cannot be negative.")
     if total <= 0:
         raise ValueError("At least one question is required.")
     if total > 150:
         raise ValueError("A quiz cannot contain more than 150 questions.")
+    if not str(topic or "").strip():
+        raise ValueError("Quiz topic cannot be empty.")
 
-    batch_size = 5
-    requirements = [("Easy", easy), ("Medium", medium), ("Hard", hard)]
-    all_questions = []
-    seen_questions = set()
+    # Only one generation pipeline at a time per Render worker. The lock is
+    # deliberately bounded so a second request receives a clear error rather
+    # than waiting indefinitely.
+    print(f"[AI GENERATION] Waiting for generation slot; requested={total}")
+    if not _GENERATION_LOCK.acquire(timeout=45):
+        raise RuntimeError(
+            "Another quiz is currently being generated. Please wait 1 minute and retry."
+        )
 
-    for difficulty, requested_count in requirements:
-        remaining = requested_count
-        while remaining:
-            batch_count = min(batch_size, remaining)
-            previous_questions = "\n".join(
-                "- " + question[:180]
-                for question in list(seen_questions)[-20:]
-            ) or "(none yet)"
-            prompt = f"""
+    started_at = time.monotonic()
+    try:
+        batch_size = 5
+        requirements = [("Easy", easy), ("Medium", medium), ("Hard", hard)]
+        all_questions = []
+        seen_questions = set()
+
+        for difficulty, requested_count in requirements:
+            remaining = requested_count
+            while remaining > 0:
+                batch_count = min(batch_size, remaining)
+                previous_questions = "\n".join(
+                    "- " + question[:180]
+                    for question in list(seen_questions)[-20:]
+                ) or "(none yet)"
+
+                prompt = f"""
 Create exactly {batch_count} multiple-choice questions about this topic:
 {topic}
 
@@ -918,62 +941,129 @@ correct_option must be A, B, C, or D. Use four distinct options and exactly
 one correct answer. Questions must be distinct, clear, and factually correct.
 The difficulty value for every object must be exactly "{difficulty}".
 Example object: {{"question":"...","option_a":"...","option_b":"...","option_c":"...","option_d":"...","correct_option":"A","difficulty":"{difficulty}","explanation":"..."}}
+Return exactly {batch_count} objects in the array.
 """
-            batch = None
-            last_error = None
-            for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
-                try:
-                    print(f"[AI GENERATION] {difficulty} batch of {batch_count}; attempt {attempt}/{MAX_GENERATION_ATTEMPTS}")
-                    response = client.chat(
-                        model=GENERATION_MODEL,
-                        messages=[{"role": "user", "content": prompt}],
-                        options={"temperature": 0.1},
-                        format="json",
+
+                batch = None
+                last_error = None
+
+                for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
+                    attempt_started = time.monotonic()
+                    try:
+                        print(
+                            f"[AI GENERATION] START difficulty={difficulty} "
+                            f"batch_size={batch_count} attempt={attempt}/"
+                            f"{MAX_GENERATION_ATTEMPTS} model={GENERATION_MODEL}"
+                        )
+
+                        response = client.chat(
+                            model=GENERATION_MODEL,
+                            messages=[{"role": "user", "content": prompt}],
+                            options={"temperature": 0.1},
+                            format="json",
+                        )
+
+                        message = response.get("message", {}) if isinstance(response, dict) else {}
+                        content = message.get("content", "") if isinstance(message, dict) else ""
+                        if not str(content).strip():
+                            raise ValueError("Ollama returned an empty message.content")
+
+                        generated = extract_questions_from_response(content)
+                        if not validate_basic_question_structure(generated, batch_count):
+                            raise ValueError(
+                                f"Question structure validation failed for {difficulty} batch; "
+                                "see the preceding [AI VALIDATION FAILED] log for the exact field."
+                            )
+
+                        expected = (
+                            batch_count if difficulty == "Easy" else 0,
+                            batch_count if difficulty == "Medium" else 0,
+                            batch_count if difficulty == "Hard" else 0,
+                        )
+                        if not check_difficulty_distribution(generated, *expected):
+                            actual = {
+                                level: sum(
+                                    1 for item in generated
+                                    if normalize_difficulty(item.get("difficulty")) == level
+                                )
+                                for level in ("Easy", "Medium", "Hard")
+                            }
+                            raise ValueError(
+                                f"Difficulty distribution mismatch; expected only {difficulty}="
+                                f"{batch_count}, received {actual}."
+                            )
+
+                        normalized = [
+                            re.sub(r"\s+", " ", str(item.get("question", "")).strip()).casefold()
+                            for item in generated
+                        ]
+                        if len(set(normalized)) != len(normalized):
+                            raise ValueError("Duplicate question text inside the same batch.")
+                        duplicate_prior = next(
+                            (question for question in normalized if question in seen_questions),
+                            None,
+                        )
+                        if duplicate_prior:
+                            raise ValueError(
+                                f"Question duplicates an earlier batch: {duplicate_prior[:100]}"
+                            )
+
+                        batch = generated
+                        print(
+                            f"[AI GENERATION] SUCCESS difficulty={difficulty} "
+                            f"count={len(batch)} elapsed={time.monotonic() - attempt_started:.1f}s"
+                        )
+                        break
+
+                    except Exception as exc:
+                        last_error = exc
+                        elapsed = time.monotonic() - attempt_started
+                        print(
+                            f"[AI GENERATION] FAILED difficulty={difficulty} "
+                            f"attempt={attempt}/{MAX_GENERATION_ATTEMPTS} "
+                            f"elapsed={elapsed:.1f}s error_type={type(exc).__name__} "
+                            f"error={str(exc)[:700]}"
+                        )
+                        if attempt < MAX_GENERATION_ATTEMPTS:
+                            delay = 2 ** attempt  # 2s, then 4s
+                            print(
+                                f"[AI GENERATION] Retrying {difficulty} batch after {delay}s."
+                            )
+                            time.sleep(delay)
+
+                if batch is None:
+                    raise RuntimeError(
+                        f"Could not generate a valid batch of {batch_count} {difficulty} "
+                        f"questions after {MAX_GENERATION_ATTEMPTS} attempts. "
+                        f"Last error: {type(last_error).__name__}: {last_error}"
                     )
-                    content = response["message"]["content"]
-                    generated = extract_questions_from_response(content)
-                    if not validate_basic_question_structure(generated, batch_count):
-                        raise ValueError("Generated question structure or count is invalid")
-                    expected = (
-                        batch_count if difficulty == "Easy" else 0,
-                        batch_count if difficulty == "Medium" else 0,
-                        batch_count if difficulty == "Hard" else 0,
-                    )
-                    if not check_difficulty_distribution(generated, *expected):
-                        raise ValueError(f"Difficulty mismatch; expected {difficulty}")
-                    normalized = [
+
+                for item in batch:
+                    seen_questions.add(
                         re.sub(r"\s+", " ", str(item.get("question", "")).strip()).casefold()
-                        for item in generated
-                    ]
-                    if len(set(normalized)) != len(normalized):
-                        raise ValueError("Duplicate questions inside batch")
-                    if any(question in seen_questions for question in normalized):
-                        raise ValueError("Question duplicates an earlier batch")
-                    batch = generated
-                    break
-                except Exception as exc:
-                    last_error = exc
-                    print(f"[AI GENERATION] {difficulty} attempt {attempt} failed: {exc}")
-            if batch is None:
-                raise RuntimeError(
-                    f"Could not generate a valid batch of {batch_count} {difficulty} questions. "
-                    f"Please retry or reduce the question count. Last error: {last_error}"
-                )
-            for item in batch:
-                seen_questions.add(
-                    re.sub(r"\s+", " ", str(item.get("question", "")).strip()).casefold()
-                )
-            all_questions.extend(batch)
-            remaining -= batch_count
+                    )
+                all_questions.extend(batch)
+                remaining -= batch_count
 
-    if len(all_questions) != total:
-        raise RuntimeError(f"Generated {len(all_questions)} questions, expected {total}.")
-    if not validate_basic_question_structure(all_questions, total):
-        raise RuntimeError("Final quiz failed question-structure validation.")
-    if not check_difficulty_distribution(all_questions, easy, medium, hard):
-        raise RuntimeError("Final quiz failed difficulty-distribution validation.")
+        if len(all_questions) != total:
+            raise RuntimeError(
+                f"Generated {len(all_questions)} questions, expected exactly {total}."
+            )
+        if not validate_basic_question_structure(all_questions, total):
+            raise RuntimeError(
+                "Final quiz failed question-structure validation; see [AI VALIDATION FAILED] log."
+            )
+        if not check_difficulty_distribution(all_questions, easy, medium, hard):
+            raise RuntimeError("Final quiz failed exact difficulty-distribution validation.")
 
-    print(f"[AI GENERATION] Successfully generated {total} questions in small batches.")
-    # The create_quiz route supports an empty evaluations list. Avoiding extra
-    # full-quiz evaluation/replacement calls reduces synchronous request time.
-    return all_questions, []
+        print(
+            f"[AI GENERATION] COMPLETE total={len(all_questions)} "
+            f"easy={easy} medium={medium} hard={hard} "
+            f"elapsed={time.monotonic() - started_at:.1f}s"
+        )
+        # Keep the existing route contract unchanged.
+        return all_questions, []
+
+    finally:
+        _GENERATION_LOCK.release()
+

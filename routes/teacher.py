@@ -1280,13 +1280,21 @@ def create_quiz():
 
     except Exception as e:
 
-        print(
-            "❌ AI GENERATION ERROR:",
-            e
+        # Keep the complete traceback in Render logs. The short message is
+        # still shown to the teacher, without exposing credentials.
+        current_app.logger.exception(
+            "AI GENERATION ERROR | teacher_id=%s | topic=%r | requested=%s "
+            "(easy=%s, medium=%s, hard=%s)",
+            session.get("teacher_id"),
+            prompt[:120],
+            total_questions,
+            easy,
+            medium,
+            hard,
         )
 
         return error_page(
-            f"AI question generation failed: {str(e)}"
+            f"AI question generation failed: {type(e).__name__}: {str(e)}"
         )
 
     # ========================================================
