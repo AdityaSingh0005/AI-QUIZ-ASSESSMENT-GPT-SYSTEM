@@ -976,7 +976,40 @@ Generate exactly {count} question(s).
 
     return []
 
+# ============================================================
+# EXTRACT QUESTIONS FROM AI RESPONSE
+# ============================================================
 
+def extract_questions_from_response(content):
+    """
+    Extract questions from either a JSON array
+    or a JSON object containing a questions key.
+    """
+
+    cleaned = clean_json_content(content)
+
+    if not cleaned:
+        raise ValueError("AI returned empty JSON content.")
+
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"AI returned invalid JSON: {error}"
+        )
+
+    if isinstance(data, list):
+        return data
+
+    if isinstance(data, dict):
+        questions = data.get("questions")
+
+        if isinstance(questions, list):
+            return questions
+
+    raise ValueError(
+        "AI response does not contain a valid questions list."
+    )
 # ============================================================
 # MAIN QUESTION GENERATOR
 # ============================================================
