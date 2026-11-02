@@ -4,39 +4,69 @@ import os
 import re
 import time
 import threading
-from ollama import Client
+from openai import OpenAI
 
 
 # ============================================================
-# OLLAMA CONFIGURATION
+# GROQ API CONFIGURATION
 # ============================================================
 
-OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-if not OLLAMA_API_KEY:
-    raise Exception("OLLAMA_API_KEY environment variable is not set")
+if not GROQ_API_KEY:
+    raise RuntimeError("GROQ_API_KEY environment variable is not set")
 
+GENERATION_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
-client = Client(
-    host="https://ollama.com",
-    headers={
-        "Authorization": f"Bearer {OLLAMA_API_KEY}"
-    },
-    # Ollama Cloud gpt-oss:20b can take longer on larger batches.
-    timeout=300,
+# Keep provider retries in this module so retry counts and logs stay predictable.
+client = OpenAI(
+    api_key=GROQ_API_KEY,
+    base_url="https://api.groq.com/openai/v1",
+    timeout=120.0,
+    max_retries=0,
 )
-
-
-GENERATION_MODEL = "gpt-oss:20b"
 
 MAX_GENERATION_ATTEMPTS = 3
 
-# This Render service runs one Gunicorn worker with multiple threads.
-# Serialize model calls so concurrent teacher submissions do not overload
-# the same Ollama Cloud model connection.
+# One generation pipeline at a time per Render worker.
 _GENERATION_LOCK = threading.Lock()
 MAX_EVALUATION_ATTEMPTS = 2
 MAX_REPLACEMENT_ATTEMPTS = 3
+
+
+def build_quiz_batch_schema(batch_count, difficulty):
+    """Strict JSON Schema for one exact-difficulty batch."""
+    question_schema = {
+        "type": "object",
+        "properties": {
+            "question": {"type": "string"},
+            "option_a": {"type": "string"},
+            "option_b": {"type": "string"},
+            "option_c": {"type": "string"},
+            "option_d": {"type": "string"},
+            "correct_option": {"type": "string", "enum": ["A", "B", "C", "D"]},
+            "difficulty": {"type": "string", "enum": [difficulty]},
+            "explanation": {"type": "string"},
+        },
+        "required": [
+            "question", "option_a", "option_b", "option_c", "option_d",
+            "correct_option", "difficulty", "explanation"
+        ],
+        "additionalProperties": False,
+    }
+    return {
+        "type": "object",
+        "properties": {
+            "questions": {
+                "type": "array",
+                "items": question_schema,
+                "minItems": batch_count,
+                "maxItems": batch_count,
+            }
+        },
+        "required": ["questions"],
+        "additionalProperties": False,
+    }
 
 
 # ============================================================
@@ -934,14 +964,11 @@ Do not repeat or paraphrase these previously generated questions:
 {previous_questions}
 
 Every question must have difficulty exactly: {difficulty}.
-Return only a valid JSON array, no markdown or commentary. Each object must
-contain these fields: question, option_a, option_b, option_c, option_d,
-correct_option, difficulty, explanation.
-correct_option must be A, B, C, or D. Use four distinct options and exactly
-one correct answer. Questions must be distinct, clear, and factually correct.
-The difficulty value for every object must be exactly "{difficulty}".
-Example object: {{"question":"...","option_a":"...","option_b":"...","option_c":"...","option_d":"...","correct_option":"A","difficulty":"{difficulty}","explanation":"..."}}
-Return exactly {batch_count} objects in the array.
+Create distinct, clear, factually correct questions. Each question must have
+four distinct options and exactly one correct answer. The correct_option must
+be A, B, C, or D. Include a concise explanation of why the answer is correct.
+The response schema enforces the required fields, difficulty and exact count.
+Do not include markdown, commentary, or any fields beyond the schema.
 """
 
                 batch = None
@@ -956,39 +983,33 @@ Return exactly {batch_count} objects in the array.
                             f"{MAX_GENERATION_ATTEMPTS} model={GENERATION_MODEL}"
                         )
 
-                        response = client.chat(
+                        response = client.chat.completions.create(
                             model=GENERATION_MODEL,
                             messages=[{"role": "user", "content": prompt}],
-                            options={"temperature": 0.1},
-                            format="json",
+                            response_format={
+                                "type": "json_schema",
+                                "json_schema": {
+                                    "name": "quiz_question_batch",
+                                    "strict": True,
+                                    "schema": build_quiz_batch_schema(batch_count, difficulty),
+                                },
+                            },
+                            max_completion_tokens=5000,
                         )
 
-                        # ollama.Client.chat() normally returns a ChatResponse
-                        # Pydantic object, not a plain dict. Support both forms.
-                        def _field(value, name, default=None):
-                            if isinstance(value, dict):
-                                return value.get(name, default)
-                            return getattr(value, name, default)
+                        if not response.choices:
+                            raise ValueError("OpenAI returned no completion choices.")
 
-                        message = _field(response, "message", {})
-                        content = _field(message, "content", "")
+                        message = response.choices[0].message
+                        if getattr(message, "refusal", None):
+                            raise ValueError("OpenAI refused the quiz-generation request.")
+
+                        content = message.content
                         if not isinstance(content, str) or not content.strip():
-                            # Log response metadata only; never print API keys,
-                            # full prompts, or model reasoning/content.
-                            thinking = _field(message, "thinking", "")
-                            tool_calls = _field(message, "tool_calls", None)
-                            done_reason = _field(response, "done_reason", None)
-                            print(
-                                "[AI RESPONSE EMPTY] "
-                                f"response_type={type(response).__name__} "
-                                f"message_type={type(message).__name__} "
-                                f"thinking_chars={len(thinking) if isinstance(thinking, str) else 0} "
-                                f"tool_calls_present={bool(tool_calls)} "
-                                f"done_reason={done_reason!r}"
-                            )
+                            finish_reason = response.choices[0].finish_reason
                             raise ValueError(
-                                "Ollama ChatResponse contained no final message.content; "
-                                "inspect [AI RESPONSE EMPTY] metadata above."
+                                "OpenAI returned empty message content; "
+                                f"finish_reason={finish_reason!r}."
                             )
 
                         generated = extract_questions_from_response(content)

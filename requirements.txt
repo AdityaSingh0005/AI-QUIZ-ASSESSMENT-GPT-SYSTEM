@@ -4,3 +4,5 @@ ollama
 qrcode
 Pillow
 gunicorn
+openai
+
