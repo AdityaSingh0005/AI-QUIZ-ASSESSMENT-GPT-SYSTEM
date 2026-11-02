@@ -1,71 +1,626 @@
-
 import json
 import os
 import re
 import time
 import threading
+
 from openai import OpenAI
+from ollama import Client as OllamaClient
 
 
 # ============================================================
-# GROQ API CONFIGURATION
+# PROVIDER CONFIGURATION
 # ============================================================
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
-if not GROQ_API_KEY:
-    raise RuntimeError("GROQ_API_KEY environment variable is not set")
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:20b")
 
-GENERATION_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
+groq_client = None
+if GROQ_API_KEY:
+    groq_client = OpenAI(
+        api_key=GROQ_API_KEY,
+        base_url="https://api.groq.com/openai/v1",
+        timeout=120.0,
+        max_retries=0,
+    )
 
-# Keep provider retries in this module so retry counts and logs stay predictable.
-client = OpenAI(
-    api_key=GROQ_API_KEY,
-    base_url="https://api.groq.com/openai/v1",
-    timeout=120.0,
-    max_retries=0,
-)
+ollama_client = None
+if OLLAMA_API_KEY:
+    ollama_client = OllamaClient(
+        host="https://ollama.com",
+        headers={"Authorization": f"Bearer {OLLAMA_API_KEY}"},
+        timeout=300,
+    )
 
-MAX_GENERATION_ATTEMPTS = 5
+
+# Groq rate-limit protection
 MIN_SECONDS_BETWEEN_GROQ_CALLS = 13.0
+MAX_GROQ_ATTEMPTS = 2
+MAX_OLLAMA_ATTEMPTS = 2
 
-# One generation pipeline at a time per Render worker.
 _GENERATION_LOCK = threading.Lock()
+_GROQ_PACING_LOCK = threading.Lock()
+
+_LAST_GROQ_CALL_AT = None
+_GROQ_CIRCUIT_OPEN = False
+
 MAX_EVALUATION_ATTEMPTS = 2
 MAX_REPLACEMENT_ATTEMPTS = 3
 
 
-def build_quiz_batch_schema(batch_count, difficulty):
-    """Strict JSON Schema for one exact-difficulty batch."""
-    question_schema = {
-        "type": "object",
-        "properties": {
-            "question": {"type": "string"},
-            "option_a": {"type": "string"},
-            "option_b": {"type": "string"},
-            "option_c": {"type": "string"},
-            "option_d": {"type": "string"},
-            "correct_option": {"type": "string", "enum": ["A", "B", "C", "D"]},
-            "difficulty": {"type": "string", "enum": [difficulty]},
-            "explanation": {"type": "string"},
-        },
-        "required": [
-            "question", "option_a", "option_b", "option_c", "option_d",
-            "correct_option", "difficulty", "explanation"
+# ============================================================
+# ERROR HELPERS
+# ============================================================
+
+def _exception_status_code(error):
+
+    response = getattr(error, "response", None)
+
+    status = getattr(
+        response,
+        "status_code",
+        None
+    )
+
+    if status is None:
+        status = getattr(
+            error,
+            "status_code",
+            None
+        )
+
+    try:
+        return int(status) if status is not None else None
+
+    except (TypeError, ValueError):
+        return None
+
+
+def _is_rate_limit_error(error):
+
+    return (
+        _exception_status_code(error) == 429
+        or type(error).__name__ == "RateLimitError"
+        or "429" in str(error)
+        or "rate limit" in str(error).lower()
+    )
+
+
+def _is_permanent_auth_error(error):
+
+    status = _exception_status_code(error)
+
+    return status in (401, 403)
+
+
+def _groq_retry_delay_seconds(error):
+
+    response = getattr(
+        error,
+        "response",
+        None
+    )
+
+    headers = getattr(
+        response,
+        "headers",
+        {}
+    ) or {}
+
+    for key in ("retry-after", "Retry-After"):
+
+        value = (
+            headers.get(key)
+            if hasattr(headers, "get")
+            else None
+        )
+
+        if value:
+
+            try:
+                return max(1.0, float(value)) + 1.0
+
+            except (TypeError, ValueError):
+                pass
+
+    match = re.search(
+        r"try again in\s*([0-9]+(?:\.[0-9]+)?)\s*s",
+        str(error),
+        re.I,
+    )
+
+    if match:
+        return max(1.0, float(match.group(1))) + 1.0
+
+    return None
+
+
+# ============================================================
+# GROQ PACING
+# ============================================================
+
+def _pace_groq():
+
+    global _LAST_GROQ_CALL_AT
+
+    with _GROQ_PACING_LOCK:
+
+        if _LAST_GROQ_CALL_AT is not None:
+
+            elapsed = (
+                time.monotonic()
+                - _LAST_GROQ_CALL_AT
+            )
+
+            wait = (
+                MIN_SECONDS_BETWEEN_GROQ_CALLS
+                - elapsed
+            )
+
+            if wait > 0:
+
+                print(
+                    f"[GROQ RATE LIMIT] "
+                    f"pacing wait={wait:.1f}s"
+                )
+
+                time.sleep(wait)
+
+        _LAST_GROQ_CALL_AT = time.monotonic()
+
+
+# ============================================================
+# GROQ REQUEST
+# ============================================================
+
+def _groq_json_content(
+    prompt,
+    response_format=None,
+    max_completion_tokens=3000,
+    temperature=0.1
+):
+
+    if not groq_client:
+        raise RuntimeError(
+            "GROQ_API_KEY is not configured."
+        )
+
+    _pace_groq()
+
+    kwargs = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
         ],
+        "temperature": temperature,
+        "max_completion_tokens": max_completion_tokens,
+    }
+
+    if response_format is not None:
+        kwargs["response_format"] = response_format
+
+    response = groq_client.chat.completions.create(
+        **kwargs
+    )
+
+    if not response.choices:
+        raise ValueError(
+            "Groq returned no completion choices."
+        )
+
+    message = response.choices[0].message
+
+    if getattr(message, "refusal", None):
+        raise ValueError(
+            "Groq refused the request."
+        )
+
+    content = message.content
+
+    if not isinstance(content, str) or not content.strip():
+
+        finish_reason = (
+            response.choices[0].finish_reason
+        )
+
+        raise ValueError(
+            "Groq returned empty content; "
+            f"finish_reason={finish_reason!r}."
+        )
+
+    return content
+
+
+# ============================================================
+# OLLAMA CLOUD REQUEST
+# ============================================================
+
+def _ollama_json_content(
+    prompt,
+    temperature=0.1
+):
+
+    if not ollama_client:
+        raise RuntimeError(
+            "OLLAMA_API_KEY is not configured."
+        )
+
+    response = ollama_client.chat(
+        model=OLLAMA_MODEL,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        options={
+            "temperature": temperature
+        },
+        format="json",
+    )
+
+    def field(value, name, default=None):
+
+        if isinstance(value, dict):
+            return value.get(name, default)
+
+        return getattr(
+            value,
+            name,
+            default
+        )
+
+    message = field(
+        response,
+        "message",
+        {}
+    )
+
+    content = field(
+        message,
+        "content",
+        ""
+    )
+
+    if not isinstance(content, str) or not content.strip():
+
+        thinking = field(
+            message,
+            "thinking",
+            ""
+        )
+
+        done_reason = field(
+            response,
+            "done_reason",
+            None
+        )
+
+        print(
+            "[OLLAMA RESPONSE EMPTY] "
+            f"thinking_chars="
+            f"{len(thinking) if isinstance(thinking, str) else 0} "
+            f"done_reason={done_reason!r}"
+        )
+
+        raise ValueError(
+            "Ollama returned empty message.content."
+        )
+
+    return content
+
+
+# ============================================================
+# GROQ PRIMARY + OLLAMA FALLBACK
+# ============================================================
+
+def _request_with_fallback(
+    prompt,
+    validator,
+    operation,
+    response_format=None,
+    max_completion_tokens=3000,
+    temperature=0.1
+):
+
+    """
+    Groq is the primary provider.
+
+    Ollama Cloud is used as fallback.
+
+    Every response is validated before acceptance.
+    Previously validated batches are retained.
+    """
+
+    errors = []
+
+    global _GROQ_CIRCUIT_OPEN
+
+    if not groq_client and not ollama_client:
+
+        raise RuntimeError(
+            "No AI provider is configured. "
+            "Set GROQ_API_KEY or OLLAMA_API_KEY."
+        )
+
+    # --------------------------------------------------------
+    # GROQ PRIMARY
+    # --------------------------------------------------------
+
+    if groq_client and not _GROQ_CIRCUIT_OPEN:
+
+        for attempt in range(
+            1,
+            MAX_GROQ_ATTEMPTS + 1
+        ):
+
+            try:
+
+                print(
+                    f"[AI PROVIDER] START "
+                    f"provider=Groq "
+                    f"operation={operation} "
+                    f"attempt={attempt}/{MAX_GROQ_ATTEMPTS} "
+                    f"model={GROQ_MODEL}"
+                )
+
+                content = _groq_json_content(
+                    prompt,
+                    response_format=response_format,
+                    max_completion_tokens=max_completion_tokens,
+                    temperature=temperature,
+                )
+
+                result = validator(content)
+
+                print(
+                    f"[AI PROVIDER] SUCCESS "
+                    f"provider=Groq operation={operation}"
+                )
+
+                return result, "Groq"
+
+            except Exception as error:
+
+                status = _exception_status_code(error)
+
+                errors.append(
+                    f"Groq {type(error).__name__}: "
+                    f"{str(error)[:400]}"
+                )
+
+                print(
+                    f"[AI PROVIDER] FAILED "
+                    f"provider=Groq "
+                    f"operation={operation} "
+                    f"attempt={attempt} "
+                    f"status={status!r} "
+                    f"error_type={type(error).__name__} "
+                    f"error={str(error)[:500]}"
+                )
+
+                # Invalid credentials should not be hidden.
+                if _is_permanent_auth_error(error):
+
+                    raise RuntimeError(
+                        f"Groq authentication failed "
+                        f"for {operation} (HTTP {status}). "
+                        "Check GROQ_API_KEY and model access."
+                    ) from error
+
+                # If Groq quota is exhausted, switch to Ollama.
+                if _is_rate_limit_error(error):
+
+                    retry_hint = (
+                        _groq_retry_delay_seconds(error)
+                    )
+
+                    _GROQ_CIRCUIT_OPEN = True
+
+                    print(
+                        "[GROQ RATE LIMIT] "
+                        "Opening Groq circuit for the rest "
+                        "of this quiz; switching this batch "
+                        "to Ollama. "
+                        f"retry_hint_seconds={retry_hint!r}"
+                    )
+
+                    break
+
+                if attempt < MAX_GROQ_ATTEMPTS:
+
+                    delay = min(
+                        2 ** attempt,
+                        8
+                    )
+
+                    print(
+                        f"[GROQ RETRY] "
+                        f"Retrying same batch after {delay}s."
+                    )
+
+                    time.sleep(delay)
+
+    elif groq_client and _GROQ_CIRCUIT_OPEN:
+
+        print(
+            "[GROQ FAILOVER] "
+            "Groq circuit is open; using Ollama for this batch."
+        )
+
+    # --------------------------------------------------------
+    # OLLAMA FALLBACK
+    # --------------------------------------------------------
+
+    if ollama_client:
+
+        for attempt in range(
+            1,
+            MAX_OLLAMA_ATTEMPTS + 1
+        ):
+
+            try:
+
+                print(
+                    f"[AI PROVIDER] START "
+                    f"provider=Ollama "
+                    f"operation={operation} "
+                    f"attempt={attempt}/{MAX_OLLAMA_ATTEMPTS} "
+                    f"model={OLLAMA_MODEL}"
+                )
+
+                content = _ollama_json_content(
+                    prompt,
+                    temperature=temperature
+                )
+
+                result = validator(content)
+
+                print(
+                    f"[AI PROVIDER] SUCCESS "
+                    f"provider=Ollama operation={operation}"
+                )
+
+                return result, "Ollama"
+
+            except Exception as error:
+
+                status = _exception_status_code(error)
+
+                errors.append(
+                    f"Ollama {type(error).__name__}: "
+                    f"{str(error)[:400]}"
+                )
+
+                print(
+                    f"[AI PROVIDER] FAILED "
+                    f"provider=Ollama "
+                    f"operation={operation} "
+                    f"attempt={attempt} "
+                    f"status={status!r} "
+                    f"error_type={type(error).__name__} "
+                    f"error={str(error)[:500]}"
+                )
+
+                if attempt < MAX_OLLAMA_ATTEMPTS:
+
+                    delay = min(
+                        2 ** attempt,
+                        8
+                    )
+
+                    print(
+                        f"[OLLAMA RETRY] "
+                        f"Retrying same batch after {delay}s."
+                    )
+
+                    time.sleep(delay)
+
+    detail = (
+        " | ".join(errors[-4:])
+        or "No provider is available."
+    )
+
+    raise RuntimeError(
+        f"{operation} failed. "
+        "No validated response was obtained. "
+        "Previously validated batches were preserved in memory. "
+        f"Details: {detail}"
+    )
+
+
+# ============================================================
+# STRICT JSON SCHEMA
+# ============================================================
+
+def build_quiz_batch_schema(
+    batch_count,
+    difficulty
+):
+
+    """Strict JSON Schema for one exact-difficulty batch."""
+
+    question_schema = {
+
+        "type": "object",
+
+        "properties": {
+
+            "question": {
+                "type": "string"
+            },
+
+            "option_a": {
+                "type": "string"
+            },
+
+            "option_b": {
+                "type": "string"
+            },
+
+            "option_c": {
+                "type": "string"
+            },
+
+            "option_d": {
+                "type": "string"
+            },
+
+            "correct_option": {
+                "type": "string",
+                "enum": ["A", "B", "C", "D"]
+            },
+
+            "difficulty": {
+                "type": "string",
+                "enum": [difficulty]
+            },
+
+            "explanation": {
+                "type": "string"
+            },
+        },
+
+        "required": [
+            "question",
+            "option_a",
+            "option_b",
+            "option_c",
+            "option_d",
+            "correct_option",
+            "difficulty",
+            "explanation"
+        ],
+
         "additionalProperties": False,
     }
+
     return {
+
         "type": "object",
+
         "properties": {
+
             "questions": {
+
                 "type": "array",
+
                 "items": question_schema,
+
                 "minItems": batch_count,
+
                 "maxItems": batch_count,
             }
         },
+
         "required": ["questions"],
+
         "additionalProperties": False,
     }
 
@@ -75,6 +630,7 @@ def build_quiz_batch_schema(batch_count, difficulty):
 # ============================================================
 
 def normalize_difficulty(value):
+
     """
     Normalize difficulty values to:
     Easy / Medium / Hard
@@ -102,95 +658,96 @@ def normalize_difficulty(value):
 # ============================================================
 
 def clean_json_content(content):
-    """
-    Clean AI response before JSON parsing.
 
-    Handles:
-    - Markdown code fences
-    - JSON arrays
-    - JSON objects containing a questions key
+    """
+    Remove optional Markdown fences and locate a valid JSON
+    value without blindly slicing at the first '[' or last ']'.
     """
 
-    if not content:
+    if content is None:
         return ""
 
-    content = str(content).strip()
+    text = str(content).strip()
 
-    # Remove markdown code fences
-    content = re.sub(
-        r"^```json\s*",
+    text = re.sub(
+        r"^\s*```(?:json)?\s*",
         "",
-        content,
+        text,
         flags=re.IGNORECASE
     )
 
-    content = re.sub(
-        r"^```\s*",
+    text = re.sub(
+        r"\s*```\s*$",
         "",
-        content
-    )
+        text
+    ).strip()
 
-    content = re.sub(
-        r"\s*```$",
-        "",
-        content
-    )
+    if not text:
+        return ""
 
-    content = content.strip()
+    try:
+        json.loads(text)
+        return text
 
-    # --------------------------------------------------------
-    # Prefer JSON array if present
-    # --------------------------------------------------------
+    except json.JSONDecodeError:
+        pass
 
-    array_start = content.find("[")
-    array_end = content.rfind("]")
+    decoder = json.JSONDecoder()
 
-    if (
-        array_start != -1
-        and array_end != -1
-        and array_end > array_start
-    ):
-        return content[array_start:array_end + 1].strip()
+    for position, character in enumerate(text):
 
-    # --------------------------------------------------------
-    # Otherwise try JSON object
-    # --------------------------------------------------------
+        if character not in "[{":
+            continue
 
-    object_start = content.find("{")
-    object_end = content.rfind("}")
+        try:
 
-    if (
-        object_start != -1
-        and object_end != -1
-        and object_end > object_start
-    ):
-        return content[object_start:object_end + 1].strip()
+            _, end_position = decoder.raw_decode(
+                text[position:]
+            )
 
-    return content
+            return text[
+                position:position + end_position
+            ].strip()
+
+        except json.JSONDecodeError:
+            continue
+
+    return text
 
 
 # ============================================================
 # EXTRACT QUESTIONS FROM AI RESPONSE
 # ============================================================
 
-def validate_basic_question_structure(questions, total):
-    """
-    Validate generated questions and log the exact failure reason.
-    """
+def validate_basic_question_structure(
+    questions,
+    total
+):
+
+    """Validate exact count, required fields, difficulty, and distinct options."""
 
     def fail(reason):
-        print(f"[AI VALIDATION FAILED] {reason}")
+
+        print(
+            f"[AI VALIDATION FAILED] {reason}"
+        )
+
         return False
 
     if not isinstance(questions, list):
-        return fail("AI response is not a list.")
 
-    if len(questions) != total:
         return fail(
-            f"Question count mismatch: expected {total}, received {len(questions)}."
+            "AI response is not a list."
         )
 
-    required_fields = [
+    if len(questions) != total:
+
+        return fail(
+            f"Question count mismatch: "
+            f"expected {total}, received {len(questions)}."
+        )
+
+    required_fields = (
         "question",
         "option_a",
         "option_b",
@@ -198,52 +755,62 @@ def validate_basic_question_structure(questions, total):
         "option_d",
         "correct_option",
         "difficulty",
-        "explanation"
-    ]
+        "explanation",
+    )
 
     seen_questions = set()
 
-    for index, question in enumerate(questions, start=1):
+    for index, question in enumerate(
+        questions,
+        start=1
+    ):
 
         if not isinstance(question, dict):
+
             return fail(
                 f"Question {index} is not a valid JSON object."
             )
 
         for field in required_fields:
 
-            if field not in question:
-                return fail(
-                    f"Question {index}: missing field '{field}'."
-                )
-
             value = question.get(field)
 
             if value is None or not str(value).strip():
+
                 return fail(
-                    f"Question {index}: field '{field}' is empty."
+                    f"Question {index}: "
+                    f"field '{field}' is missing or empty."
                 )
 
-        question["question"] = str(
-            question["question"]
-        ).strip()
+        question_text = re.sub(
+            r"\s+",
+            " ",
+            str(question["question"]).strip()
+        )
 
-        question_text = question["question"].lower()
+        normalized_question = question_text.casefold()
 
-        if question_text in seen_questions:
+        if normalized_question in seen_questions:
+
             return fail(
                 f"Question {index}: duplicate question detected."
             )
 
-        seen_questions.add(question_text)
+        seen_questions.add(normalized_question)
+
+        question["question"] = question_text
 
         correct_option = str(
             question["correct_option"]
         ).strip().upper()
 
-        if correct_option not in ["A", "B", "C", "D"]:
+        if correct_option not in {
+            "A", "B", "C", "D"
+        }:
+
             return fail(
-                f"Question {index}: invalid correct_option '{correct_option}'."
+                f"Question {index}: "
+                f"invalid correct_option '{correct_option}'."
             )
 
         question["correct_option"] = correct_option
@@ -253,6 +820,7 @@ def validate_basic_question_structure(questions, total):
         )
 
         if not difficulty:
+
             return fail(
                 f"Question {index}: invalid difficulty "
                 f"'{question.get('difficulty')}'."
@@ -260,24 +828,37 @@ def validate_basic_question_structure(questions, total):
 
         question["difficulty"] = difficulty
 
-        option_fields = [
+        option_fields = (
             "option_a",
             "option_b",
             "option_c",
             "option_d"
-        ]
+        )
+
+        normalized_options = []
 
         for field in option_fields:
-            question[field] = str(
-                question[field]
-            ).strip()
 
-        options = [
-            question[field].casefold()
-            for field in option_fields
-        ]
+            value = str(question[field]).strip()
 
-        if len(set(options)) != 4:
+            if not value:
+
+                return fail(
+                    f"Question {index}: {field} is empty."
+                )
+
+            question[field] = value
+
+            normalized_options.append(
+                re.sub(
+                    r"\s+",
+                    " ",
+                    value
+                ).casefold()
+            )
+
+        if len(set(normalized_options)) != 4:
+
             return fail(
                 f"Question {index}: duplicate options detected."
             )
@@ -291,6 +872,8 @@ def validate_basic_question_structure(questions, total):
     )
 
     return True
+
+
 # ============================================================
 # BASIC QUESTION VALIDATION
 # ============================================================
@@ -306,6 +889,7 @@ def trim_extra_questions(
     medium,
     hard
 ):
+
     """
     Keep only the requested number of questions
     for each difficulty.
@@ -348,6 +932,7 @@ def check_difficulty_distribution(
     medium,
     hard
 ):
+
     """
     Verify generated difficulty distribution exactly.
     """
@@ -371,10 +956,8 @@ def check_difficulty_distribution(
 
     return (
         counts["Easy"] == easy
-        and
-        counts["Medium"] == medium
-        and
-        counts["Hard"] == hard
+        and counts["Medium"] == medium
+        and counts["Hard"] == hard
     )
 
 
@@ -382,24 +965,82 @@ def check_difficulty_distribution(
 # AI DIFFICULTY EVALUATION
 # ============================================================
 
-def evaluate_question_difficulties(topic, questions):
-    """
-    Independently evaluate the actual difficulty of every question.
+def build_evaluation_schema(question_count):
 
-    The evaluator is NOT shown the original/generated
-    difficulty label.
+    """Strict JSON Schema for independent difficulty evaluation."""
 
-    Returns:
-        [
-            {
-                "index": 1,
-                "difficulty": "Easy",
-                "confidence": 0.95,
-                "reason": "..."
+    return {
+
+        "type": "object",
+
+        "properties": {
+
+            "evaluations": {
+
+                "type": "array",
+
+                "minItems": question_count,
+
+                "maxItems": question_count,
+
+                "items": {
+
+                    "type": "object",
+
+                    "properties": {
+
+                        "index": {
+                            "type": "integer",
+                            "minimum": 1
+                        },
+
+                        "difficulty": {
+                            "type": "string",
+                            "enum": [
+                                "Easy",
+                                "Medium",
+                                "Hard"
+                            ]
+                        },
+
+                        "confidence": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+
+                        "reason": {
+                            "type": "string"
+                        },
+                    },
+
+                    "required": [
+                        "index",
+                        "difficulty",
+                        "confidence",
+                        "reason"
+                    ],
+
+                    "additionalProperties": False,
+                },
             }
-        ]
+        },
 
-    Returns None if evaluation completely fails.
+        "required": ["evaluations"],
+
+        "additionalProperties": False,
+    }
+
+
+def evaluate_question_difficulties(
+    topic,
+    questions
+):
+
+    """
+    Independently evaluate actual question difficulty.
+    Uses Groq first and Ollama Cloud if Groq is rate-limited or fails.
+    Returns None only if both providers fail validation.
     """
 
     if not questions:
@@ -413,14 +1054,22 @@ def evaluate_question_difficulties(topic, questions):
     ):
 
         evaluation_questions.append({
+
             "index": index,
+
             "question": question.get("question"),
+
             "option_a": question.get("option_a"),
+
             "option_b": question.get("option_b"),
+
             "option_c": question.get("option_c"),
+
             "option_d": question.get("option_d"),
+
             "correct_option": question.get("correct_option"),
-            "explanation": question.get("explanation")
+
+            "explanation": question.get("explanation"),
         })
 
     prompt = f"""
@@ -429,171 +1078,175 @@ You are an expert educational assessment reviewer.
 Topic:
 {topic}
 
-Your task is to independently determine the ACTUAL difficulty
-of every question below.
+Independently determine the ACTUAL difficulty of every question below.
+Do NOT use any original/generated difficulty label.
+Judge conceptual depth, reasoning, ambiguity, number of steps, prerequisite
+knowledge, and expected learner level.
 
-IMPORTANT:
-- Do NOT use any original/generated difficulty label.
-- Judge only the question itself.
-- Consider conceptual depth, reasoning required, ambiguity,
-  number of steps, prerequisite knowledge and expected learner level.
-- Use exactly one of:
-  Easy
-  Medium
-  Hard
-- Confidence must be between 0 and 1.
-- Give a short reason.
-- Return ONLY valid JSON.
-- Do not use markdown.
+Use exactly one difficulty:
+Easy, Medium, Hard.
 
-Required JSON format:
+Return one JSON object in this exact structure:
+{{
+  "evaluations": [
+    {{
+      "index": 1,
+      "difficulty": "Easy",
+      "confidence": 0.95,
+      "reason": "Short reason"
+    }}
+  ]
+}}
 
-[
-  {{
-    "index": 1,
-    "difficulty": "Easy",
-    "confidence": 0.95,
-    "reason": "Short reason"
-  }}
-]
+The evaluations array must contain exactly {len(questions)} objects, in the
+same order as the input questions. Return JSON only.
 
 Questions:
-
-{json.dumps(
-    evaluation_questions,
-    ensure_ascii=False,
-    indent=2
-)}
+{json.dumps(evaluation_questions, ensure_ascii=False, indent=2)}
 """
 
-    for attempt in range(MAX_EVALUATION_ATTEMPTS):
+    def validate(content):
 
-        try:
+        cleaned = clean_json_content(content)
 
-            response = client.chat(
-                model=GENERATION_MODEL,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                options={
-                    "temperature": 0.1
-                },
-                format="json"
+        data = json.loads(cleaned)
+
+        if isinstance(data, dict):
+            evaluations = data.get("evaluations")
+        else:
+            evaluations = data
+
+        if (
+            not isinstance(evaluations, list)
+            or len(evaluations) != len(questions)
+        ):
+
+            raise ValueError(
+                "Evaluation count does not match question count."
             )
 
-            content = response["message"]["content"]
+        validated = []
 
-            cleaned = clean_json_content(content)
+        for expected_index, item in enumerate(
+            evaluations,
+            start=1
+        ):
 
-            evaluations = json.loads(cleaned)
-
-            if not isinstance(evaluations, list):
+            if not isinstance(item, dict):
                 raise ValueError(
-                    "Evaluation response is not a list"
+                    "Invalid evaluation object."
                 )
 
-            if len(evaluations) != len(questions):
+            try:
+
+                index = int(item.get("index"))
+
+                confidence = float(
+                    item.get("confidence")
+                )
+
+            except (TypeError, ValueError):
+
                 raise ValueError(
-                    "Evaluation count does not match question count"
+                    "Evaluation index/confidence is invalid."
                 )
 
-            validated = []
+            difficulty = normalize_difficulty(
+                item.get("difficulty")
+            )
 
-            for expected_index, evaluation in enumerate(
-                evaluations,
-                start=1
-            ):
+            if index != expected_index:
 
-                if not isinstance(evaluation, dict):
-                    raise ValueError(
-                        "Invalid evaluation object"
-                    )
-
-                index = evaluation.get("index")
-
-                difficulty = normalize_difficulty(
-                    evaluation.get("difficulty")
+                raise ValueError(
+                    "Evaluation indexes are incorrect."
                 )
 
-                confidence = evaluation.get("confidence")
+            if not difficulty:
 
-                reason = str(
-                    evaluation.get("reason", "")
-                ).strip()
-
-                # AI sometimes returns "1.0" or "1"
-                try:
-                    index = int(index)
-                except (TypeError, ValueError):
-                    raise ValueError(
-                        "Invalid evaluation index"
-                    )
-
-                if index != expected_index:
-                    raise ValueError(
-                        "Evaluation indexes are incorrect"
-                    )
-
-                if not difficulty:
-                    raise ValueError(
-                        "Invalid evaluated difficulty"
-                    )
-
-                try:
-                    confidence = float(confidence)
-                except (TypeError, ValueError):
-                    raise ValueError(
-                        "Invalid confidence value"
-                    )
-
-                confidence = max(
-                    0.0,
-                    min(1.0, confidence)
+                raise ValueError(
+                    "Invalid evaluated difficulty."
                 )
 
-                if not reason:
-                    reason = (
-                        "AI difficulty assessment completed."
-                    )
+            if not 0 <= confidence <= 1:
 
-                validated.append({
-                    "index": expected_index,
-                    "difficulty": difficulty,
-                    "confidence": round(
-                        confidence,
-                        2
+                raise ValueError(
+                    "Evaluation confidence must be between 0 and 1."
+                )
+
+            reason = str(
+                item.get("reason", "")
+            ).strip()
+
+            validated.append({
+
+                "index": expected_index,
+
+                "difficulty": difficulty,
+
+                "confidence": round(confidence, 2),
+
+                "reason": (
+                    reason
+                    or "AI difficulty assessment completed."
+                )[:300],
+            })
+
+        return validated
+
+    try:
+
+        result, provider = _request_with_fallback(
+
+            prompt=prompt,
+
+            validator=validate,
+
+            operation="difficulty evaluation",
+
+            response_format={
+
+                "type": "json_schema",
+
+                "json_schema": {
+
+                    "name": "difficulty_evaluations",
+
+                    "strict": True,
+
+                    "schema": build_evaluation_schema(
+                        len(questions)
                     ),
-                    "reason": reason[:300]
-                })
+                },
+            },
 
-            return validated
+            max_completion_tokens=3000,
 
-        except Exception as error:
+            temperature=0.1,
+        )
 
-            print(
-                f"[AI DIFFICULTY EVALUATION] "
-                f"Attempt {attempt + 1} failed: {error}"
-            )
+        print(
+            f"[AI DIFFICULTY EVALUATION] "
+            f"completed_by={provider} "
+            f"count={len(result)}"
+        )
 
-    print(
-        "[AI DIFFICULTY EVALUATION] "
-        "All evaluation attempts failed."
-    )
+        return result
 
-    return None
+    except Exception as error:
 
+        print(
+            f"[AI DIFFICULTY EVALUATION] "
+            f"Both providers failed: {error}"
+        )
 
-# ============================================================
-# VALIDATE ACTUAL DIFFICULTY
-# ============================================================
+        return None
+
 
 def validate_actual_difficulty(
     questions,
     evaluations
 ):
+
     """
     Compare generated difficulty with independently
     evaluated difficulty.
@@ -620,8 +1273,11 @@ def validate_actual_difficulty(
         if not evaluation:
 
             failed.append({
+
                 "index": index,
+
                 "question": question,
+
                 "evaluation": None
             })
 
@@ -642,519 +1298,1036 @@ def validate_actual_difficulty(
         else:
 
             failed.append({
+
                 "index": index,
+
                 "question": question,
+
                 "evaluation": evaluation
             })
 
     return passed, failed
 
-
 # ============================================================
-# REPLACEMENT QUESTION GENERATION
+# JSON RESPONSE EXTRACTION
 # ============================================================
 
-def generate_replacement_questions(
-    topic,
-    difficulty,
-    count
+def extract_questions_from_response(
+    content,
+    expected_count,
+    difficulty
 ):
     """
-    Generate replacement questions for questions whose
-    generated difficulty does not match AI evaluation.
-
-    This function is intentionally more tolerant than the
-    initial generation pipeline because only a small number
-    of replacement questions may be required.
-    """
-
-    if count <= 0:
-        return []
-
-    difficulty = normalize_difficulty(difficulty)
-
-    if not difficulty:
-        raise ValueError(
-            "Invalid replacement difficulty."
-        )
-
-    # --------------------------------------------------------
-    # Difficulty-specific instructions
-    # --------------------------------------------------------
-
-    if difficulty == "Easy":
-
-        difficulty_rules = """
-Easy questions MUST:
-- Test basic definitions or fundamental concepts.
-- Require little or no multi-step reasoning.
-- Be answerable by a beginner who understands the basics.
-- Avoid tricky wording and advanced edge cases.
-"""
-
-    elif difficulty == "Medium":
-
-        difficulty_rules = """
-Medium questions MUST:
-- Test understanding and application.
-- Require at least some reasoning.
-- Be more than simple direct recall.
-- Be appropriate for an intermediate learner.
-"""
-
-    else:
-
-        difficulty_rules = """
-Hard questions MUST:
-- Require genuine reasoning or deeper conceptual understanding.
-- Preferably combine two or more related concepts.
-- Require analysis, comparison, prediction, tracing,
-  calculation, or multi-step reasoning where appropriate.
-- NOT be simple definition/recall questions.
-- NOT be made artificially difficult only by confusing wording.
-- Be appropriate for an advanced learner.
-"""
-
-    prompt = f"""
-Generate exactly {count} replacement multiple-choice question(s).
-
-Topic:
-{topic}
-
-REQUIRED DIFFICULTY:
-{difficulty}
-
-{difficulty_rules}
-
-VERY IMPORTANT:
-
-1. Every question MUST genuinely be {difficulty}.
-2. The difficulty field MUST be exactly "{difficulty}".
-3. Generate exactly {count} questions.
-4. Each question must have four different options.
-5. Exactly one option must be correct.
-6. Do not duplicate questions.
-7. Do not leave any field empty.
-8. Keep explanations concise.
-9. Return ONLY JSON.
-10. Do not use markdown.
-11. Do not add commentary before or after JSON.
-
-Return this exact JSON structure:
-
-[
-  {{
-    "question": "Question text?",
-    "option_a": "Option A",
-    "option_b": "Option B",
-    "option_c": "Option C",
-    "option_d": "Option D",
-    "correct_option": "A",
-    "difficulty": "{difficulty}",
-    "explanation": "Short explanation."
-  }}
-]
-
-Generate exactly {count} question(s).
-"""
-
-    for attempt in range(
-        MAX_REPLACEMENT_ATTEMPTS
-    ):
-
-        try:
-
-            print(
-                f"[AI REPLACEMENT] "
-                f"Generating {count} {difficulty} "
-                f"replacement question(s) "
-                f"- attempt {attempt + 1}/"
-                f"{MAX_REPLACEMENT_ATTEMPTS}"
-            )
-
-            response = client.chat(
-                model=GENERATION_MODEL,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                options={
-                    "temperature": 0.15
-                },
-                format="json"
-            )
-
-            content = response["message"]["content"]
-
-            if not content:
-                raise ValueError(
-                    "AI returned empty response"
-                )
-
-            replacements = extract_questions_from_response(
-                content
-            )
-
-            # ------------------------------------------------
-            # If AI accidentally generated extra questions,
-            # safely keep only the required difficulty.
-            # ------------------------------------------------
-
-            if len(replacements) > count:
-
-                replacements = [
-                    question
-                    for question in replacements
-                    if isinstance(question, dict)
-                    and normalize_difficulty(
-                        question.get("difficulty")
-                    ) == difficulty
-                ][:count]
-
-            # ------------------------------------------------
-            # Exact count
-            # ------------------------------------------------
-
-            if len(replacements) != count:
-
-                raise ValueError(
-                    f"Replacement count mismatch: "
-                    f"expected {count}, "
-                    f"received {len(replacements)}"
-                )
-
-            # ------------------------------------------------
-            # Basic validation
-            # ------------------------------------------------
-
-            if not validate_basic_question_structure(
-                replacements,
-                count
-            ):
-
-                raise ValueError(
-                    "Invalid replacement question structure"
-                )
-
-            # ------------------------------------------------
-            # Required difficulty validation
-            # ------------------------------------------------
-
-            for question in replacements:
-
-                actual_difficulty = normalize_difficulty(
-                    question.get("difficulty")
-                )
-
-                if actual_difficulty != difficulty:
-
-                    raise ValueError(
-                        "Replacement question has incorrect "
-                        f"difficulty: {actual_difficulty}"
-                    )
-
-            print(
-                f"[AI REPLACEMENT] "
-                f"Successfully generated {count} "
-                f"{difficulty} replacement question(s)."
-            )
-
-            return replacements
-
-        except Exception as error:
-
-            print(
-                f"[AI REPLACEMENT] "
-                f"{difficulty} attempt "
-                f"{attempt + 1} failed: {error}"
-            )
-
-    print(
-        f"[AI REPLACEMENT] "
-        f"Unable to generate {count} "
-        f"{difficulty} replacement question(s) "
-        f"after {MAX_REPLACEMENT_ATTEMPTS} attempts."
-    )
-
-    return []
-
-# ============================================================
-# EXTRACT QUESTIONS FROM AI RESPONSE
-# ============================================================
-
-def extract_questions_from_response(content):
-    """
-    Extract questions from either a JSON array
-    or a JSON object containing a questions key.
+    Extract and validate questions from an AI response.
+    Supports:
+    - {"questions": [...]}
+    - Direct JSON list [...]
+    - Markdown fenced JSON
     """
 
     cleaned = clean_json_content(content)
 
     if not cleaned:
-        raise ValueError("AI returned empty JSON content.")
+        raise ValueError(
+            "AI returned an empty JSON response."
+        )
 
     try:
         data = json.loads(cleaned)
+
     except json.JSONDecodeError as error:
         raise ValueError(
-            f"AI returned invalid JSON: {error}"
-        )
-
-    if isinstance(data, list):
-        return data
+            f"Invalid JSON returned by AI: {error}"
+        ) from error
 
     if isinstance(data, dict):
         questions = data.get("questions")
 
-        if isinstance(questions, list):
-            return questions
+    elif isinstance(data, list):
+        questions = data
 
-    raise ValueError(
-        "AI response does not contain a valid questions list."
+    else:
+        raise ValueError(
+            "AI response must be a JSON object or list."
+        )
+
+    if not isinstance(questions, list):
+        raise ValueError(
+            "The AI response does not contain a valid questions list."
+        )
+
+    if not validate_basic_question_structure(
+        questions,
+        expected_count
+    ):
+        raise ValueError(
+            "Generated questions failed structural validation."
+        )
+
+    # Ensure every question belongs to the requested difficulty.
+    requested_difficulty = normalize_difficulty(
+        difficulty
     )
-def _groq_retry_delay_seconds(error):
-    """Read Groq's Retry-After header or the wait time in its 429 message."""
-    response = getattr(error, "response", None)
-    headers = getattr(response, "headers", {}) or {}
 
-    for key in ("retry-after", "Retry-After"):
-        value = headers.get(key) if hasattr(headers, "get") else None
-        if value:
-            try:
-                return max(1.0, float(value)) + 1.0
-            except (TypeError, ValueError):
-                pass
+    for index, question in enumerate(
+        questions,
+        start=1
+    ):
 
-    message = str(error)
-    match = re.search(r"try again in\s*([0-9]+(?:\.[0-9]+)?)\s*s", message, re.I)
-    if match:
-        return max(1.0, float(match.group(1))) + 1.0
+        actual_difficulty = normalize_difficulty(
+            question.get("difficulty")
+        )
 
-    # A 429 without a readable reset time: wait long enough for the short
-    # token-per-minute window to clear instead of retrying after 2–4 seconds.
-    return 15.0
+        if actual_difficulty != requested_difficulty:
 
+            raise ValueError(
+                f"Question {index} has difficulty "
+                f"{actual_difficulty}; expected "
+                f"{requested_difficulty}."
+            )
+
+    return questions
+
+
+# ============================================================
+# REPLACEMENT QUESTION SCHEMA
+# ============================================================
+
+def build_replacement_schema(
+    replacement_count,
+    difficulty
+):
+    """
+    Strict schema for replacement questions.
+    """
+
+    question_schema = {
+
+        "type": "object",
+
+        "properties": {
+
+            "question": {
+                "type": "string"
+            },
+
+            "option_a": {
+                "type": "string"
+            },
+
+            "option_b": {
+                "type": "string"
+            },
+
+            "option_c": {
+                "type": "string"
+            },
+
+            "option_d": {
+                "type": "string"
+            },
+
+            "correct_option": {
+                "type": "string",
+                "enum": ["A", "B", "C", "D"]
+            },
+
+            "difficulty": {
+                "type": "string",
+                "enum": [difficulty]
+            },
+
+            "explanation": {
+                "type": "string"
+            },
+        },
+
+        "required": [
+            "question",
+            "option_a",
+            "option_b",
+            "option_c",
+            "option_d",
+            "correct_option",
+            "difficulty",
+            "explanation"
+        ],
+
+        "additionalProperties": False,
+    }
+
+    return {
+
+        "type": "object",
+
+        "properties": {
+
+            "questions": {
+
+                "type": "array",
+
+                "items": question_schema,
+
+                "minItems": replacement_count,
+
+                "maxItems": replacement_count,
+            }
+        },
+
+        "required": ["questions"],
+
+        "additionalProperties": False,
+    }
+
+
+# ============================================================
+# REPLACEMENT QUESTION GENERATOR
+# ============================================================
+
+def generate_replacement_questions(
+    topic,
+    failed_questions
+):
+    """
+    Generate replacement questions for failed questions.
+
+    Each replacement:
+    - Uses the original question's difficulty.
+    - Tests the same topic/concept.
+    - Uses a different question statement.
+    - Has four unique options.
+    - Is structurally validated before returning.
+
+    Returns:
+        Dictionary:
+        {
+            original_question_index: replacement_question
+        }
+
+    Returns an empty dictionary if there is nothing to replace.
+    """
+
+    if not failed_questions:
+        print(
+            "[AI REPLACEMENT] No failed questions. "
+            "Replacement not required."
+        )
+        return {}
+
+    replacements = {}
+
+    # Group failed questions by their evaluated difficulty.
+    grouped_failures = {
+        "Easy": [],
+        "Medium": [],
+        "Hard": []
+    }
+
+    for item in failed_questions:
+
+        if not isinstance(item, dict):
+            continue
+
+        original_question = item.get(
+            "question",
+            {}
+        )
+
+        evaluation = item.get(
+            "evaluation",
+            {}
+        )
+
+        if not isinstance(original_question, dict):
+            continue
+
+        if not isinstance(evaluation, dict):
+            continue
+
+        original_index = item.get("index")
+
+        if original_index is None:
+            continue
+
+        difficulty = normalize_difficulty(
+            evaluation.get("difficulty")
+        )
+
+        if difficulty not in grouped_failures:
+            continue
+
+        grouped_failures[difficulty].append({
+
+            "index": original_index,
+
+            "question": original_question,
+
+            "reason": evaluation.get(
+                "reason",
+                "Difficulty mismatch."
+            )
+        })
+
+    # Generate replacement batches separately by difficulty.
+    for difficulty, failures in grouped_failures.items():
+
+        if not failures:
+            continue
+
+        print(
+            f"[AI REPLACEMENT] "
+            f"Starting {len(failures)} replacements "
+            f"for difficulty={difficulty}."
+        )
+
+        failed_question_details = []
+
+        for item in failures:
+
+            original = item["question"]
+
+            failed_question_details.append({
+
+                "original_index": item["index"],
+
+                "original_question": original.get(
+                    "question",
+                    ""
+                ),
+
+                "original_options": {
+
+                    "A": original.get("option_a"),
+
+                    "B": original.get("option_b"),
+
+                    "C": original.get("option_c"),
+
+                    "D": original.get("option_d"),
+                },
+
+                "original_correct_option": original.get(
+                    "correct_option"
+                ),
+
+                "original_explanation": original.get(
+                    "explanation"
+                ),
+
+                "evaluation_reason": item["reason"]
+            })
+
+        prompt = f"""
+You are an expert educational question setter.
+
+Topic:
+{topic}
+
+Your task is to create replacement questions.
+
+Required difficulty:
+{difficulty}
+
+Number of replacement questions:
+{len(failures)}
+
+The questions below failed an independent difficulty review.
+
+Create one completely new replacement question for each failed question.
+
+IMPORTANT RULES:
+
+1. Preserve the original topic and learning concept.
+2. The replacement must have exactly this difficulty: {difficulty}.
+3. Do not copy the original question.
+4. Do not simply change names, numbers, or a few words.
+5. Create a genuinely different question testing the same learning concept.
+6. Create exactly four options: A, B, C, D.
+7. Exactly one option must be correct.
+8. All four options must be different.
+9. The correct_option must contain only A, B, C, or D.
+10. Provide a short, accurate explanation.
+11. Do not include markdown.
+12. Do not add any text outside the JSON.
+
+Return this exact structure:
+
+{{
+  "questions": [
+    {{
+      "question": "Question text",
+      "option_a": "Option A",
+      "option_b": "Option B",
+      "option_c": "Option C",
+      "option_d": "Option D",
+      "correct_option": "A",
+      "difficulty": "{difficulty}",
+      "explanation": "Explanation"
+    }}
+  ]
+}}
+
+The questions to replace are:
+
+{json.dumps(failed_question_details, ensure_ascii=False, indent=2)}
+"""
+
+        def validate_replacements(content):
+
+            new_questions = extract_questions_from_response(
+                content,
+                expected_count=len(failures),
+                difficulty=difficulty
+            )
+
+            # Check that replacements are not copies of originals.
+            original_texts = {
+                re.sub(
+                    r"\s+",
+                    " ",
+                    str(item["question"].get("question", "")).strip()
+                ).casefold()
+                for item in failures
+            }
+
+            for replacement in new_questions:
+
+                replacement_text = re.sub(
+                    r"\s+",
+                    " ",
+                    replacement["question"].strip()
+                ).casefold()
+
+                if replacement_text in original_texts:
+
+                    raise ValueError(
+                        "Replacement question repeats an original question."
+                    )
+
+            return new_questions
+
+        try:
+
+            new_questions, provider = _request_with_fallback(
+
+                prompt=prompt,
+
+                validator=validate_replacements,
+
+                operation=f"{difficulty} replacement generation",
+
+                response_format={
+
+                    "type": "json_schema",
+
+                    "json_schema": {
+
+                        "name": "replacement_questions",
+
+                        "strict": True,
+
+                        "schema": build_replacement_schema(
+                            len(failures),
+                            difficulty
+                        ),
+                    },
+                },
+
+                max_completion_tokens=3000,
+
+                temperature=0.2,
+            )
+
+            for failed_item, replacement in zip(
+                failures,
+                new_questions
+            ):
+
+                replacements[
+                    failed_item["index"]
+                ] = replacement
+
+            print(
+                f"[AI REPLACEMENT] "
+                f"SUCCESS provider={provider} "
+                f"difficulty={difficulty} "
+                f"count={len(new_questions)}"
+            )
+
+        except Exception as error:
+
+            print(
+                f"[AI REPLACEMENT] FAILED "
+                f"difficulty={difficulty} "
+                f"error={str(error)[:500]}"
+            )
+
+            # Do not replace a failed question with an invalid response.
+            # The calling function can decide whether to stop generation.
+
+            continue
+
+    print(
+        f"[AI REPLACEMENT] "
+        f"Total validated replacements={len(replacements)}"
+    )
+
+    return replacements
+
+
+# ============================================================
+# APPLY REPLACEMENTS
+# ============================================================
+
+def apply_replacements(
+    questions,
+    replacements
+):
+    """
+    Replace original questions by their 1-based index.
+
+    Original question order is preserved.
+    Only validated replacement questions are applied.
+    """
+
+    if not questions or not replacements:
+        return questions
+
+    updated_questions = list(questions)
+
+    for original_index, replacement in replacements.items():
+
+        try:
+            index = int(original_index) - 1
+
+        except (TypeError, ValueError):
+            print(
+                f"[AI REPLACEMENT] Invalid index: {original_index}"
+            )
+            continue
+
+        if index < 0 or index >= len(updated_questions):
+
+            print(
+                f"[AI REPLACEMENT] Index out of range: "
+                f"{original_index}"
+            )
+
+            continue
+
+        if not isinstance(replacement, dict):
+            continue
+
+        updated_questions[index] = replacement
+
+        print(
+            f"[AI REPLACEMENT] Applied replacement "
+            f"at question index={original_index}"
+        )
+
+    return updated_questions
 
 # ============================================================
 # MAIN QUESTION GENERATOR
 # ============================================================
 
 def generate_questions(topic, easy, medium, hard):
-    """Generate exact-count, difficulty-separated batches with safe retries."""
-    easy, medium, hard = int(easy), int(medium), int(hard)
-    total = easy + medium + hard
+    """
+    Generate exact-count quiz questions.
+
+    Primary provider: Groq
+    Fallback provider: Ollama Cloud
+
+    Existing route contract:
+        return questions, evaluations
+    """
+
+    global _GROQ_CIRCUIT_OPEN
+
+    # --------------------------------------------------------
+    # INPUT VALIDATION
+    # --------------------------------------------------------
+
+    try:
+        easy = int(easy)
+        medium = int(medium)
+        hard = int(hard)
+
+    except (TypeError, ValueError):
+
+        raise ValueError(
+            "Easy, Medium and Hard counts must be valid integers."
+        )
 
     if min(easy, medium, hard) < 0:
-        raise ValueError("Question counts cannot be negative.")
-    if total <= 0:
-        raise ValueError("At least one question is required.")
-    if total > 150:
-        raise ValueError("A quiz cannot contain more than 150 questions.")
-    if not str(topic or "").strip():
-        raise ValueError("Quiz topic cannot be empty.")
 
-    # Only one generation pipeline at a time per Render worker. The lock is
-    # deliberately bounded so a second request receives a clear error rather
-    # than waiting indefinitely.
-    print(f"[AI GENERATION] Waiting for generation slot; requested={total}")
-    if not _GENERATION_LOCK.acquire(timeout=45):
+        raise ValueError(
+            "Question counts cannot be negative."
+        )
+
+    total = easy + medium + hard
+
+    if total <= 0:
+
+        raise ValueError(
+            "At least one question is required."
+        )
+
+    if total > 150:
+
+        raise ValueError(
+            "A quiz cannot contain more than 150 questions."
+        )
+
+    topic = str(topic or "").strip()
+
+    if not topic:
+
+        raise ValueError(
+            "Quiz topic cannot be empty."
+        )
+
+    if not groq_client and not ollama_client:
+
         raise RuntimeError(
-            "Another quiz is currently being generated. Please wait 1 minute and retry."
+            "No AI provider is configured. "
+            "Please configure GROQ_API_KEY or OLLAMA_API_KEY."
+        )
+
+    # --------------------------------------------------------
+    # PREVENT OVERLAPPING GENERATION
+    # --------------------------------------------------------
+
+    print(
+        f"[AI GENERATION] Waiting for generation slot; "
+        f"requested={total}"
+    )
+
+    if not _GENERATION_LOCK.acquire(timeout=45):
+
+        raise RuntimeError(
+            "Another quiz is currently being generated. "
+            "Please wait and try again."
         )
 
     started_at = time.monotonic()
-    last_groq_call_at = None
+
     try:
-        batch_size = 5
-        requirements = [("Easy", easy), ("Medium", medium), ("Hard", hard)]
+
+        # ----------------------------------------------------
+        # RESET PROVIDER CIRCUIT FOR THIS QUIZ
+        # ----------------------------------------------------
+
+        _GROQ_CIRCUIT_OPEN = False
+
+        # ----------------------------------------------------
+        # BATCH CONFIGURATION
+        # ----------------------------------------------------
+
+        try:
+
+            batch_size = int(
+                os.getenv(
+                    "AI_QUIZ_BATCH_SIZE",
+                    "5"
+                )
+            )
+
+        except (TypeError, ValueError):
+
+            batch_size = 5
+
+        batch_size = max(
+            1,
+            min(5, batch_size)
+        )
+
+        try:
+
+            max_completion_tokens = int(
+                os.getenv(
+                    "AI_MAX_COMPLETION_TOKENS",
+                    "3000"
+                )
+            )
+
+        except (TypeError, ValueError):
+
+            max_completion_tokens = 3000
+
+        max_completion_tokens = max(
+            1000,
+            min(6000, max_completion_tokens)
+        )
+
+        requirements = [
+            ("Easy", easy),
+            ("Medium", medium),
+            ("Hard", hard),
+        ]
+
         all_questions = []
+
         seen_questions = set()
 
+        seen_question_order = []
+
+        # ----------------------------------------------------
+        # GENERATE EACH DIFFICULTY SEPARATELY
+        # ----------------------------------------------------
+
         for difficulty, requested_count in requirements:
+
             remaining = requested_count
+
             while remaining > 0:
-                batch_count = min(batch_size, remaining)
+
+                batch_count = min(
+                    batch_size,
+                    remaining
+                )
+
+                # Include recently generated questions to reduce
+                # repetition across different batches.
+
                 previous_questions = "\n".join(
                     "- " + question[:180]
-                    for question in list(seen_questions)[-20:]
+                    for question in seen_question_order[-30:]
                 ) or "(none yet)"
 
                 prompt = f"""
-Create exactly {batch_count} multiple-choice questions about this topic:
+You are an expert educational quiz question generator.
+
+TOPIC:
 {topic}
 
-Do not repeat or paraphrase these previously generated questions:
+REQUIRED DIFFICULTY:
+{difficulty}
+
+NUMBER OF QUESTIONS:
+Exactly {batch_count}
+
+PREVIOUSLY GENERATED QUESTIONS:
 {previous_questions}
 
-Every question must have difficulty exactly: {difficulty}.
-Create distinct, clear, factually correct questions. Each question must have
-four distinct options and exactly one correct answer. The correct_option must
-be A, B, C, or D. Include a concise explanation of why the answer is correct.
-The response schema enforces the required fields, difficulty and exact count.
-Do not include markdown, commentary, or any fields beyond the schema.
+IMPORTANT INSTRUCTIONS:
+
+1. Generate exactly {batch_count} questions.
+2. Every question must belong to the topic.
+3. Every question must genuinely match {difficulty} difficulty.
+4. Do not repeat or paraphrase previously generated questions.
+5. Each question must have exactly four options.
+6. Exactly one option must be correct.
+7. The correct_option must be A, B, C or D.
+8. All four options must be distinct.
+9. Avoid ambiguous questions.
+10. Do not invent factual information.
+11. Include a concise explanation for the correct answer.
+12. Do not include markdown or commentary.
+13. Return only valid JSON.
+14. Do not include extra fields.
+
+DIFFICULTY GUIDELINES:
+
+Easy:
+Basic definitions, fundamentals and direct conceptual questions.
+
+Medium:
+Conceptual understanding, application and moderate reasoning.
+
+Hard:
+Deeper reasoning, analysis, comparison, tracing,
+calculations or multi-step problem solving.
+
+REQUIRED JSON STRUCTURE:
+
+{{
+    "questions": [
+        {{
+            "question": "Question text",
+            "option_a": "Option A",
+            "option_b": "Option B",
+            "option_c": "Option C",
+            "option_d": "Option D",
+            "correct_option": "A",
+            "difficulty": "{difficulty}",
+            "explanation": "Explanation"
+        }}
+    ]
+}}
+
+The questions array must contain exactly {batch_count} objects.
 """
 
-                batch = None
-                last_error = None
+                # ------------------------------------------------
+                # VALIDATE THE AI RESPONSE BEFORE ACCEPTING IT
+                # ------------------------------------------------
 
-                for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
-                    attempt_started = time.monotonic()
-                    try:
-                        # Groq's free/on-demand tier has a rolling TPM limit.
-                        # Pace successful requests so a 60-question quiz does
-                        # not fire 12 batches back-to-back into the 8k TPM cap.
-                        if last_groq_call_at is not None:
-                            elapsed_since_call = time.monotonic() - last_groq_call_at
-                            wait_for_pacing = MIN_SECONDS_BETWEEN_GROQ_CALLS - elapsed_since_call
-                            if wait_for_pacing > 0:
-                                print(
-                                    f"[GROQ RATE LIMIT] pacing wait={wait_for_pacing:.1f}s "
-                                    f"before {difficulty} batch"
-                                )
-                                time.sleep(wait_for_pacing)
+                def validate_batch(content):
 
-                        print(
-                            f"[AI GENERATION] START difficulty={difficulty} "
-                            f"batch_size={batch_count} attempt={attempt}/"
-                            f"{MAX_GENERATION_ATTEMPTS} model={GENERATION_MODEL}"
-                        )
-
-                        last_groq_call_at = time.monotonic()
-                        response = client.chat.completions.create(
-                            model=GENERATION_MODEL,
-                            messages=[{"role": "user", "content": prompt}],
-                            response_format={
-                                "type": "json_schema",
-                                "json_schema": {
-                                    "name": "quiz_question_batch",
-                                    "strict": True,
-                                    "schema": build_quiz_batch_schema(batch_count, difficulty),
-                                },
-                            },
-                            max_completion_tokens=3000,
-                        )
-
-                        if not response.choices:
-                            raise ValueError("OpenAI returned no completion choices.")
-
-                        message = response.choices[0].message
-                        if getattr(message, "refusal", None):
-                            raise ValueError("OpenAI refused the quiz-generation request.")
-
-                        content = message.content
-                        if not isinstance(content, str) or not content.strip():
-                            finish_reason = response.choices[0].finish_reason
-                            raise ValueError(
-                                "OpenAI returned empty message content; "
-                                f"finish_reason={finish_reason!r}."
-                            )
-
-                        generated = extract_questions_from_response(content)
-                        if not validate_basic_question_structure(generated, batch_count):
-                            raise ValueError(
-                                f"Question structure validation failed for {difficulty} batch; "
-                                "see the preceding [AI VALIDATION FAILED] log for the exact field."
-                            )
-
-                        expected = (
-                            batch_count if difficulty == "Easy" else 0,
-                            batch_count if difficulty == "Medium" else 0,
-                            batch_count if difficulty == "Hard" else 0,
-                        )
-                        if not check_difficulty_distribution(generated, *expected):
-                            actual = {
-                                level: sum(
-                                    1 for item in generated
-                                    if normalize_difficulty(item.get("difficulty")) == level
-                                )
-                                for level in ("Easy", "Medium", "Hard")
-                            }
-                            raise ValueError(
-                                f"Difficulty distribution mismatch; expected only {difficulty}="
-                                f"{batch_count}, received {actual}."
-                            )
-
-                        normalized = [
-                            re.sub(r"\s+", " ", str(item.get("question", "")).strip()).casefold()
-                            for item in generated
-                        ]
-                        if len(set(normalized)) != len(normalized):
-                            raise ValueError("Duplicate question text inside the same batch.")
-                        duplicate_prior = next(
-                            (question for question in normalized if question in seen_questions),
-                            None,
-                        )
-                        if duplicate_prior:
-                            raise ValueError(
-                                f"Question duplicates an earlier batch: {duplicate_prior[:100]}"
-                            )
-
-                        batch = generated
-                        print(
-                            f"[AI GENERATION] SUCCESS difficulty={difficulty} "
-                            f"count={len(batch)} elapsed={time.monotonic() - attempt_started:.1f}s"
-                        )
-                        break
-
-                    except Exception as exc:
-                        last_error = exc
-                        elapsed = time.monotonic() - attempt_started
-                        print(
-                            f"[AI GENERATION] FAILED difficulty={difficulty} "
-                            f"attempt={attempt}/{MAX_GENERATION_ATTEMPTS} "
-                            f"elapsed={elapsed:.1f}s error_type={type(exc).__name__} "
-                            f"error={str(exc)[:700]}"
-                        )
-                        if attempt < MAX_GENERATION_ATTEMPTS:
-                            if type(exc).__name__ == "RateLimitError" or "429" in str(exc):
-                                delay = _groq_retry_delay_seconds(exc)
-                                print(
-                                    f"[GROQ RATE LIMIT] 429 received; waiting {delay:.1f}s "
-                                    f"before retry {attempt + 1}/{MAX_GENERATION_ATTEMPTS}."
-                                )
-                            else:
-                                delay = min(2 ** attempt, 16)
-                                print(
-                                    f"[AI GENERATION] Retrying {difficulty} batch "
-                                    f"after {delay}s."
-                                )
-                            time.sleep(delay)
-
-                if batch is None:
-                    raise RuntimeError(
-                        f"Could not generate a valid batch of {batch_count} {difficulty} "
-                        f"questions after {MAX_GENERATION_ATTEMPTS} attempts. "
-                        f"Last error: {type(last_error).__name__}: {last_error}"
+                    generated = extract_questions_from_response(
+                        content,
+                        expected_count=batch_count,
+                        difficulty=difficulty
                     )
+
+                    if not validate_basic_question_structure(
+                        generated,
+                        batch_count
+                    ):
+
+                        raise ValueError(
+                            f"Question structure validation failed "
+                            f"for {difficulty} batch."
+                        )
+
+                    expected_distribution = (
+
+                        batch_count if difficulty == "Easy" else 0,
+
+                        batch_count if difficulty == "Medium" else 0,
+
+                        batch_count if difficulty == "Hard" else 0,
+                    )
+
+                    if not check_difficulty_distribution(
+                        generated,
+                        *expected_distribution
+                    ):
+
+                        raise ValueError(
+                            f"Difficulty mismatch in {difficulty} batch."
+                        )
+
+                    # Check duplicates inside the current batch.
+
+                    normalized_questions = []
+
+                    for item in generated:
+
+                        normalized = re.sub(
+                            r"\s+",
+                            " ",
+                            str(
+                                item.get("question", "")
+                            ).strip()
+                        ).casefold()
+
+                        normalized_questions.append(
+                            normalized
+                        )
+
+                    if len(set(normalized_questions)) != len(
+                        normalized_questions
+                    ):
+
+                        raise ValueError(
+                            "Duplicate questions detected inside the batch."
+                        )
+
+                    # Check duplicates against previous successful batches.
+
+                    for normalized in normalized_questions:
+
+                        if normalized in seen_questions:
+
+                            raise ValueError(
+                                "Question duplicates an earlier "
+                                "successful batch."
+                            )
+
+                    return generated
+
+                                # ------------------------------------------------
+                # CALL GROQ FIRST, THEN OLLAMA IF REQUIRED
+                # ------------------------------------------------
+
+                operation = (
+                    f"{difficulty} generation batch "
+                    f"({batch_count} questions)"
+                )
+
+                try:
+
+                    batch, provider = _request_with_fallback(
+
+                        prompt=prompt,
+
+                        validator=validate_batch,
+
+                        operation=operation,
+
+                        response_format={
+
+                            "type": "json_schema",
+
+                            "json_schema": {
+
+                                "name": "quiz_question_batch",
+
+                                "strict": True,
+
+                                "schema": build_quiz_batch_schema(
+                                    batch_count,
+                                    difficulty
+                                ),
+                            },
+                        },
+
+                        max_completion_tokens=max_completion_tokens,
+
+                        temperature=0.1,
+                    )
+
+                except Exception as primary_error:
+
+                    # Do not hide a Groq authentication/configuration error.
+                    if (
+                        _is_permanent_auth_error(primary_error)
+                        or "Groq authentication failed" in str(primary_error)
+                    ):
+                        raise
+
+                    # ------------------------------------------------
+                    # ONE ADDITIONAL OLLAMA RECOVERY ATTEMPT
+                    # ------------------------------------------------
+
+                    if not ollama_client:
+                        raise
+
+                    print(
+                        f"[AI RECOVERY] Starting one additional "
+                        f"Ollama attempt for {operation}."
+                    )
+
+                    try:
+
+                        recovery_content = _ollama_json_content(
+                            prompt,
+                            temperature=0.1
+                        )
+
+                        batch = validate_batch(recovery_content)
+
+                        provider = "Ollama-Recovery"
+
+                        print(
+                            f"[AI RECOVERY] SUCCESS "
+                            f"provider=Ollama-Recovery "
+                            f"operation={operation}"
+                        )
+
+                    except Exception as recovery_error:
+
+                        print(
+                            f"[AI RECOVERY] FAILED "
+                            f"operation={operation} "
+                            f"error_type={type(recovery_error).__name__} "
+                            f"error={str(recovery_error)[:500]}"
+                        )
+
+                        raise RuntimeError(
+                            f"{operation} failed. "
+                            "Groq and normal Ollama attempts failed, "
+                            "and the additional Ollama recovery attempt "
+                            "also failed. "
+                            f"Primary error: {str(primary_error)[:300]}. "
+                            f"Recovery error: {str(recovery_error)[:300]}."
+                        ) from recovery_error
+
+                # ------------------------------------------------
+                # SAVE VALIDATED BATCH IN MEMORY
+                # ------------------------------------------------
 
                 for item in batch:
+
+                    normalized_question = re.sub(
+                        r"\s+",
+                        " ",
+                        str(
+                            item.get("question", "")
+                        ).strip()
+                    ).casefold()
+
                     seen_questions.add(
-                        re.sub(r"\s+", " ", str(item.get("question", "")).strip()).casefold()
+                        normalized_question
                     )
+
+                    seen_question_order.append(
+                        normalized_question
+                    )
+
                 all_questions.extend(batch)
+
                 remaining -= batch_count
 
+                print(
+                    f"[AI GENERATION] BATCH COMPLETE "
+                    f"provider={provider} "
+                    f"difficulty={difficulty} "
+                    f"count={len(batch)} "
+                    f"remaining_in_level={remaining} "
+                    f"total_completed={len(all_questions)}/{total}"
+                )
+
+        # ----------------------------------------------------
+        # FINAL VALIDATION
+        # ----------------------------------------------------
+
         if len(all_questions) != total:
+
             raise RuntimeError(
-                f"Generated {len(all_questions)} questions, expected exactly {total}."
+                f"Generated {len(all_questions)} questions, "
+                f"but expected exactly {total}."
             )
-        if not validate_basic_question_structure(all_questions, total):
+
+        if not validate_basic_question_structure(
+            all_questions,
+            total
+        ):
+
             raise RuntimeError(
-                "Final quiz failed question-structure validation; see [AI VALIDATION FAILED] log."
+                "Final quiz failed question-structure validation."
             )
-        if not check_difficulty_distribution(all_questions, easy, medium, hard):
-            raise RuntimeError("Final quiz failed exact difficulty-distribution validation.")
+
+        if not check_difficulty_distribution(
+            all_questions,
+            easy,
+            medium,
+            hard
+        ):
+
+            raise RuntimeError(
+                "Final quiz failed exact difficulty-distribution validation."
+            )
+
+        elapsed = time.monotonic() - started_at
 
         print(
-            f"[AI GENERATION] COMPLETE total={len(all_questions)} "
-            f"easy={easy} medium={medium} hard={hard} "
-            f"elapsed={time.monotonic() - started_at:.1f}s"
+            f"[AI GENERATION] COMPLETE "
+            f"total={len(all_questions)} "
+            f"easy={easy} "
+            f"medium={medium} "
+            f"hard={hard} "
+            f"elapsed={elapsed:.1f}s"
         )
-        # Keep the existing route contract unchanged.
+
+        # Preserve the existing Flask route contract.
+        # Extra evaluation calls are disabled to conserve free API quota.
+
         return all_questions, []
 
-    finally:
-        _GENERATION_LOCK.release()
+    except Exception as error:
 
+        print(
+            f"[AI GENERATION FAILED] "
+            f"type={type(error).__name__} "
+            f"error={str(error)[:700]}"
+        )
+
+        # Do not return an incomplete quiz as successful.
+        raise
+
+    finally:
+
+        _GENERATION_LOCK.release()
