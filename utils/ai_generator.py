@@ -4,28 +4,15 @@ import re
 import time
 import threading
 
-from openai import OpenAI
 from ollama import Client as OllamaClient
 
 
 # ============================================================
-# PROVIDER CONFIGURATION
+# OLLAMA CLOUD CONFIGURATION (OLLAMA ONLY)
 # ============================================================
-
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
 OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:20b")
-
-groq_client = None
-if GROQ_API_KEY:
-    groq_client = OpenAI(
-        api_key=GROQ_API_KEY,
-        base_url="https://api.groq.com/openai/v1",
-        timeout=120.0,
-        max_retries=0,
-    )
 
 ollama_client = None
 if OLLAMA_API_KEY:
@@ -35,206 +22,12 @@ if OLLAMA_API_KEY:
         timeout=300,
     )
 
-
-# Groq rate-limit protection
-MIN_SECONDS_BETWEEN_GROQ_CALLS = 13.0
-MAX_GROQ_ATTEMPTS = 2
 MAX_OLLAMA_ATTEMPTS = 2
 
 _GENERATION_LOCK = threading.Lock()
-_GROQ_PACING_LOCK = threading.Lock()
-
-_LAST_GROQ_CALL_AT = None
-_GROQ_CIRCUIT_OPEN = False
 
 MAX_EVALUATION_ATTEMPTS = 2
 MAX_REPLACEMENT_ATTEMPTS = 3
-
-
-# ============================================================
-# ERROR HELPERS
-# ============================================================
-
-def _exception_status_code(error):
-
-    response = getattr(error, "response", None)
-
-    status = getattr(
-        response,
-        "status_code",
-        None
-    )
-
-    if status is None:
-        status = getattr(
-            error,
-            "status_code",
-            None
-        )
-
-    try:
-        return int(status) if status is not None else None
-
-    except (TypeError, ValueError):
-        return None
-
-
-def _is_rate_limit_error(error):
-
-    return (
-        _exception_status_code(error) == 429
-        or type(error).__name__ == "RateLimitError"
-        or "429" in str(error)
-        or "rate limit" in str(error).lower()
-    )
-
-
-def _is_permanent_auth_error(error):
-
-    status = _exception_status_code(error)
-
-    return status in (401, 403)
-
-
-def _groq_retry_delay_seconds(error):
-
-    response = getattr(
-        error,
-        "response",
-        None
-    )
-
-    headers = getattr(
-        response,
-        "headers",
-        {}
-    ) or {}
-
-    for key in ("retry-after", "Retry-After"):
-
-        value = (
-            headers.get(key)
-            if hasattr(headers, "get")
-            else None
-        )
-
-        if value:
-
-            try:
-                return max(1.0, float(value)) + 1.0
-
-            except (TypeError, ValueError):
-                pass
-
-    match = re.search(
-        r"try again in\s*([0-9]+(?:\.[0-9]+)?)\s*s",
-        str(error),
-        re.I,
-    )
-
-    if match:
-        return max(1.0, float(match.group(1))) + 1.0
-
-    return None
-
-
-# ============================================================
-# GROQ PACING
-# ============================================================
-
-def _pace_groq():
-
-    global _LAST_GROQ_CALL_AT
-
-    with _GROQ_PACING_LOCK:
-
-        if _LAST_GROQ_CALL_AT is not None:
-
-            elapsed = (
-                time.monotonic()
-                - _LAST_GROQ_CALL_AT
-            )
-
-            wait = (
-                MIN_SECONDS_BETWEEN_GROQ_CALLS
-                - elapsed
-            )
-
-            if wait > 0:
-
-                print(
-                    f"[GROQ RATE LIMIT] "
-                    f"pacing wait={wait:.1f}s"
-                )
-
-                time.sleep(wait)
-
-        _LAST_GROQ_CALL_AT = time.monotonic()
-
-
-# ============================================================
-# GROQ REQUEST
-# ============================================================
-
-def _groq_json_content(
-    prompt,
-    response_format=None,
-    max_completion_tokens=3000,
-    temperature=0.1
-):
-
-    if not groq_client:
-        raise RuntimeError(
-            "GROQ_API_KEY is not configured."
-        )
-
-    _pace_groq()
-
-    kwargs = {
-        "model": GROQ_MODEL,
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "temperature": temperature,
-        "max_completion_tokens": max_completion_tokens,
-    }
-
-    if response_format is not None:
-        kwargs["response_format"] = response_format
-
-    response = groq_client.chat.completions.create(
-        **kwargs
-    )
-
-    if not response.choices:
-        raise ValueError(
-            "Groq returned no completion choices."
-        )
-
-    message = response.choices[0].message
-
-    if getattr(message, "refusal", None):
-        raise ValueError(
-            "Groq refused the request."
-        )
-
-    content = message.content
-
-    if not isinstance(content, str) or not content.strip():
-
-        finish_reason = (
-            response.choices[0].finish_reason
-        )
-
-        raise ValueError(
-            "Groq returned empty content; "
-            f"finish_reason={finish_reason!r}."
-        )
-
-    return content
 
 
 # ============================================================
@@ -317,10 +110,10 @@ def _ollama_json_content(
 
 
 # ============================================================
-# GROQ PRIMARY + OLLAMA FALLBACK
+# OLLAMA-ONLY REQUEST HANDLER
 # ============================================================
 
-def _request_with_fallback(
+def _request_with_ollama(
     prompt,
     validator,
     operation,
@@ -328,208 +121,74 @@ def _request_with_fallback(
     max_completion_tokens=3000,
     temperature=0.1
 ):
-
     """
-    Groq is the primary provider.
+    Send the request only to Ollama Cloud.
 
-    Ollama Cloud is used as fallback.
-
-    Every response is validated before acceptance.
-    Previously validated batches are retained.
+    Every response is validated before acceptance. There is no other
+    AI provider or fallback path. Previously validated batches remain in memory if a later
+    batch fails.
     """
+
+    if not ollama_client:
+        raise RuntimeError(
+            "OLLAMA_API_KEY is not configured. "
+            "Add a valid Ollama Cloud API key to the environment."
+        )
 
     errors = []
 
-    global _GROQ_CIRCUIT_OPEN
+    for attempt in range(1, MAX_OLLAMA_ATTEMPTS + 1):
+        try:
+            print(
+                f"[AI PROVIDER] START "
+                f"provider=Ollama "
+                f"operation={operation} "
+                f"attempt={attempt}/{MAX_OLLAMA_ATTEMPTS} "
+                f"model={OLLAMA_MODEL}"
+            )
 
-    if not groq_client and not ollama_client:
+            content = _ollama_json_content(
+                prompt,
+                temperature=temperature
+            )
 
-        raise RuntimeError(
-            "No AI provider is configured. "
-            "Set GROQ_API_KEY or OLLAMA_API_KEY."
-        )
+            result = validator(content)
 
-    # --------------------------------------------------------
-    # GROQ PRIMARY
-    # --------------------------------------------------------
+            print(
+                f"[AI PROVIDER] SUCCESS "
+                f"provider=Ollama operation={operation}"
+            )
 
-    if groq_client and not _GROQ_CIRCUIT_OPEN:
+            return result, "Ollama"
 
-        for attempt in range(
-            1,
-            MAX_GROQ_ATTEMPTS + 1
-        ):
+        except Exception as error:
+            errors.append(
+                f"Ollama {type(error).__name__}: {str(error)[:400]}"
+            )
 
-            try:
+            print(
+                f"[AI PROVIDER] FAILED "
+                f"provider=Ollama "
+                f"operation={operation} "
+                f"attempt={attempt} "
+                f"error_type={type(error).__name__} "
+                f"error={str(error)[:500]}"
+            )
 
+            if attempt < MAX_OLLAMA_ATTEMPTS:
+                delay = min(2 ** attempt, 8)
                 print(
-                    f"[AI PROVIDER] START "
-                    f"provider=Groq "
-                    f"operation={operation} "
-                    f"attempt={attempt}/{MAX_GROQ_ATTEMPTS} "
-                    f"model={GROQ_MODEL}"
+                    f"[OLLAMA RETRY] "
+                    f"Retrying the same request after {delay}s."
                 )
+                time.sleep(delay)
 
-                content = _groq_json_content(
-                    prompt,
-                    response_format=response_format,
-                    max_completion_tokens=max_completion_tokens,
-                    temperature=temperature,
-                )
-
-                result = validator(content)
-
-                print(
-                    f"[AI PROVIDER] SUCCESS "
-                    f"provider=Groq operation={operation}"
-                )
-
-                return result, "Groq"
-
-            except Exception as error:
-
-                status = _exception_status_code(error)
-
-                errors.append(
-                    f"Groq {type(error).__name__}: "
-                    f"{str(error)[:400]}"
-                )
-
-                print(
-                    f"[AI PROVIDER] FAILED "
-                    f"provider=Groq "
-                    f"operation={operation} "
-                    f"attempt={attempt} "
-                    f"status={status!r} "
-                    f"error_type={type(error).__name__} "
-                    f"error={str(error)[:500]}"
-                )
-
-                # Invalid credentials should not be hidden.
-                if _is_permanent_auth_error(error):
-
-                    raise RuntimeError(
-                        f"Groq authentication failed "
-                        f"for {operation} (HTTP {status}). "
-                        "Check GROQ_API_KEY and model access."
-                    ) from error
-
-                # If Groq quota is exhausted, switch to Ollama.
-                if _is_rate_limit_error(error):
-
-                    retry_hint = (
-                        _groq_retry_delay_seconds(error)
-                    )
-
-                    _GROQ_CIRCUIT_OPEN = True
-
-                    print(
-                        "[GROQ RATE LIMIT] "
-                        "Opening Groq circuit for the rest "
-                        "of this quiz; switching this batch "
-                        "to Ollama. "
-                        f"retry_hint_seconds={retry_hint!r}"
-                    )
-
-                    break
-
-                if attempt < MAX_GROQ_ATTEMPTS:
-
-                    delay = min(
-                        2 ** attempt,
-                        8
-                    )
-
-                    print(
-                        f"[GROQ RETRY] "
-                        f"Retrying same batch after {delay}s."
-                    )
-
-                    time.sleep(delay)
-
-    elif groq_client and _GROQ_CIRCUIT_OPEN:
-
-        print(
-            "[GROQ FAILOVER] "
-            "Groq circuit is open; using Ollama for this batch."
-        )
-
-    # --------------------------------------------------------
-    # OLLAMA FALLBACK
-    # --------------------------------------------------------
-
-    if ollama_client:
-
-        for attempt in range(
-            1,
-            MAX_OLLAMA_ATTEMPTS + 1
-        ):
-
-            try:
-
-                print(
-                    f"[AI PROVIDER] START "
-                    f"provider=Ollama "
-                    f"operation={operation} "
-                    f"attempt={attempt}/{MAX_OLLAMA_ATTEMPTS} "
-                    f"model={OLLAMA_MODEL}"
-                )
-
-                content = _ollama_json_content(
-                    prompt,
-                    temperature=temperature
-                )
-
-                result = validator(content)
-
-                print(
-                    f"[AI PROVIDER] SUCCESS "
-                    f"provider=Ollama operation={operation}"
-                )
-
-                return result, "Ollama"
-
-            except Exception as error:
-
-                status = _exception_status_code(error)
-
-                errors.append(
-                    f"Ollama {type(error).__name__}: "
-                    f"{str(error)[:400]}"
-                )
-
-                print(
-                    f"[AI PROVIDER] FAILED "
-                    f"provider=Ollama "
-                    f"operation={operation} "
-                    f"attempt={attempt} "
-                    f"status={status!r} "
-                    f"error_type={type(error).__name__} "
-                    f"error={str(error)[:500]}"
-                )
-
-                if attempt < MAX_OLLAMA_ATTEMPTS:
-
-                    delay = min(
-                        2 ** attempt,
-                        8
-                    )
-
-                    print(
-                        f"[OLLAMA RETRY] "
-                        f"Retrying same batch after {delay}s."
-                    )
-
-                    time.sleep(delay)
-
-    detail = (
-        " | ".join(errors[-4:])
-        or "No provider is available."
-    )
+    detail = " | ".join(errors[-4:]) or "No Ollama response was received."
 
     raise RuntimeError(
         f"{operation} failed. "
-        "No validated response was obtained. "
+        "Ollama did not return a validated response after "
+        f"{MAX_OLLAMA_ATTEMPTS} attempts. "
         "Previously validated batches were preserved in memory. "
         f"Details: {detail}"
     )
@@ -1039,8 +698,8 @@ def evaluate_question_difficulties(
 
     """
     Independently evaluate actual question difficulty.
-    Uses Groq first and Ollama Cloud if Groq is rate-limited or fails.
-    Returns None only if both providers fail validation.
+    Uses Ollama Cloud only.
+    Returns None if Ollama cannot provide a validated evaluation.
     """
 
     if not questions:
@@ -1195,7 +854,7 @@ Questions:
 
     try:
 
-        result, provider = _request_with_fallback(
+        result, provider = _request_with_ollama(
 
             prompt=prompt,
 
@@ -1236,7 +895,7 @@ Questions:
 
         print(
             f"[AI DIFFICULTY EVALUATION] "
-            f"Both providers failed: {error}"
+            f"Ollama evaluation failed: {error}"
         )
 
         return None
@@ -1708,7 +1367,7 @@ The questions to replace are:
 
         try:
 
-            new_questions, provider = _request_with_fallback(
+            new_questions, provider = _request_with_ollama(
 
                 prompt=prompt,
 
@@ -1835,14 +1494,11 @@ def generate_questions(topic, easy, medium, hard):
     """
     Generate exact-count quiz questions.
 
-    Primary provider: Groq
-    Fallback provider: Ollama Cloud
+    AI provider: Ollama Cloud only
 
     Existing route contract:
         return questions, evaluations
     """
-
-    global _GROQ_CIRCUIT_OPEN
 
     # --------------------------------------------------------
     # INPUT VALIDATION
@@ -1887,11 +1543,10 @@ def generate_questions(topic, easy, medium, hard):
             "Quiz topic cannot be empty."
         )
 
-    if not groq_client and not ollama_client:
-
+    if not ollama_client:
         raise RuntimeError(
-            "No AI provider is configured. "
-            "Please configure GROQ_API_KEY or OLLAMA_API_KEY."
+            "Ollama Cloud is not configured. "
+            "Please set OLLAMA_API_KEY in the environment."
         )
 
     # --------------------------------------------------------
@@ -1913,12 +1568,6 @@ def generate_questions(topic, easy, medium, hard):
     started_at = time.monotonic()
 
     try:
-
-        # ----------------------------------------------------
-        # RESET PROVIDER CIRCUIT FOR THIS QUIZ
-        # ----------------------------------------------------
-
-        _GROQ_CIRCUIT_OPEN = False
 
         # ----------------------------------------------------
         # BATCH CONFIGURATION
@@ -2138,102 +1787,28 @@ The questions array must contain exactly {batch_count} objects.
 
                     return generated
 
-                                # ------------------------------------------------
-                # CALL GROQ FIRST, THEN OLLAMA IF REQUIRED
+                # ------------------------------------------------
+                # CALL OLLAMA CLOUD ONLY
                 # ------------------------------------------------
 
-                operation = (
-                    f"{difficulty} generation batch "
-                    f"({batch_count} questions)"
-                )
-
-                try:
-
-                    batch, provider = _request_with_fallback(
-
-                        prompt=prompt,
-
-                        validator=validate_batch,
-
-                        operation=operation,
-
-                        response_format={
-
-                            "type": "json_schema",
-
-                            "json_schema": {
-
-                                "name": "quiz_question_batch",
-
-                                "strict": True,
-
-                                "schema": build_quiz_batch_schema(
-                                    batch_count,
-                                    difficulty
-                                ),
-                            },
+                batch, provider = _request_with_ollama(
+                    prompt=prompt,
+                    validator=validate_batch,
+                    operation=f"{difficulty} batch generation",
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "quiz_question_batch",
+                            "strict": True,
+                            "schema": build_quiz_batch_schema(
+                                batch_count,
+                                difficulty
+                            ),
                         },
-
-                        max_completion_tokens=max_completion_tokens,
-
-                        temperature=0.1,
-                    )
-
-                except Exception as primary_error:
-
-                    # Do not hide a Groq authentication/configuration error.
-                    if (
-                        _is_permanent_auth_error(primary_error)
-                        or "Groq authentication failed" in str(primary_error)
-                    ):
-                        raise
-
-                    # ------------------------------------------------
-                    # ONE ADDITIONAL OLLAMA RECOVERY ATTEMPT
-                    # ------------------------------------------------
-
-                    if not ollama_client:
-                        raise
-
-                    print(
-                        f"[AI RECOVERY] Starting one additional "
-                        f"Ollama attempt for {operation}."
-                    )
-
-                    try:
-
-                        recovery_content = _ollama_json_content(
-                            prompt,
-                            temperature=0.1
-                        )
-
-                        batch = validate_batch(recovery_content)
-
-                        provider = "Ollama-Recovery"
-
-                        print(
-                            f"[AI RECOVERY] SUCCESS "
-                            f"provider=Ollama-Recovery "
-                            f"operation={operation}"
-                        )
-
-                    except Exception as recovery_error:
-
-                        print(
-                            f"[AI RECOVERY] FAILED "
-                            f"operation={operation} "
-                            f"error_type={type(recovery_error).__name__} "
-                            f"error={str(recovery_error)[:500]}"
-                        )
-
-                        raise RuntimeError(
-                            f"{operation} failed. "
-                            "Groq and normal Ollama attempts failed, "
-                            "and the additional Ollama recovery attempt "
-                            "also failed. "
-                            f"Primary error: {str(primary_error)[:300]}. "
-                            f"Recovery error: {str(recovery_error)[:300]}."
-                        ) from recovery_error
+                    },
+                    max_completion_tokens=max_completion_tokens,
+                    temperature=0.1,
+                )
 
                 # ------------------------------------------------
                 # SAVE VALIDATED BATCH IN MEMORY

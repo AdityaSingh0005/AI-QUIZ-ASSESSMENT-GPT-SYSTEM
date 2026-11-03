@@ -191,6 +191,56 @@ def _get_attempt_questions(quiz_id):
             return cursor.fetchall()
     finally:
         _close_db(connection)
+        
+def _get_quiz_context(attempt_id):
+    """
+    Fetch attempt and its quiz metadata using one database
+    connection and one SQL query.
+    """
+    connection = _db_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    a.*,
+                    q.title AS quiz_title,
+                    q.total_questions AS quiz_total_questions,
+                    q.duration_minutes AS quiz_duration_minutes,
+                    q.question_time_seconds AS quiz_question_time_seconds,
+                    q.available_from AS quiz_available_from,
+                    q.available_until AS quiz_available_until
+                FROM quiz_attempts a
+                JOIN quizzes q
+                  ON q.quiz_id = a.quiz_id
+                WHERE a.attempt_id = %s
+                LIMIT 1
+                """,
+                (attempt_id,),
+            )
+
+            row = cursor.fetchone()
+
+            if not row:
+                return None, None
+
+            attempt = dict(row)
+
+            quiz_data = {
+                "quiz_id": attempt["quiz_id"],
+                "title": attempt["quiz_title"],
+                "total_questions": attempt["quiz_total_questions"],
+                "duration_minutes": attempt["quiz_duration_minutes"],
+                "question_time_seconds": attempt["quiz_question_time_seconds"],
+                "available_from": attempt["quiz_available_from"],
+                "available_until": attempt["quiz_available_until"],
+            }
+
+            return attempt, quiz_data
+
+    finally:
+        _close_db(connection)
 
 def _get_attempt_question_at(quiz_id, question_index):
     """Fetch only the requested question ID."""
@@ -217,49 +267,48 @@ def _get_attempt_question_at(quiz_id, question_index):
 # ============================================================
 
 def _to_datetime(value):
+    """Parse a stored datetime and normalize it to timezone-aware UTC.
+
+    PostgreSQL TIMESTAMPTZ values normally arrive timezone-aware. Older rows
+    or manually supplied strings may be naive; this application stores those
+    values as UTC, so interpret them consistently rather than comparing
+    naive local time with aware UTC time.
+    """
     if value is None:
         return None
 
-    if isinstance(value, datetime):
-        return value
+    from datetime import timezone
 
     try:
-        return datetime.fromisoformat(str(value))
+        parsed = value if isinstance(value, datetime) else datetime.fromisoformat(
+            str(value).replace("Z", "+00:00")
+        )
     except (TypeError, ValueError):
         return None
 
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
 
-def _now_like(value):
-    now = datetime.now()
+    return parsed.astimezone(timezone.utc)
 
-    if value is not None and getattr(value, "tzinfo", None):
-        from datetime import timezone
-        now = datetime.now(timezone.utc)
 
-    return now
+def _now_like(value=None):
+    """Return current UTC time, compatible with normalized DB datetimes."""
+    from datetime import timezone
+    return datetime.now(timezone.utc)
 
 
 def _quiz_status(quiz):
-    now = datetime.now()
+    now = _now_like()
 
-    available_from = _to_datetime(
-        quiz.get("available_from")
-    )
-    available_until = _to_datetime(
-        quiz.get("available_until")
-    )
+    available_from = _to_datetime(quiz.get("available_from"))
+    available_until = _to_datetime(quiz.get("available_until"))
 
-    if available_from is not None:
-        now = _now_like(available_from)
+    if available_from is not None and now < available_from:
+        return "upcoming"
 
-        if now < available_from:
-            return "upcoming"
-
-    if available_until is not None:
-        now = _now_like(available_until)
-
-        if now > available_until:
-            return "expired"
+    if available_until is not None and now > available_until:
+        return "expired"
 
     return "available"
 
@@ -392,7 +441,56 @@ def _get_attempt_answers(attempt_id):
     finally:
         _close_db(connection)
 
+def _get_questions_with_answers(quiz_id, attempt_id):
+    """
+    Fetch all quiz questions and saved answers in one query.
+    """
+    connection = _db_connection()
 
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    q.question_id,
+                    q.quiz_id,
+                    q.question,
+                    q.option_a,
+                    q.option_b,
+                    q.option_c,
+                    q.option_d,
+                    q.difficulty,
+                    q.explanation,
+                    sa.selected_option
+                FROM questions q
+                LEFT JOIN student_answers sa
+                  ON sa.question_id = q.question_id
+                 AND sa.attempt_id = %s
+                WHERE q.quiz_id = %s
+                ORDER BY q.question_id
+                """,
+                (attempt_id, quiz_id),
+            )
+
+            rows = cursor.fetchall()
+
+        questions = []
+        answers = {}
+
+        for row in rows:
+            question = dict(row)
+            question_id = question["question_id"]
+            selected_option = question.pop("selected_option", None)
+
+            if selected_option:
+                answers[question_id] = selected_option
+
+            questions.append(question)
+
+        return questions, answers
+
+    finally:
+        _close_db(connection)
 # ============================================================
 # ANSWER SAVING
 # ============================================================
@@ -535,20 +633,16 @@ def _mark_attempt_submitted(attempt_id):
             )
 
             cursor.execute(
-    """
-    UPDATE quiz_attempts
-    SET status = 'submitted',
-        submitted_at = CURRENT_TIMESTAMP,
-        score = %s,
-        percentage = %s
-    WHERE attempt_id = %s
-    RETURNING *
-    """,
-                (
-                    score,
-                    percentage,
-                    attempt_id,
-                ),
+                """
+                UPDATE quiz_attempts
+                SET status = 'submitted',
+                    submitted_at = CURRENT_TIMESTAMP,
+                    score = %s,
+                    percentage = %s
+                WHERE attempt_id = %s
+                RETURNING *
+                """,
+                (score, percentage, attempt_id),
             )
             submitted_attempt = cursor.fetchone()
             cursor.execute(
@@ -1037,8 +1131,15 @@ def guest_start_quiz(quiz_id):
     if not quiz:
         return "Quiz not found.", 404
 
-    if _quiz_status(quiz) == "upcoming":
+    quiz_status = _quiz_status(quiz)
+
+    if quiz_status == "upcoming":
         return _quiz_countdown_page(quiz)
+
+    if quiz_status != "available":
+        return _quiz_unavailable_page(
+            quiz, "This quiz is no longer available."
+        ), 410
 
     if request.method == "GET":
         return render_template(
@@ -1179,7 +1280,8 @@ def quiz():
         flash("Please start a quiz first.", "error")
         return redirect(url_for("student.available_quizzes"))
 
-    attempt = _get_attempt(attempt_id)
+    attempt, quiz_data = _get_quiz_context(attempt_id)
+
     if not attempt:
         _clear_active_quiz_session()
         if is_ajax:
@@ -1272,8 +1374,10 @@ def quiz():
 
     else:
         # GET requests still need the complete question list for rendering.
-        questions = _get_attempt_questions(attempt["quiz_id"])
-
+        questions, answers = _get_questions_with_answers(
+            attempt["quiz_id"],
+            attempt_id,
+        )
         if not questions:
             return _quiz_unavailable_page(
                 quiz_data, "This quiz does not contain any questions."
@@ -1379,8 +1483,6 @@ def quiz():
         return redirect(url_for("student.quiz"))
 
     # GET: render the current question and existing answers.
-        if attempt["status"] == "submitted":
-            return redirect(url_for("student.quiz"))
     if attempt["status"] == "submitted":
         return redirect(url_for("student.quiz"))
     answers = _get_attempt_answers(attempt_id)
