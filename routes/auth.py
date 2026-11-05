@@ -1,3 +1,6 @@
+from werkzeug.security import generate_password_hash, check_password_hash
+import hmac
+
 from flask import (
     Blueprint,
     render_template,
@@ -10,8 +13,35 @@ from database import get_db_connection
 from psycopg2.extras import RealDictCursor
 
 
+
+
+
 auth = Blueprint("auth", __name__)
 
+def _verify_password_and_upgrade(cursor, table, id_column, user, supplied_password):
+    if not user:
+        return False
+
+    stored = str(user.get("password") or "")
+
+    if not stored:
+        return False
+
+    if stored.startswith(("scrypt:", "pbkdf2:", "argon2:")):
+        try:
+            return check_password_hash(stored, supplied_password)
+        except (ValueError, TypeError):
+            return False
+
+    if hmac.compare_digest(stored, str(supplied_password)):
+        upgraded = generate_password_hash(supplied_password)
+        cursor.execute(
+            f"UPDATE {table} SET password = %s WHERE {id_column} = %s",
+            (upgraded, user[id_column])
+        )
+        return True
+
+    return False
 
 # ============================================================
 # LOGIN PAGE
@@ -72,40 +102,27 @@ def login():
                 """
                 SELECT *
                 FROM teachers
-
-                WHERE LOWER(email)=LOWER(%s)
-
-                AND password=%s
+                WHERE LOWER(TRIM(email)) = LOWER(TRIM(%s))
+                LIMIT 1
                 """,
-                (
-                    username,
-                    password
-                )
+                (username,)
             )
 
             user = cursor.fetchone()
 
-            if user:
+            if user and _verify_password_and_upgrade(
+                cursor, "teachers", "teacher_id", user, password
+            ):
 
-                # Clear student session
-                session.pop(
-                    "student_id",
-                    None
-                )
+                db.commit()
 
-                # Teacher session
-                session["teacher_id"] = (
-                    user["teacher_id"]
-                )
+                session.pop("student_id", None)
+                session.pop("pending_quiz_id", None)
 
-                session["name"] = (
-                    user["full_name"]
-                )
+                session["teacher_id"] = user["teacher_id"]
+                session["name"] = user["full_name"]
 
-                return redirect(
-                    "/teacher_dashboard"
-                )
-
+                return redirect("/teacher_dashboard")
 
         # ====================================================
         # STUDENT LOGIN
@@ -117,55 +134,35 @@ def login():
                 """
                 SELECT *
                 FROM students
-
-                WHERE LOWER(roll_number)=LOWER(%s)
-
-                AND password=%s
+                WHERE LOWER(TRIM(roll_number)) = LOWER(TRIM(%s))
+                LIMIT 1
                 """,
-                (
-                    username,
-                    password
-                )
+                (username,)
             )
 
             user = cursor.fetchone()
 
-            if user:
+            if user and _verify_password_and_upgrade(
+                cursor, "students", "student_id", user, password
+            ):
 
-                # Clear teacher session
-                session.pop(
-                    "teacher_id",
-                    None
-                )
+                db.commit()
 
-                # Student session
-                session["student_id"] = (
-                    user["student_id"]
-                )
+                session.pop("teacher_id", None)
 
-                session["name"] = (
-                    user["full_name"]
-                )
-
-                # =================================================
-                # QR QUIZ CHECK
-                # =================================================
+                session["student_id"] = user["student_id"]
+                session["name"] = user["full_name"]
 
                 pending_quiz_id = session.pop(
-                    "pending_quiz_id",
-                    None
+                    "pending_quiz_id", None
                 )
 
                 if pending_quiz_id:
-
                     return redirect(
                         f"/start_quiz/{pending_quiz_id}"
                     )
 
-                return redirect(
-                    "/student_dashboard"
-                )
-
+                return redirect("/student_dashboard")
 
         # ====================================================
         # INVALID LOGIN
@@ -175,6 +172,7 @@ def login():
             "login.html",
             error="Invalid account type, username or password."
         )
+    
 
 
     except Exception as e:
@@ -412,7 +410,7 @@ def register():
                 (
                     full_name,
                     username,
-                    password
+                    generate_password_hash(password)
                 )
             )
 
@@ -475,7 +473,7 @@ def register():
                 (
                     full_name,
                     username,
-                    password,
+                    generate_password_hash(password),
                     department,
                     semester,
                     section
