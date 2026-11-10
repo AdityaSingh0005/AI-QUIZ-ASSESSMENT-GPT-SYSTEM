@@ -91,30 +91,68 @@ def _get_attempt(attempt_id):
         _close_db(connection)
 
 
-def _get_attempt_and_quiz(attempt_id):
-    """Fetch the attempt and its quiz metadata in one database round trip."""
+def _get_attempt_and_quiz(attempt_id, lightweight=False):
+    """
+    Fetch attempt and quiz metadata in one database round trip.
+
+    GET:
+        Fetch complete quiz metadata.
+
+    POST:
+        Fetch only the quiz fields required for answer processing.
+    """
+
     connection = _db_connection()
+
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT a.*, to_jsonb(q) AS quiz_data
-                FROM quiz_attempts AS a
-                LEFT JOIN quizzes AS q ON q.quiz_id = a.quiz_id
-                WHERE a.attempt_id = %s
-                """,
-                (attempt_id,),
-            )
+
+            if lightweight:
+                cursor.execute(
+                    """
+                    SELECT
+                        a.*,
+                        jsonb_build_object(
+                            'total_questions', q.total_questions,
+                            'question_time_seconds', q.question_time_seconds,
+                            'duration_minutes', q.duration_minutes
+                        ) AS quiz_data
+                    FROM quiz_attempts AS a
+                    JOIN quizzes AS q
+                        ON q.quiz_id = a.quiz_id
+                    WHERE a.attempt_id = %s
+                    """,
+                    (attempt_id,),
+                )
+
+            else:
+                cursor.execute(
+                    """
+                    SELECT
+                        a.*,
+                        to_jsonb(q) AS quiz_data
+                    FROM quiz_attempts AS a
+                    JOIN quizzes AS q
+                        ON q.quiz_id = a.quiz_id
+                    WHERE a.attempt_id = %s
+                    """,
+                    (attempt_id,),
+                )
+
             row = cursor.fetchone()
+
             if not row:
                 return None, None
+
             attempt = dict(row)
             quiz_data = attempt.pop("quiz_data", None)
+
             return attempt, quiz_data
+
     finally:
         _close_db(connection)
-
-
+        
+        
 def _normalise_json_list(value):
     """Accept PostgreSQL JSONB values or JSON strings."""
     if isinstance(value, str):
@@ -250,6 +288,8 @@ def _get_attempt_question_at(quiz_id, question_index, attempt=None):
             return cursor.fetchone()
     finally:
         _close_db(connection)
+
+
 
 # ============================================================
 # TIME AND QUIZ AVAILABILITY
@@ -508,6 +548,7 @@ def _save_answer(attempt, question_id, selected_option):
 
     finally:
         _close_db(connection)
+
 
 # ============================================================
 # ATTEMPT SUBMISSION AND RESULT CALCULATION
@@ -1225,7 +1266,10 @@ def quiz():
         return redirect(url_for("student.available_quizzes"))
 
     step_started = time.perf_counter()
-    attempt, quiz_data = _get_attempt_and_quiz(attempt_id)
+    attempt, quiz_data = _get_attempt_and_quiz(
+    attempt_id,
+    lightweight=(request.method == "POST")
+)
     timings["get_attempt_and_quiz_ms"] = round(
         (time.perf_counter() - step_started) * 1000, 2
     )
