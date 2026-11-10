@@ -310,7 +310,7 @@ Back to Home </a>
           const card = cards[currentIndex];
           questionIdInput.value = card.dataset.questionId;
           currentIndexInput.value = currentIndex;
-          nextButton.textContent = currentIndex === cards.length - 1 ? "Submit Quiz" : "Save & Next →";
+          nextButton.hidden = currentIndex === cards.length - 1;
           submitButton.hidden = currentIndex !== cards.length - 1;
           updateStyles();
           updateProgress();

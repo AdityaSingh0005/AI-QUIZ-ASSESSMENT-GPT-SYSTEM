@@ -476,14 +476,30 @@ def _get_attempt_answers(attempt_id):
 # ANSWER SAVING
 # ============================================================
 
+
 def _save_answer(attempt, question_id, selected_option):
+    import time
+
     if selected_option not in ("A", "B", "C", "D"):
         return False
 
+    total_start = time.perf_counter()
+
+    connection_start = time.perf_counter()
     connection = _db_connection()
+    connection_ms = (
+        time.perf_counter() - connection_start
+    ) * 1000
+
+    query_ms = 0
+    fetch_ms = 0
+    commit_ms = 0
+    saved_answer = None
 
     try:
         with connection.cursor() as cursor:
+            query_start = time.perf_counter()
+
             cursor.execute(
                 """
                 WITH locked_attempt AS MATERIALIZED (
@@ -534,21 +550,54 @@ def _save_answer(attempt, question_id, selected_option):
                 ),
             )
 
+            query_ms = (
+                time.perf_counter() - query_start
+            ) * 1000
+
+            fetch_start = time.perf_counter()
             saved_answer = cursor.fetchone()
 
+            fetch_ms = (
+                time.perf_counter() - fetch_start
+            ) * 1000
+
+        commit_start = time.perf_counter()
         connection.commit()
+
+        commit_ms = (
+            time.perf_counter() - commit_start
+        ) * 1000
+
         return saved_answer is not None
 
     except Exception:
         connection.rollback()
+
         current_app.logger.exception(
             "Failed to save quiz answer."
         )
         raise
 
     finally:
-        _close_db(connection)
+        total_ms = (
+            time.perf_counter() - total_start
+        ) * 1000
 
+        current_app.logger.info(
+            "ANSWER_SAVE_PERFORMANCE "
+            "connection_ms=%.2f "
+            "query_ms=%.2f "
+            "fetch_ms=%.2f "
+            "commit_ms=%.2f "
+            "total_ms=%.2f",
+            connection_ms,
+            query_ms,
+            fetch_ms,
+            commit_ms,
+            total_ms,
+        )
+
+        _close_db(connection)
 
 # ============================================================
 # ATTEMPT SUBMISSION AND RESULT CALCULATION
