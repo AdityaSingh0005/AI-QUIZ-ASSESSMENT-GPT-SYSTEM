@@ -2,26 +2,23 @@
 Gemini-only AI Question Generator
 AI Quiz Assessment GPT System
 
-Primary and only provider:
+Primary provider:
     Google Gemini API
 
-Compatible public functions:
-    generate_questions(topic, easy_count, medium_count, hard_count)
-    evaluate_question_difficulties(questions)
-    generate_replacement_questions(...)
-    apply_replacements(...)
-    extract_questions_from_response(...)
+Models:
+    1. gemini-3.8-flash
+    2. gemini-3.5-flash
+    3. gemini-3.5-flash-lite
 
-Environment variables:
-    GEMINI_API_KEY
-    GEMINI_MODEL=gemini-3.8-flash
-    AI_QUIZ_BATCH_SIZE=5
-    AI_MAX_COMPLETION_TOKENS=4000
-    AI_GENERATION_LOCK_WAIT=45
-    GEMINI_TIMEOUT_SECONDS=150
-    GEMINI_MAX_RETRIES=4
+Public functions:
+    generate_questions()
+    evaluate_question_difficulties()
+    generate_replacement_questions()
+    apply_replacements()
+    extract_questions_from_response()
 
-Ollama is completely removed.
+No Ollama.
+No paid fallback provider.
 """
 
 import json
@@ -31,9 +28,15 @@ import time
 import random
 import threading
 
+from difflib import SequenceMatcher
 from collections import Counter
+
 from google import genai
 
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
 
 GEMINI_API_KEY = (
     os.getenv("GEMINI_API_KEY") or ""
@@ -48,20 +51,26 @@ GEMINI_FALLBACK_MODELS = [
     "gemini-3.5-flash-lite",
 ]
 
-# Primary + fallback models
 GEMINI_MODELS = list(dict.fromkeys([
     GEMINI_MODEL,
     *GEMINI_FALLBACK_MODELS
 ]))
 
+# Generate 10 questions per API request.
 BATCH_SIZE = max(
     1,
-    min(int(os.getenv("AI_QUIZ_BATCH_SIZE", "5")), 10)
+    min(
+        int(os.getenv("AI_QUIZ_BATCH_SIZE", "10")),
+        10
+    )
 )
 
 MAX_OUTPUT_TOKENS = max(
-    1000,
-    min(int(os.getenv("AI_MAX_COMPLETION_TOKENS", "4000")), 8000)
+    2000,
+    min(
+        int(os.getenv("AI_MAX_COMPLETION_TOKENS", "6000")),
+        8000
+    )
 )
 
 GENERATION_LOCK_WAIT = max(
@@ -69,23 +78,46 @@ GENERATION_LOCK_WAIT = max(
     int(os.getenv("AI_GENERATION_LOCK_WAIT", "45"))
 )
 
+# Hard cap: 45 seconds per Gemini request.
 GEMINI_TIMEOUT_SECONDS = max(
-    30,
-    int(os.getenv("GEMINI_TIMEOUT_SECONDS", "150"))
+    20,
+    min(
+        int(os.getenv("GEMINI_TIMEOUT_SECONDS", "45")),
+        45
+    )
 )
 
-# Maximum total API attempts across all models
+# Maximum 4 API attempts per batch, regardless of
+# a larger value in the Render environment.
 GEMINI_MAX_RETRIES = max(
     1,
-    min(int(os.getenv("GEMINI_MAX_RETRIES", "10")), 15)
+    min(
+        int(os.getenv("GEMINI_MAX_RETRIES", "4")),
+        4
+    )
 )
 
-# Exponential backoff with maximum 60 seconds
-RETRY_DELAYS = (5, 10, 20, 30, 45, 60)
+# Short retry delays.
+RETRY_DELAYS = (1, 2, 3)
+
+# One additional request if the returned batch fails validation.
+BATCH_VALIDATION_ATTEMPTS = 2
+
+# Maximum duration for one complete quiz-generation operation.
+QUIZ_GENERATION_TIMEOUT_SECONDS = 18 * 60
 
 RETRYABLE_STATUS_CODES = {
-    408, 409, 429, 500, 502, 503, 504
+    408,
+    409,
+    429,
+    500,
+    502,
+    503,
+    504
 }
+
+_GENERATION_LOCK = threading.Lock()
+
 
 # ============================================================
 # GEMINI CLIENT
@@ -101,9 +133,6 @@ if GEMINI_API_KEY:
             "timeout": GEMINI_TIMEOUT_SECONDS * 1000
         }
     )
-
-
-_GENERATION_LOCK = threading.Lock()
 
 
 # ============================================================
@@ -306,7 +335,11 @@ def normalize_difficulty(value):
 
 def _status_code(exc):
 
-    response = getattr(exc, "response", None)
+    response = getattr(
+        exc,
+        "response",
+        None
+    )
 
     candidates = [
 
@@ -315,6 +348,7 @@ def _status_code(exc):
         getattr(exc, "status_code", None),
 
         getattr(exc, "code", None)
+
     ]
 
     for value in candidates:
@@ -334,6 +368,7 @@ def _status_code(exc):
             )
 
             if match:
+
                 return int(match.group(1))
 
     return None
@@ -354,11 +389,19 @@ def _format_provider_error(provider, exc):
         " "
     ).strip()
 
-    if len(message) > 700:
+    if len(message) > 500:
 
-        message = message[:700] + "..."
+        message = message[:500] + "..."
 
     return f"{provider}{status_text}: {message}"
+
+
+def _remaining_time(deadline):
+
+    if deadline is None:
+        return None
+
+    return deadline - time.monotonic()
 
 
 # ============================================================
@@ -368,6 +411,7 @@ def _format_provider_error(provider, exc):
 def _extract_json_text(content):
 
     if isinstance(content, (dict, list)):
+
         return content
 
     if not isinstance(content, str):
@@ -403,35 +447,37 @@ def _extract_json_text(content):
 
     except json.JSONDecodeError:
 
-        candidates = []
+        pass
 
-        start_obj = text.find("{")
-        end_obj = text.rfind("}")
+    start = text.find("{")
+    end = text.rfind("}")
 
-        start_arr = text.find("[")
-        end_arr = text.rfind("]")
+    if start >= 0 and end > start:
 
-        if start_obj >= 0 and end_obj > start_obj:
+        try:
 
-            candidates.append(
-                text[start_obj:end_obj + 1]
+            return json.loads(
+                text[start:end + 1]
             )
 
-        if start_arr >= 0 and end_arr > start_arr:
+        except json.JSONDecodeError:
 
-            candidates.append(
-                text[start_arr:end_arr + 1]
+            pass
+
+    start = text.find("[")
+    end = text.rfind("]")
+
+    if start >= 0 and end > start:
+
+        try:
+
+            return json.loads(
+                text[start:end + 1]
             )
 
-        for candidate in candidates:
+        except json.JSONDecodeError:
 
-            try:
-
-                return json.loads(candidate)
-
-            except json.JSONDecodeError:
-
-                continue
+            pass
 
     raise ValueError(
         "Gemini response was not valid JSON."
@@ -462,12 +508,76 @@ def _unwrap_questions(payload):
             return questions
 
     raise ValueError(
-        "JSON response must contain a 'questions' array."
+        "JSON response must contain a questions array."
     )
 
 
 # ============================================================
-# QUESTION VALIDATION
+# DUPLICATE DETECTION
+# ============================================================
+
+def _normalised_question_key(question):
+
+    question = str(
+        question or ""
+    ).casefold().strip()
+
+    # Ignore punctuation and repeated whitespace.
+    question = re.sub(
+        r"[^\w\s]",
+        " ",
+        question
+    )
+
+    question = re.sub(
+        r"\s+",
+        " ",
+        question
+    )
+
+    return question.strip()
+
+
+def _is_duplicate_question(
+    question,
+    existing_questions,
+    similarity_threshold=0.94
+):
+
+    new_key = _normalised_question_key(
+        question
+    )
+
+    if not new_key:
+        return True
+
+    for existing in existing_questions:
+
+        old_key = _normalised_question_key(
+            existing
+        )
+
+        if not old_key:
+            continue
+
+        if new_key == old_key:
+            return True
+
+        # Detect almost-identical reworded questions.
+        similarity = SequenceMatcher(
+            None,
+            new_key,
+            old_key
+        ).ratio()
+
+        if similarity >= similarity_threshold:
+            return True
+
+    return False
+
+
+# ============================================================
+# BASIC QUESTION VALIDATION
 # ============================================================
 
 def validate_basic_question_structure(
@@ -482,16 +592,34 @@ def validate_basic_question_structure(
         )
 
     if (
+
         expected_count is not None
+
         and len(questions) != expected_count
+
     ):
 
         raise ValueError(
+
             f"Expected {expected_count} questions, "
             f"received {len(questions)}."
+
         )
 
-    seen_questions = set()
+    seen_questions = []
+
+    required_fields = (
+
+        "question",
+        "option_a",
+        "option_b",
+        "option_c",
+        "option_d",
+        "correct_option",
+        "difficulty",
+        "explanation"
+
+    )
 
     for index, item in enumerate(
         questions,
@@ -504,30 +632,23 @@ def validate_basic_question_structure(
                 f"Question {index} is not a JSON object."
             )
 
-        required = (
-
-            "question",
-            "option_a",
-            "option_b",
-            "option_c",
-            "option_d",
-            "correct_option",
-            "difficulty",
-            "explanation"
-
-        )
-
-        for key in required:
+        for key in required_fields:
 
             value = item.get(key)
 
             if (
+
                 value is None
+
                 or not str(value).strip()
+
             ):
 
                 raise ValueError(
-                    f"Question {index}: '{key}' is missing."
+
+                    f"Question {index}: "
+                    f"'{key}' is missing."
+
                 )
 
         item["question"] = str(
@@ -557,8 +678,7 @@ def validate_basic_question_structure(
         ):
 
             raise ValueError(
-                f"Question {index}: correct_option "
-                "must be A, B, C or D."
+                f"Question {index}: invalid correct_option."
             )
 
         item["difficulty"] = normalize_difficulty(
@@ -590,24 +710,26 @@ def validate_basic_question_structure(
         if len(set(options)) != 4:
 
             raise ValueError(
-                f"Question {index}: all four options "
-                "must be unique."
+
+                f"Question {index}: "
+                "all four options must be unique."
+
             )
 
-        normalized_question = re.sub(
-            r"\s+",
-            " ",
-            item["question"].casefold()
-        ).strip()
-
-        if normalized_question in seen_questions:
+        if _is_duplicate_question(
+            item["question"],
+            seen_questions
+        ):
 
             raise ValueError(
-                f"Duplicate question detected at question {index}."
+
+                f"Duplicate question inside batch "
+                f"at question {index}."
+
             )
 
-        seen_questions.add(
-            normalized_question
+        seen_questions.append(
+            item["question"]
         )
 
     return questions
@@ -648,27 +770,17 @@ def check_difficulty_distribution(
 
     }
 
-    if any(
+    for level, expected_count in expected.items():
 
-        actual.get(level, 0) != count
+        if actual.get(level, 0) != expected_count:
 
-        for level, count in expected.items()
+            raise ValueError(
 
-    ):
+                "Difficulty distribution mismatch. "
 
-        raise ValueError(
+                f"Expected {expected}, received {dict(actual)}."
 
-            "Difficulty distribution mismatch. "
-
-            f"Expected {expected}, received "
-
-            f"{{'Easy': {actual.get('Easy', 0)}, "
-
-            f"'Medium': {actual.get('Medium', 0)}, "
-
-            f"'Hard': {actual.get('Hard', 0)}}}."
-
-        )
+            )
 
     return True
 
@@ -678,9 +790,13 @@ def extract_questions_from_response(
     expected_count=None
 ):
 
-    payload = _extract_json_text(response)
+    payload = _extract_json_text(
+        response
+    )
 
-    questions = _unwrap_questions(payload)
+    questions = _unwrap_questions(
+        payload
+    )
 
     if (
 
@@ -701,77 +817,103 @@ def extract_questions_from_response(
     )
 
 
-def _normalised_question_key(question):
-
-    return re.sub(
-        r"\s+",
-        " ",
-        str(question or "").casefold()
-    ).strip()
-
-
 # ============================================================
-# GEMINI API - RETRY SYSTEM
+# GEMINI API - FAST RETRY AND MODEL FAILOVER
 # ============================================================
 
 def _gemini_json_content(
     prompt,
     response_schema=None,
-    temperature=0.2
+    temperature=0.2,
+    deadline=None
 ):
-    """
-    Gemini-only generation with automatic model failover.
-
-    Model order:
-        1. gemini-3.8-flash
-        2. gemini-3.5-flash
-        3. gemini-3.5-flash-lite
-
-    Maximum attempts are controlled by
-    GEMINI_MAX_RETRIES.
-
-    Temporary errors trigger retry/backoff.
-    Permanent model errors trigger model failover.
-    """
 
     if gemini_client is None:
+
         raise RuntimeError(
             "GEMINI_API_KEY is not configured."
         )
 
     config = {
+
         "temperature": temperature,
+
         "max_output_tokens": MAX_OUTPUT_TOKENS,
+
         "response_mime_type": "application/json"
+
     }
 
     if response_schema is not None:
+
         config["response_json_schema"] = response_schema
 
-    last_error = None
     errors = []
 
-    attempt = 0
+    last_error = None
+
+    unavailable_models = set()
+
     model_index = 0
+
+    attempt = 0
 
     while attempt < GEMINI_MAX_RETRIES:
 
-        model = GEMINI_MODELS[
-            model_index % len(GEMINI_MODELS)
+        remaining_time = _remaining_time(
+            deadline
+        )
+
+        if (
+
+            remaining_time is not None
+
+            and remaining_time <= 0
+
+        ):
+
+            raise TimeoutError(
+                "Quiz generation reached its maximum time limit."
+            )
+
+        available_models = [
+
+            model
+
+            for model in GEMINI_MODELS
+
+            if model not in unavailable_models
+
+        ]
+
+        if not available_models:
+
+            raise RuntimeError(
+                "All configured Gemini models are unavailable: "
+                + ", ".join(GEMINI_MODELS)
+            )
+
+        model = available_models[
+            model_index % len(available_models)
         ]
 
         attempt += 1
 
         try:
+
             print(
                 f"[GEMINI] Attempt {attempt}/"
                 f"{GEMINI_MAX_RETRIES} | Model: {model}"
             )
 
             response = gemini_client.models.generate_content(
+
                 model=model,
+
                 contents=prompt,
+
                 config=config
+
             )
 
             content = getattr(
@@ -780,7 +922,13 @@ def _gemini_json_content(
                 None
             )
 
-            if not content or not str(content).strip():
+            if (
+
+                not content
+
+                or not str(content).strip()
+
+            ):
 
                 raise ValueError(
                     f"Empty response from {model}."
@@ -795,106 +943,159 @@ def _gemini_json_content(
         except Exception as exc:
 
             last_error = exc
-            status = _status_code(exc)
+
+            status = _status_code(
+                exc
+            )
 
             error_message = _format_provider_error(
                 model,
                 exc
             )
 
-            errors.append(error_message)
+            errors.append(
+                error_message
+            )
 
             print(
                 f"[GEMINI ERROR] {error_message}"
             )
 
-            # Invalid API key or permission:
-            # Trying another model will not fix authentication.
-            if status in (401, 403):
+            # Authentication errors cannot be fixed by
+            # switching models.
+            if status == 401:
 
                 raise RuntimeError(
-                    "Gemini API authentication or permission "
-                    f"failed: {error_message}"
+                    "Gemini API key is invalid or unauthorized: "
+                    + error_message
                 ) from exc
 
-            # Invalid model: skip to the next model.
-            if status == 404:
+            # A model-specific 403 may be bypassed by trying
+            # another configured model.
+            if status == 403:
 
-                print(
-                    f"[GEMINI FAILOVER] Model {model} "
-                    "is unavailable. Switching model."
+                unavailable_models.add(
+                    model
                 )
 
-                model_index += 1
+                print(
+                    f"[GEMINI FAILOVER] Access denied for {model}."
+                )
+
                 continue
 
-            # Permanent bad request:
-            # Do not repeatedly send the same request.
+            # Skip invalid/unavailable model.
+            if status == 404:
+
+                unavailable_models.add(
+                    model
+                )
+
+                print(
+                    f"[GEMINI FAILOVER] {model} is unavailable."
+                )
+
+                continue
+
+            # Invalid request cannot be repaired by retries.
             if status == 400:
 
                 raise RuntimeError(
-                    f"Gemini rejected the request: {error_message}"
+                    "Gemini rejected the request: "
+                    + error_message
                 ) from exc
 
-            # Retry temporary errors.
-            if status is not None and status not in RETRYABLE_STATUS_CODES:
+            if (
+
+                status is not None
+
+                and status not in RETRYABLE_STATUS_CODES
+
+            ):
 
                 raise RuntimeError(
-                    f"Non-retryable Gemini error: {error_message}"
+                    "Non-retryable Gemini error: "
+                    + error_message
                 ) from exc
 
             if attempt >= GEMINI_MAX_RETRIES:
                 break
 
             delay = RETRY_DELAYS[
-                min(attempt - 1, len(RETRY_DELAYS) - 1)
+                min(
+                    attempt - 1,
+                    len(RETRY_DELAYS) - 1
+                )
             ]
 
-            delay += random.uniform(0, 3)
-
-            print(
-                f"[GEMINI RETRY] Waiting {delay:.1f}s "
-                f"before next attempt."
+            delay += random.uniform(
+                0,
+                0.7
             )
 
-            time.sleep(delay)
+            remaining_time = _remaining_time(
+                deadline
+            )
 
-            # Move to next model after temporary failure.
+            if remaining_time is not None:
+
+                delay = min(
+                    delay,
+                    max(0, remaining_time)
+                )
+
+            print(
+                f"[GEMINI RETRY] Waiting {delay:.1f}s."
+            )
+
+            if delay > 0:
+
+                time.sleep(
+                    delay
+                )
+
             model_index += 1
 
-    error_summary = " | ".join(errors[-5:])
+    error_summary = " | ".join(
+        errors[-4:]
+    )
 
     raise RuntimeError(
-        "Gemini generation failed after "
-        f"{attempt} total attempt(s) across available models. "
+
+        "Gemini failed after "
+
+        f"{attempt} attempt(s). "
+
         f"Last error: {last_error}. "
+
         f"Recent errors: {error_summary}"
+
     ) from last_error
-    
-    
+
+
 # ============================================================
-# GEMINI ONLY REQUEST HANDLER
+# GEMINI REQUEST HANDLER
 # ============================================================
 
 def _request_with_fallback(
     prompt,
     validator=None,
     response_schema=None,
-    temperature=0.2
+    temperature=0.2,
+    deadline=None
 ):
 
     """
     Backward-compatible function name.
 
-    Gemini is the only AI provider.
-    No Ollama or other provider is called.
+    Only Gemini is used.
     """
 
     if gemini_client is None:
 
         raise RuntimeError(
             "Gemini API is not configured. "
-            "Set GEMINI_API_KEY in Render."
+            "Set GEMINI_API_KEY."
         )
 
     raw = _gemini_json_content(
@@ -903,11 +1104,15 @@ def _request_with_fallback(
 
         response_schema=response_schema,
 
-        temperature=temperature
+        temperature=temperature,
+
+        deadline=deadline
 
     )
 
-    parsed = _extract_json_text(raw)
+    parsed = _extract_json_text(
+        raw
+    )
 
     if validator is not None:
 
@@ -917,15 +1122,24 @@ def _request_with_fallback(
 
 
 # ============================================================
-# PROMPT CONSTRUCTION
+# QUESTION PROMPT
 # ============================================================
 
 def _question_prompt(
     topic,
     count,
     difficulty,
-    previous_questions
+    previous_questions,
+    rejected_questions=None
 ):
+
+    previous_questions = list(
+        previous_questions or []
+    )
+
+    rejected_questions = list(
+        rejected_questions or []
+    )
 
     previous_text = ""
 
@@ -933,22 +1147,43 @@ def _question_prompt(
 
         previous_text = (
 
-            "\nAvoid creating questions similar "
-            "to these existing questions:\n"
+            "\nQUESTIONS ALREADY GENERATED. "
+            "DO NOT REPEAT OR REPHRASE THEM:\n"
 
         )
 
         previous_text += "\n".join(
 
-            f"- {str(q)[:350]}"
+            f"- {str(q)[:250]}"
 
-            for q in previous_questions[-30:]
+            for q in previous_questions
+
+        )
+
+    rejected_text = ""
+
+    if rejected_questions:
+
+        rejected_text = (
+
+            "\nQUESTIONS REJECTED IN THE PREVIOUS RESPONSE. "
+            "DO NOT REUSE THEM:\n"
+
+        )
+
+        rejected_text += "\n".join(
+
+            f"- {str(q)[:250]}"
+
+            for q in rejected_questions
 
         )
 
     return f"""
 
-Create exactly {count} original multiple-choice questions.
+You are an expert university examination question setter.
+
+Generate exactly {count} ORIGINAL multiple-choice questions.
 
 TOPIC:
 {topic}
@@ -956,23 +1191,27 @@ TOPIC:
 REQUIRED DIFFICULTY:
 {difficulty}
 
-STRICT RULES:
+STRICT REQUIREMENTS:
 
-1. Return exactly {count} questions.
-2. Every question must have exactly four options.
-3. Options must be A, B, C and D.
-4. Exactly one option must be correct.
-5. All four options must be unique.
-6. correct_option must be A, B, C or D.
-7. difficulty must be exactly "{difficulty}".
-8. Provide a clear and factually correct explanation.
-9. Do not repeat earlier questions.
-10. Avoid ambiguous or subjective questions.
-11. Keep questions suitable for university-level assessment.
-12. Return valid JSON only.
-13. Use a top-level "questions" array.
+1. Generate exactly {count} questions.
+2. All questions must test different knowledge points.
+3. Do not repeat existing questions.
+4. Do not rephrase an existing question.
+5. Do not use the same question with changed names or numbers.
+6. Every question must contain four options.
+7. All four options must be different.
+8. Exactly one option must be correct.
+9. correct_option must be A, B, C or D.
+10. difficulty must be exactly "{difficulty}".
+11. Give a clear factual explanation.
+12. Avoid ambiguous questions.
+13. Avoid subjective questions.
+14. Questions must be suitable for university-level assessment.
+15. Use clear and grammatically correct English.
+16. Return JSON only.
+17. Do not include Markdown code fences.
 
-Every question must contain:
+Each question must contain:
 
 question
 option_a
@@ -985,7 +1224,156 @@ explanation
 
 {previous_text}
 
+{rejected_text}
+
+Return exactly {count} questions inside the top-level questions array.
+
 """.strip()
+
+
+# ============================================================
+# VALIDATED BATCH GENERATION
+# ============================================================
+
+def _generate_validated_batch(
+    prompt,
+    validator,
+    count,
+    difficulty,
+    deadline=None
+):
+
+    """
+    Generate one batch.
+
+    If the response contains duplicates or fails validation,
+    regenerate only this batch instead of failing the full quiz.
+    """
+
+    last_validation_error = None
+
+    rejected_questions = []
+
+    current_prompt = prompt
+
+    for validation_attempt in range(
+        1,
+        BATCH_VALIDATION_ATTEMPTS + 1
+    ):
+
+        remaining_time = _remaining_time(
+            deadline
+        )
+
+        if (
+
+            remaining_time is not None
+
+            and remaining_time <= 0
+
+        ):
+
+            raise TimeoutError(
+                "Quiz generation exceeded its time limit."
+            )
+
+        try:
+
+            print(
+
+                f"[BATCH] {difficulty} | "
+
+                f"{count} questions | "
+
+                f"Validation attempt "
+                f"{validation_attempt}/"
+                f"{BATCH_VALIDATION_ATTEMPTS}"
+
+            )
+
+            payload = _request_with_fallback(
+
+                prompt=current_prompt,
+
+                validator=validator,
+
+                response_schema=build_quiz_batch_schema(
+                    count
+                ),
+
+                temperature=0.2,
+
+                deadline=deadline
+
+            )
+
+            batch = validate_basic_question_structure(
+
+                _unwrap_questions(payload),
+
+                expected_count=count
+
+            )
+
+            validator(payload)
+
+            print(
+                f"[BATCH SUCCESS] {difficulty}: {count} questions."
+            )
+
+            return batch
+
+        except ValueError as exc:
+
+            last_validation_error = exc
+
+            print(
+                f"[BATCH VALIDATION ERROR] {exc}"
+            )
+
+            if validation_attempt >= BATCH_VALIDATION_ATTEMPTS:
+
+                break
+
+            rejected_questions.append(
+                str(exc)
+            )
+
+            current_prompt = (
+
+                prompt
+
+                + "\n\nIMPORTANT REGENERATION INSTRUCTION:\n"
+
+                + "Your previous response failed validation.\n"
+
+                + f"Reason: {str(exc)[:500]}\n"
+
+                + "Generate a completely new set of questions.\n"
+
+                + "Do not reuse any question from the previous response.\n"
+
+                + "Check every question for uniqueness before returning JSON."
+
+            )
+
+        except TimeoutError:
+
+            raise
+
+        except RuntimeError:
+
+            raise
+
+    raise ValueError(
+
+        f"Unable to generate a valid unique {difficulty} batch "
+
+        f"after {BATCH_VALIDATION_ATTEMPTS} validation attempts. "
+
+        f"Last validation error: {last_validation_error}"
+
+    )
 
 
 # ============================================================
@@ -1002,7 +1390,8 @@ def generate_questions(
     """
     Generate questions using Gemini only.
 
-    Return format:
+    Return format remains:
+
         (all_questions, [])
     """
 
@@ -1012,17 +1401,22 @@ def generate_questions(
 
     try:
 
-        easy_count = int(easy_count)
+        easy_count = int(
+            easy_count
+        )
 
-        medium_count = int(medium_count)
+        medium_count = int(
+            medium_count
+        )
 
-        hard_count = int(hard_count)
+        hard_count = int(
+            hard_count
+        )
 
     except (TypeError, ValueError):
 
         raise ValueError(
-            "Easy, Medium and Hard counts "
-            "must be whole numbers."
+            "Question counts must be whole numbers."
         )
 
     counts = (
@@ -1053,7 +1447,11 @@ def generate_questions(
             "Maximum 150 questions per difficulty is allowed."
         )
 
-    if sum(counts) <= 0:
+    total_count = sum(
+        counts
+    )
+
+    if total_count <= 0:
 
         raise ValueError(
             "At least one question must be requested."
@@ -1077,15 +1475,23 @@ def generate_questions(
     ):
 
         raise RuntimeError(
-            "Another quiz is currently being generated. "
+            "Another quiz is being generated. "
             "Please try again shortly."
         )
+
+    started_at = time.monotonic()
+
+    deadline = (
+
+        started_at
+
+        + QUIZ_GENERATION_TIMEOUT_SECONDS
+
+    )
 
     try:
 
         all_questions = []
-
-        previous_keys = set()
 
         difficulty_batches = (
 
@@ -1097,11 +1503,71 @@ def generate_questions(
 
         )
 
+        total_batches = sum(
+
+            (
+
+                count + BATCH_SIZE - 1
+
+            ) // BATCH_SIZE
+
+            for _, count in difficulty_batches
+
+        )
+
+        completed_batches = 0
+
+        print("\n" + "=" * 60)
+
+        print(
+            f"[QUIZ GENERATION] Topic: {topic}"
+        )
+
+        print(
+            f"[QUIZ GENERATION] Total questions: {total_count}"
+        )
+
+        print(
+            f"[QUIZ GENERATION] Batch size: {BATCH_SIZE}"
+        )
+
+        print(
+            f"[QUIZ GENERATION] Total batches: {total_batches}"
+        )
+
+        print(
+            f"[QUIZ GENERATION] Models: {GEMINI_MODELS}"
+        )
+
+        print("=" * 60)
+
         for difficulty, requested_count in difficulty_batches:
 
             remaining = requested_count
 
             while remaining > 0:
+
+                remaining_time = _remaining_time(
+                    deadline
+                )
+
+                if (
+
+                    remaining_time is not None
+
+                    and remaining_time <= 0
+
+                ):
+
+                    raise TimeoutError(
+
+                        "Quiz generation reached its "
+                        "18-minute time limit. "
+
+                        f"Generated {len(all_questions)} "
+                        f"of {total_count} questions."
+
+                    )
 
                 batch_count = min(
                     BATCH_SIZE,
@@ -1128,6 +1594,14 @@ def generate_questions(
 
                 )
 
+                previous_keys = [
+
+                    q["question"]
+
+                    for q in all_questions
+
+                ]
+
                 def validate_batch(payload):
 
                     batch = validate_basic_question_structure(
@@ -1145,7 +1619,9 @@ def generate_questions(
                         for q in batch
 
                         if normalize_difficulty(
+
                             q.get("difficulty")
+
                         ) != difficulty
 
                     ]
@@ -1154,82 +1630,137 @@ def generate_questions(
 
                         raise ValueError(
 
-                            f"All {batch_count} questions "
-
-                            f"must be {difficulty}."
+                            f"Expected all questions to be "
+                            f"{difficulty}."
 
                         )
 
-                    local_keys = set()
+                    current_batch_questions = []
 
                     for question in batch:
 
-                        key = _normalised_question_key(
+                        question_text = question["question"]
 
-                            question["question"]
+                        if _is_duplicate_question(
 
-                        )
+                            question_text,
 
-                        if (
-
-                            key in previous_keys
-
-                            or key in local_keys
+                            previous_keys
 
                         ):
 
                             raise ValueError(
 
                                 "Duplicate question detected "
+                                "across generation batches: "
 
-                                "across generation batches."
+                                + question_text[:180]
 
                             )
 
-                        local_keys.add(key)
+                        if _is_duplicate_question(
+
+                            question_text,
+
+                            current_batch_questions
+
+                        ):
+
+                            raise ValueError(
+
+                                "Duplicate question inside "
+                                "the current batch: "
+
+                                + question_text[:180]
+
+                            )
+
+                        current_batch_questions.append(
+                            question_text
+                        )
 
                     return batch
 
-                payload = _request_with_fallback(
+                batch = _generate_validated_batch(
 
                     prompt=prompt,
 
                     validator=validate_batch,
 
-                    response_schema=build_quiz_batch_schema(
-                        batch_count
-                    ),
+                    count=batch_count,
 
-                    temperature=0.2
+                    difficulty=difficulty,
+
+                    deadline=deadline
 
                 )
 
-                batch = validate_batch(payload)
-
-                for question in batch:
-
-                    previous_keys.add(
-
-                        _normalised_question_key(
-
-                            question["question"]
-
-                        )
-
-                    )
-
-                all_questions.extend(batch)
+                all_questions.extend(
+                    batch
+                )
 
                 remaining -= batch_count
 
+                completed_batches += 1
+
+                elapsed = (
+                    time.monotonic() - started_at
+                )
+
+                print("\n" + "-" * 55)
+
+                print(
+                    f"[QUIZ PROGRESS] "
+                    f"{completed_batches}/{total_batches} batches"
+                )
+
+                print(
+                    f"[QUIZ PROGRESS] "
+                    f"{len(all_questions)}/{total_count} questions"
+                )
+
+                print(
+                    f"[QUIZ PROGRESS] "
+                    f"Elapsed: {elapsed:.1f} seconds"
+                )
+
+                print("-" * 55)
+
+        # Final structure validation.
         validate_basic_question_structure(
 
             all_questions,
 
-            expected_count=sum(counts)
+            expected_count=total_count
 
         )
 
+        # Final duplicate validation across all batches.
+        final_questions = []
+
+        for question in all_questions:
+
+            if _is_duplicate_question(
+
+                question["question"],
+
+                final_questions
+
+            ):
+
+                raise ValueError(
+
+                    "Final duplicate validation failed: "
+
+                    + question["question"][:180]
+
+                )
+
+            final_questions.append(
+                question["question"]
+            )
+
+        # Exact difficulty distribution.
         check_difficulty_distribution(
 
             all_questions,
@@ -1241,6 +1772,38 @@ def generate_questions(
             hard_count
 
         )
+
+        elapsed = (
+            time.monotonic() - started_at
+        )
+
+        print("\n" + "=" * 60)
+
+        print(
+            "[QUIZ GENERATION SUCCESS]"
+        )
+
+        print(
+            f"Total questions: {len(all_questions)}"
+        )
+
+        print(
+            f"Easy: {easy_count}"
+        )
+
+        print(
+            f"Medium: {medium_count}"
+        )
+
+        print(
+            f"Hard: {hard_count}"
+        )
+
+        print(
+            f"Generation time: {elapsed:.1f} seconds"
+        )
+
+        print("=" * 60 + "\n")
 
         return all_questions, []
 
@@ -1317,8 +1880,11 @@ def evaluate_question_difficulties(questions):
         "and a short reason.\n\n"
 
         + json.dumps(
+
             {"questions": compact_questions},
+
             ensure_ascii=False
+
         )
 
     )
@@ -1349,17 +1915,21 @@ def evaluate_question_difficulties(questions):
 
         for item in evaluations:
 
-            if (
+            if not isinstance(item, dict):
 
-                not isinstance(item, dict)
-
-                or normalize_difficulty(
-                    item.get("evaluated_difficulty")
-                ) not in (
-                    "Easy",
-                    "Medium",
-                    "Hard"
+                raise ValueError(
+                    "Invalid evaluation object."
                 )
+
+            if normalize_difficulty(
+
+                item.get("evaluated_difficulty")
+
+            ) not in (
+
+                "Easy",
+                "Medium",
+                "Hard"
 
             ):
 
@@ -1383,7 +1953,9 @@ def evaluate_question_difficulties(questions):
 
     )
 
-    evaluations = validator(payload)
+    evaluations = validator(
+        payload
+    )
 
     for item in evaluations:
 
@@ -1400,8 +1972,13 @@ def evaluate_question_difficulties(questions):
                 0.0,
 
                 min(
+
                     1.0,
-                    float(item.get("confidence", 0))
+
+                    float(
+                        item.get("confidence", 0)
+                    )
+
                 )
 
             )
@@ -1441,19 +2018,23 @@ def generate_replacement_questions(
 
         return []
 
+    if gemini_client is None:
+
+        raise RuntimeError(
+            "Gemini API is not configured."
+        )
+
     replacements = []
 
-    existing_keys = {
+    existing_question_texts = [
 
-        _normalised_question_key(
-            q.get("question")
-        )
+        q.get("question", "")
 
         for q in existing_questions
 
         if isinstance(q, dict)
 
-    }
+    ]
 
     groups = {
 
@@ -1473,12 +2054,22 @@ def generate_replacement_questions(
         ]
 
         for level in (
+
             "Easy",
             "Medium",
             "Hard"
+
         )
 
     }
+
+    deadline = (
+
+        time.monotonic()
+
+        + QUIZ_GENERATION_TIMEOUT_SECONDS
+
+    )
 
     for difficulty, items in groups.items():
 
@@ -1491,6 +2082,20 @@ def generate_replacement_questions(
                 remaining
             )
 
+            all_existing = (
+
+                existing_question_texts
+
+                + [
+
+                    q["question"]
+
+                    for q in replacements
+
+                ]
+
+            )
+
             prompt = _question_prompt(
 
                 topic=topic,
@@ -1499,15 +2104,7 @@ def generate_replacement_questions(
 
                 difficulty=difficulty,
 
-                previous_questions=[
-
-                    q.get("question", "")
-
-                    for q in (
-                        existing_questions + replacements
-                    )
-
-                ]
+                previous_questions=all_existing
 
             )
 
@@ -1521,7 +2118,7 @@ def generate_replacement_questions(
 
                 )
 
-                local_keys = set()
+                batch_texts = []
 
                 for question in batch:
 
@@ -1538,60 +2135,58 @@ def generate_replacement_questions(
 
                         )
 
-                    key = _normalised_question_key(
+                    if _is_duplicate_question(
 
-                        question["question"]
+                        question["question"],
 
-                    )
-
-                    if (
-
-                        key in existing_keys
-
-                        or key in local_keys
+                        all_existing
 
                     ):
 
                         raise ValueError(
 
-                            "Replacement duplicates "
-                            "an existing question."
+                            "Replacement duplicates an "
+                            "existing question: "
+
+                            + question["question"][:180]
 
                         )
 
-                    local_keys.add(key)
+                    if _is_duplicate_question(
+
+                        question["question"],
+
+                        batch_texts
+
+                    ):
+
+                        raise ValueError(
+                            "Duplicate replacement in current batch."
+                        )
+
+                    batch_texts.append(
+                        question["question"]
+                    )
 
                 return batch
 
-            payload = _request_with_fallback(
+            batch = _generate_validated_batch(
 
-                prompt,
+                prompt=prompt,
 
                 validator=validator,
 
-                response_schema=build_replacement_schema(
-                    batch_count
-                ),
+                count=batch_count,
 
-                temperature=0.25
+                difficulty=difficulty,
+
+                deadline=deadline
 
             )
 
-            batch = validator(payload)
-
-            for question in batch:
-
-                existing_keys.add(
-
-                    _normalised_question_key(
-
-                        question["question"]
-
-                    )
-
-                )
-
-            replacements.extend(batch)
+            replacements.extend(
+                batch
+            )
 
             remaining -= batch_count
 
