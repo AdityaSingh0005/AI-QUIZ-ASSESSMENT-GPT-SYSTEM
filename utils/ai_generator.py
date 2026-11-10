@@ -35,10 +35,6 @@ from collections import Counter
 from google import genai
 
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
-
 GEMINI_API_KEY = (
     os.getenv("GEMINI_API_KEY") or ""
 ).strip()
@@ -47,6 +43,17 @@ GEMINI_MODEL = (
     os.getenv("GEMINI_MODEL") or "gemini-3.8-flash"
 ).strip()
 
+GEMINI_FALLBACK_MODELS = [
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+]
+
+# Primary + fallback models
+GEMINI_MODELS = list(dict.fromkeys([
+    GEMINI_MODEL,
+    *GEMINI_FALLBACK_MODELS
+]))
+
 BATCH_SIZE = max(
     1,
     min(int(os.getenv("AI_QUIZ_BATCH_SIZE", "5")), 10)
@@ -54,10 +61,7 @@ BATCH_SIZE = max(
 
 MAX_OUTPUT_TOKENS = max(
     1000,
-    min(
-        int(os.getenv("AI_MAX_COMPLETION_TOKENS", "4000")),
-        8000
-    )
+    min(int(os.getenv("AI_MAX_COMPLETION_TOKENS", "4000")), 8000)
 )
 
 GENERATION_LOCK_WAIT = max(
@@ -70,23 +74,18 @@ GEMINI_TIMEOUT_SECONDS = max(
     int(os.getenv("GEMINI_TIMEOUT_SECONDS", "150"))
 )
 
+# Maximum total API attempts across all models
 GEMINI_MAX_RETRIES = max(
     1,
-    min(int(os.getenv("GEMINI_MAX_RETRIES", "4")), 6)
+    min(int(os.getenv("GEMINI_MAX_RETRIES", "10")), 15)
 )
 
-RETRY_DELAYS = (2, 5, 10, 20)
+# Exponential backoff with maximum 60 seconds
+RETRY_DELAYS = (5, 10, 20, 30, 45, 60)
 
 RETRYABLE_STATUS_CODES = {
-    408,
-    409,
-    429,
-    500,
-    502,
-    503,
-    504
+    408, 409, 429, 500, 502, 503, 504
 }
-
 
 # ============================================================
 # GEMINI CLIENT
@@ -720,45 +719,59 @@ def _gemini_json_content(
     response_schema=None,
     temperature=0.2
 ):
+    """
+    Gemini-only generation with automatic model failover.
+
+    Model order:
+        1. gemini-3.8-flash
+        2. gemini-3.5-flash
+        3. gemini-3.5-flash-lite
+
+    Maximum attempts are controlled by
+    GEMINI_MAX_RETRIES.
+
+    Temporary errors trigger retry/backoff.
+    Permanent model errors trigger model failover.
+    """
 
     if gemini_client is None:
-
         raise RuntimeError(
             "GEMINI_API_KEY is not configured."
         )
 
     config = {
-
         "temperature": temperature,
-
         "max_output_tokens": MAX_OUTPUT_TOKENS,
-
         "response_mime_type": "application/json"
-
     }
 
     if response_schema is not None:
-
         config["response_json_schema"] = response_schema
 
     last_error = None
+    errors = []
 
-    for attempt in range(GEMINI_MAX_RETRIES):
+    attempt = 0
+    model_index = 0
+
+    while attempt < GEMINI_MAX_RETRIES:
+
+        model = GEMINI_MODELS[
+            model_index % len(GEMINI_MODELS)
+        ]
+
+        attempt += 1
 
         try:
-
             print(
-                f"[GEMINI] Requesting model {GEMINI_MODEL}"
+                f"[GEMINI] Attempt {attempt}/"
+                f"{GEMINI_MAX_RETRIES} | Model: {model}"
             )
 
             response = gemini_client.models.generate_content(
-
-                model=GEMINI_MODEL,
-
+                model=model,
                 contents=prompt,
-
                 config=config
-
             )
 
             content = getattr(
@@ -767,101 +780,98 @@ def _gemini_json_content(
                 None
             )
 
-            if (
-                not content
-                or not str(content).strip()
-            ):
-
-                prompt_feedback = getattr(
-                    response,
-                    "prompt_feedback",
-                    None
-                )
-
-                candidates = getattr(
-                    response,
-                    "candidates",
-                    None
-                )
-
-                finish_reason = None
-
-                if candidates:
-
-                    finish_reason = getattr(
-                        candidates[0],
-                        "finish_reason",
-                        None
-                    )
+            if not content or not str(content).strip():
 
                 raise ValueError(
-
-                    "Gemini returned empty content "
-
-                    f"(finish_reason={finish_reason}, "
-
-                    f"prompt_feedback={prompt_feedback})."
-
+                    f"Empty response from {model}."
                 )
+
+            print(
+                f"[GEMINI SUCCESS] Model: {model}"
+            )
 
             return content
 
         except Exception as exc:
 
             last_error = exc
-
             status = _status_code(exc)
 
-            # Retry temporary HTTP errors only.
-            # Do not retry invalid keys, invalid models or bad requests.
+            error_message = _format_provider_error(
+                model,
+                exc
+            )
 
-            if status is not None:
+            errors.append(error_message)
 
-                if status not in RETRYABLE_STATUS_CODES:
+            print(
+                f"[GEMINI ERROR] {error_message}"
+            )
 
-                    break
+            # Invalid API key or permission:
+            # Trying another model will not fix authentication.
+            if status in (401, 403):
 
-            # Unknown connection-level exceptions can be temporary.
-            # Retry them within the configured retry limit.
+                raise RuntimeError(
+                    "Gemini API authentication or permission "
+                    f"failed: {error_message}"
+                ) from exc
 
-            if attempt >= GEMINI_MAX_RETRIES - 1:
+            # Invalid model: skip to the next model.
+            if status == 404:
 
+                print(
+                    f"[GEMINI FAILOVER] Model {model} "
+                    "is unavailable. Switching model."
+                )
+
+                model_index += 1
+                continue
+
+            # Permanent bad request:
+            # Do not repeatedly send the same request.
+            if status == 400:
+
+                raise RuntimeError(
+                    f"Gemini rejected the request: {error_message}"
+                ) from exc
+
+            # Retry temporary errors.
+            if status is not None and status not in RETRYABLE_STATUS_CODES:
+
+                raise RuntimeError(
+                    f"Non-retryable Gemini error: {error_message}"
+                ) from exc
+
+            if attempt >= GEMINI_MAX_RETRIES:
                 break
 
             delay = RETRY_DELAYS[
-                min(
-                    attempt,
-                    len(RETRY_DELAYS) - 1
-                )
+                min(attempt - 1, len(RETRY_DELAYS) - 1)
             ]
 
-            delay += random.uniform(0, 1)
+            delay += random.uniform(0, 3)
 
             print(
-
-                "[GEMINI RETRY] "
-
-                f"Attempt {attempt + 1}/"
-
-                f"{GEMINI_MAX_RETRIES} failed. "
-
-                f"HTTP status: {status}. "
-
-                f"Retrying in {delay:.1f} seconds."
-
+                f"[GEMINI RETRY] Waiting {delay:.1f}s "
+                f"before next attempt."
             )
 
             time.sleep(delay)
 
+            # Move to next model after temporary failure.
+            model_index += 1
+
+    error_summary = " | ".join(errors[-5:])
+
     raise RuntimeError(
-
-        "Gemini API failed after "
-
-        f"{attempt + 1} attempt(s): {last_error}"
-
+        "Gemini generation failed after "
+        f"{attempt} total attempt(s) across available models. "
+        f"Last error: {last_error}. "
+        f"Recent errors: {error_summary}"
     ) from last_error
-
-
+    
+    
 # ============================================================
 # GEMINI ONLY REQUEST HANDLER
 # ============================================================
