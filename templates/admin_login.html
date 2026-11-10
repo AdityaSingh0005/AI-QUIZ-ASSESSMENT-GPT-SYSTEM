@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | AI Quiz Assessment</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #101827, #172554, #312e81);
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            background: white;
+            padding: 40px 32px;
+            border-radius: 18px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .icon {
+            width: 65px;
+            height: 65px;
+            background: #e0e7ff;
+            color: #3730a3;
+            border-radius: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            margin: 0 auto 20px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #374151;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid #d1d5db;
+            border-radius: 9px;
+            margin-bottom: 20px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        input:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #4338ca;
+            color: white;
+            border: none;
+            border-radius: 9px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #3730a3;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 11px;
+            border-radius: 8px;
+            margin-bottom: 18px;
+            font-size: 13px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-container">
+
+        <div class="icon">🔐</div>
+
+        <h2>Admin Portal</h2>
+
+        <p class="subtitle">
+            AI Quiz Assessment GPT System
+        </p>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('admin.login') }}">
+
+            <label for="email">Admin Email</label>
+
+            <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="Enter admin email"
+                required
+                autocomplete="username"
+            >
+
+            <label for="password">Password</label>
+
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Enter admin password"
+                required
+                autocomplete="current-password"
+            >
+
+            <button type="submit">Secure Login</button>
+
+        </form>
+
+        <div class="footer">
+            Authorized Administrators Only
+        </div>
+
+    </div>
+
+</body>
+</html>

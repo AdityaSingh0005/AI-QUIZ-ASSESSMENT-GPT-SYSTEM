@@ -828,66 +828,54 @@
 
 
                 <div class="field">
-                    <label for="department">
-                        Department / Programme <span class="required">*</span>
-                    </label>
+                    <label for="course">Course <span class="required">*</span></label>
+                    <select id="course" name="course" required>
+                        <option value="">Select course</option>
+                        {% for c in course_options %}
+                            <option value="{{ c }}">{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
+                <div class="field">
+                    <label for="department">Department / Programme <span class="required">*</span></label>
                     <select id="department" name="department" required>
                         <option value="">Select department</option>
-
-                        {% for c in cohorts %}
-                            {% if loop.first or c.department != cohorts[loop.index0 - 1].department %}
-                                <option value="{{ c.department }}">{{ c.department }}</option>
-                            {% endif %}
+                        {% for d in department_options %}
+                            <option value="{{ d }}">{{ d }}</option>
                         {% endfor %}
                     </select>
                 </div>
 
-
                 <div class="field">
-                    <label for="semester">
-                        Semester <span class="required">*</span>
-                    </label>
-
+                    <label for="semester">Semester <span class="required">*</span></label>
                     <select id="semester" name="semester" required>
                         <option value="">Select semester</option>
-
-                        {% for c in cohorts %}
-                            {% if c.semester %}
-                                <option value="{{ c.semester }}">{{ c.semester }}</option>
-                            {% endif %}
+                        {% for sem in semester_options %}
+                            <option value="{{ sem }}">Semester {{ sem }}</option>
                         {% endfor %}
                     </select>
                 </div>
-
-
-                <div class="field">
-                    <label for="section">Section (optional)</label>
-
-                    <input
-                        id="section"
-                        name="section"
-                        placeholder="e.g. A"
-                    >
-
-                    <span class="field-help">
-                        Leave blank to include all sections.
-                    </span>
-                </div>
-
 
                 <div class="field">
                     <label for="final_out_of">
                         Final marks out of <span class="required">*</span>
                     </label>
 
-                    <select id="final_out_of" name="final_out_of" required>
-                        <option value="30">30 Marks</option>
-                        <option value="40">40 Marks</option>
-                    </select>
+                    <input
+                        type="number"
+                        id="final_out_of"
+                        name="final_out_of"
+                        required
+                        min="1"
+                        max="1000"
+                        step="1"
+                        value="30"
+                        placeholder="e.g. 30 or 40"
+                    >
 
                     <span class="field-help">
-                        Choose the final internal assessment scale.
+                        Sir apni requirement ke according koi bhi final scale enter kar sakte hain, jaise 30, 40 ya 50.
                     </span>
                 </div>
 
@@ -902,8 +890,7 @@
                 </svg>
 
                 <span>
-                    Students will be added from the selected department and semester.
-                    If you leave Section blank, all sections will be included.
+                    Registered students from the selected course, department and semester will be included. Guest participants who submitted any selected quiz will also be added; matching roll numbers are merged.
                 </span>
             </div>
 
@@ -939,7 +926,6 @@
                         type="radio"
                         name="calculation_method"
                         value="percentage_average"
-                        checked
                     >
 
                     <div class="method-content">
@@ -957,7 +943,7 @@
                             <span class="radio-indicator"></span>
                         </div>
 
-                        <strong>Percentage average</strong>
+                        <strong>Percentage Based</strong>
 
                         <small>
                             Calculate each quiz percentage first, then take the
@@ -975,6 +961,7 @@
                         type="radio"
                         name="calculation_method"
                         value="total_marks_average"
+                        checked
                     >
 
                     <div class="method-content">
@@ -991,7 +978,7 @@
                             <span class="radio-indicator"></span>
                         </div>
 
-                        <strong>Total-marks-based average</strong>
+                        <strong>Marks Based</strong>
 
                         <small>
                             Add the average obtained marks from included quizzes
@@ -1044,7 +1031,7 @@
 
             <div class="quiz-toolbar">
                 <span class="hint">
-                    Only your own quizzes are shown. Each question currently carries 1 mark.
+                    Sir ke selected subject ke quizzes yahan dikhte hain. Maximum marks quiz ke question count se liye jayenge (1 question = 1 mark).
                 </span>
 
                 {% if quizzes %}
@@ -1054,14 +1041,66 @@
                 {% endif %}
             </div>
 
+            <!-- SUBJECT SELECTION -->
 
+            <div class="form-group" style="margin-bottom: 22px;">
+
+                <label style="font-weight: 700; display: block; margin-bottom: 12px;">
+                    Select Subjects
+                </label>
+
+                <div id="subjectSelection"
+                    style="display: flex; flex-wrap: wrap; gap: 10px;">
+
+                    {% for subject in subjects %}
+
+                    <label style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 10px 15px;
+                        border: 1px solid #dbe2ea;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        background: #ffffff;
+                    ">
+
+                        <input
+                            type="checkbox"
+                            name="subjects"
+                            value="{{ subject }}"
+                            class="subject-checkbox"
+                        >
+
+                        <span>{{ subject }}</span>
+
+                    </label>
+
+                    {% endfor %}
+
+                </div>
+
+                <small style="display: block; margin-top: 10px; color: #64748b;">
+                    Select one or more subjects. Only quizzes from selected subjects will be displayed.
+                </small>
+
+            </div>
             {% if quizzes %}
+
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px;">
+                    <button type="button" id="selectVisibleQuizzes" class="btn btn-secondary">Select all visible quizzes</button>
+                    <button type="button" id="clearVisibleQuizzes" class="btn btn-secondary">Clear visible selection</button>
+                    <span id="visibleQuizCount" class="field-help" style="align-self:center;"></span>
+                </div>
 
                 <div class="quizlist">
 
                     {% for q in quizzes %}
 
-                    <label class="quiz-option">
+                    <label
+                        class="quiz-option"
+                        data-subject="{{ q.subject|default('General', true)|lower|trim }}"
+                    >
 
                         <input
                             type="checkbox"
@@ -1085,7 +1124,7 @@
 
                                 <small>
                                     Quiz #{{ q.quiz_id }}
-                                    · {{ q.total_questions or 0 }} questions
+                                    · Max {{ q.total_questions or 0 }} marks ({{ q.total_questions or 0 }} questions)
                                     · {{ q.created_at }}
                                 </small>
 
@@ -1216,11 +1255,13 @@
         function updateProgress() {
 
             const title = document.getElementById("title");
+            const course = document.getElementById("course");
             const department = document.getElementById("department");
             const semester = document.getElementById("semester");
 
             const detailComplete = Boolean(
                 title.value.trim() &&
+                course.value &&
                 department.value &&
                 semester.value
             );
@@ -1268,7 +1309,7 @@
 
 
         document.querySelectorAll(
-            "#title, #department, #semester, #assessmentForm input"
+            "#title, #course, #department, #semester, #assessmentForm input"
         ).forEach(function (element) {
 
             element.addEventListener("input", updateProgress);
@@ -1280,12 +1321,25 @@
 
 
         if (form) {
-
+            let submissionStarted = false;
             form.addEventListener("submit", function (event) {
+                if (submissionStarted) {
+                    event.preventDefault();
+                    return;
+                }
 
                 const selected = document.querySelectorAll(
                     ".quiz-checkbox:checked"
                 ).length;
+                const selectedSubjects = document.querySelectorAll(
+                    ".subject-checkbox:checked"
+                ).length;
+
+                if (selectedSubjects === 0) {
+                    event.preventDefault();
+                    alert("Please select at least one subject.");
+                    return;
+                }
 
                 if (selected === 0) {
 
@@ -1305,12 +1359,12 @@
 
                 }
 
+                submissionStarted = true;
                 if (submitButton) {
-
-                    submitButton.disabled = true;
-
+                    // Keep the native submitter enabled until the browser has
+                    // serialized the form and started navigation.
+                    submitButton.setAttribute("aria-busy", "true");
                     submitButton.textContent = "Creating assessment...";
-
                 }
 
             });
@@ -1319,6 +1373,116 @@
 
     })();
 </script>
+<script>
 
+document.addEventListener("DOMContentLoaded", function () {
+
+    const subjectCheckboxes = document.querySelectorAll(
+        ".subject-checkbox"
+    );
+
+    const quizCards = document.querySelectorAll(
+        ".quiz-option"
+    );
+
+    const quizCheckboxes = document.querySelectorAll(
+        ".quiz-checkbox"
+    );
+    const selectVisibleButton = document.getElementById("selectVisibleQuizzes");
+    const clearVisibleButton = document.getElementById("clearVisibleQuizzes");
+    const visibleQuizCount = document.getElementById("visibleQuizCount");
+
+    const selectedSubjects = new Set();
+
+    function filterQuizzes() {
+
+        selectedSubjects.clear();
+
+        subjectCheckboxes.forEach(function (checkbox) {
+
+            if (checkbox.checked) {
+
+                selectedSubjects.add(
+                    checkbox.value.trim().toLowerCase()
+                );
+
+            }
+
+        });
+
+        quizCards.forEach(function (card) {
+
+            const quizSubject = (
+                card.dataset.subject || "general"
+            ).trim().toLowerCase();
+
+            const quizCheckbox = card.querySelector(
+                ".quiz-checkbox"
+            );
+
+            const shouldShow = (
+                selectedSubjects.size === 0 ||
+                selectedSubjects.has(quizSubject)
+            );
+
+            card.style.display = shouldShow
+                ? ""
+                : "none";
+
+            // Hidden quizzes must not remain selected.
+            if (!shouldShow && quizCheckbox) {
+
+                quizCheckbox.checked = false;
+
+            }
+
+        });
+
+        // Update existing selected quiz counter and visible quiz count.
+        quizCheckboxes.forEach(function (checkbox) {
+            checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        const visibleCount = Array.from(quizCards).filter(card => card.style.display !== "none").length;
+        if (visibleQuizCount) {
+            visibleQuizCount.textContent = visibleCount + " quiz(es) available for the selected subject filter";
+        }
+    }
+
+    if (selectVisibleButton) {
+        selectVisibleButton.addEventListener("click", function () {
+            quizCards.forEach(function (card) {
+                if (card.style.display !== "none") {
+                    const checkbox = card.querySelector(".quiz-checkbox");
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+                    }
+                }
+            });
+        });
+    }
+
+    if (clearVisibleButton) {
+        clearVisibleButton.addEventListener("click", function () {
+            quizCards.forEach(function (card) {
+                if (card.style.display !== "none") {
+                    const checkbox = card.querySelector(".quiz-checkbox");
+                    if (checkbox) {
+                        checkbox.checked = false;
+                        checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+                    }
+                }
+            });
+        });
+    }
+
+    subjectCheckboxes.forEach(function (checkbox) {
+        checkbox.addEventListener("change", filterQuizzes);
+    });
+    filterQuizzes();
+
+});
+
+</script>
 </body>
 </html>

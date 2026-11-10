@@ -43,6 +43,33 @@ def _verify_password_and_upgrade(cursor, table, id_column, user, supplied_passwo
 
     return False
 
+def _log_login_activity(
+    cursor,
+    user_role,
+    user_id,
+    username,
+    full_name,
+    login_status
+):
+    cursor.execute(
+        """
+        INSERT INTO login_activity (
+            user_role,
+            user_id,
+            username,
+            full_name,
+            login_status
+        )
+        VALUES (%s, %s, %s, %s, %s)
+        """,
+        (
+            user_role,
+            user_id,
+            username,
+            full_name,
+            login_status
+        )
+    )
 # ============================================================
 # LOGIN PAGE
 # ============================================================
@@ -114,6 +141,15 @@ def login():
                 cursor, "teachers", "teacher_id", user, password
             ):
 
+                _log_login_activity(
+                    cursor,
+                    "teacher",
+                    user["teacher_id"],
+                    username,
+                    user["full_name"],
+                    "success"
+                )
+
                 db.commit()
 
                 session.pop("student_id", None)
@@ -146,6 +182,15 @@ def login():
                 cursor, "students", "student_id", user, password
             ):
 
+                _log_login_activity(
+                    cursor,
+                    "student",
+                    user["student_id"],
+                    username,
+                    user["full_name"],
+                    "success"
+                )
+
                 db.commit()
 
                 session.pop("teacher_id", None)
@@ -164,9 +209,20 @@ def login():
 
                 return redirect("/student_dashboard")
 
-        # ====================================================
+                # ====================================================
         # INVALID LOGIN
         # ====================================================
+
+        _log_login_activity(
+            cursor,
+            role if role in ["teacher", "student"] else "unknown",
+            None,
+            username,
+            None,
+            "failed"
+        )
+
+        db.commit()
 
         return render_template(
             "login.html",
@@ -248,10 +304,10 @@ def register():
         ""
     ).strip()
 
-    section = request.form.get(
-        "section",
-        ""
-    ).strip()
+    
+    course = (
+    request.form.get("course") or ""
+    ).strip().upper()
 
 
     # ========================================================
@@ -337,12 +393,11 @@ def register():
                 "register.html",
                 error="Semester is required."
             )
-
-        if not section:
-
+        
+        if not course:
             return render_template(
                 "register.html",
-                error="Section is required."
+                error="Course is required."
             )
 
 
@@ -454,29 +509,24 @@ def register():
                 (
                     full_name,
                     roll_number,
-                    password,
+                    course,
                     department,
                     semester,
-                    section
+                    password
                 )
 
                 VALUES
                 (
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s
+                    %s, %s, %s, %s, %s, %s
                 )
                 """,
                 (
                     full_name,
                     username,
-                    generate_password_hash(password),
+                    course,
                     department,
                     semester,
-                    section
+                    generate_password_hash(password)
                 )
             )
 

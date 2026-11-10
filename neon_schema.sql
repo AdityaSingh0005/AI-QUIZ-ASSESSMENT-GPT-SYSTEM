@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS students (
     student_id SERIAL PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
     roll_number VARCHAR(30) NOT NULL UNIQUE,
+    course VARCHAR(30),
     department VARCHAR(100),
     semester VARCHAR(20),
-    section VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     password VARCHAR(255) NOT NULL,
     email VARCHAR(100),
@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS quizzes (
         REFERENCES teachers(teacher_id),
 
     title VARCHAR(255),
+    subject VARCHAR(150),
     prompt TEXT,
     total_questions INTEGER,
     qr_code_path VARCHAR(255),
@@ -133,6 +134,10 @@ CREATE TABLE IF NOT EXISTS quiz_attempts (
 
     roll_number VARCHAR(30) NOT NULL,
 
+    course VARCHAR(30),
+    department VARCHAR(100),
+    semester VARCHAR(20),
+
     attempt_mode VARCHAR(10) NOT NULL
         CHECK (attempt_mode IN ('login', 'guest')),
 
@@ -151,7 +156,11 @@ CREATE TABLE IF NOT EXISTS quiz_attempts (
 
     score INTEGER,
 
-    percentage DECIMAL(5,2)
+    percentage DECIMAL(5,2),
+
+    question_order JSONB,
+
+    option_order JSONB
 );
 
 

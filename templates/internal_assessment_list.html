@@ -152,8 +152,8 @@
     {% if assessments %}
       <div class="assessment-list" id="assessmentList">
         {% for a in assessments %}
-        <a class="assessment-link" href="/internal_assessment/{{ a.assessment_id }}"
-           data-search="{{ (a.title ~ ' ' ~ (a.department or '') ~ ' ' ~ (a.semester or '') ~ ' ' ~ (a.section or '') ~ ' ' ~ a.status)|lower }}">
+        <div class="assessment-link"
+           data-search="{{ (a.title ~ ' ' ~ (a.course or '') ~ ' ' ~ (a.department or '') ~ ' ' ~ (a.semester or '') ~ ' ' ~ a.status)|lower }}">
           <article class="assessment">
             <div class="assessment-main">
               <div class="assessment-title-row">
@@ -162,7 +162,7 @@
                   <span class="badge-dot"></span>{{ a.status|upper }}
                 </span>
               </div>
-              <p class="cohort">{{ a.department or 'Department not specified' }} · Semester {{ a.semester or '—' }}{% if a.section %} · Section {{ a.section }}{% else %} · All sections{% endif %}</p>
+              <p class="cohort">{{ a.course or 'Course not specified' }} · {{ a.department or 'Department not specified' }} · Semester {{ a.semester or '—' }}</p>
               <div class="meta">
                 <span class="meta-item">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
@@ -180,12 +180,18 @@
             </div>
             <div class="assessment-side">
               <div class="scale"><span class="scale-label">Final scale</span><span class="scale-value">/ {{ a.final_out_of }}</span></div>
-              <span class="open-link">View details
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-              </span>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
+                <a class="open-link" href="/internal_assessment/{{ a.assessment_id }}">View details
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+                <form method="POST" action="/internal_assessment/{{ a.assessment_id }}/delete"
+                      onsubmit="return confirm('Delete this assessment permanently? This cannot be undone.');">
+                  <button type="submit" style="border:1px solid #fecaca;background:#fff1f2;color:#be123c;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:750;cursor:pointer">Delete assessment</button>
+                </form>
+              </div>
             </div>
           </article>
-        </a>
+        </div>
         {% endfor %}
       </div>
       <p id="noSearchResults" class="section-note hidden" style="padding:18px 2px">No assessments match your search.</p>
@@ -195,7 +201,7 @@
           <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>
         </div>
         <h3>Your assessment workspace is ready</h3>
-        <p>Create your first internal assessment by selecting a department, semester and quizzes. Student-wise marks will be calculated in one place.</p>
+        <p>Create your first internal assessment by selecting a course, semester, subject and quizzes. Student-wise marks will be calculated in one place.</p>
         <a class="primary-btn" href="/internal_assessment/new">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
           Create your first assessment

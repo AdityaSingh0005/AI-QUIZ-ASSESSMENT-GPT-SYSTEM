@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title|default('Internal Assessment Error') }}</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f1f5f9;font-family:Arial,sans-serif;color:#172033;padding:20px}
+    .card{width:min(680px,100%);background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:28px;box-shadow:0 12px 36px #0f172a12}
+    h1{margin:0 0 12px;color:#b91c1c;font-size:24px}.detail{padding:14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere;color:#7c2d12;font-size:13px}
+    a{display:inline-block;margin:16px 10px 0 0;padding:10px 15px;border-radius:9px;background:#1d4ed8;color:#fff;text-decoration:none;font-weight:600}a.secondary{background:#475569}
+  </style>
+</head>
+<body><main class="card">
+  <h1>{{ page_title|default('Internal Assessment') }}: Error</h1>
+  <p>{{ message|default('The request could not be completed.') }}</p>
+  {% if detail %}<div class="detail">{{ detail }}</div>{% endif %}
+  <a href="/internal_assessment/new">Try again</a><a class="secondary" href="/internal_assessment">All assessments</a><a class="secondary" href="/teacher_dashboard">Dashboard</a>
+</main></body></html>

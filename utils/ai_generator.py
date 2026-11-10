@@ -349,8 +349,49 @@ def _request_with_fallback(
             "Set GROQ_API_KEY or OLLAMA_API_KEY."
         )
 
+    # Provider order is configurable without changing the existing default.
+    # Set AI_PRIMARY_PROVIDER=ollama on Render to avoid waiting for Groq's
+    # inter-request pacing before every batch.
+    primary_provider = os.getenv("AI_PRIMARY_PROVIDER", "groq").strip().lower()
+    if primary_provider not in ("groq", "ollama"):
+        primary_provider = "groq"
+
+    ollama_primary_attempted = False
+
     # --------------------------------------------------------
-    # GROQ PRIMARY
+    # OLLAMA PRIMARY (OPT-IN)
+    # --------------------------------------------------------
+
+    if primary_provider == "ollama" and ollama_client:
+        ollama_primary_attempted = True
+        for attempt in range(1, MAX_OLLAMA_ATTEMPTS + 1):
+            try:
+                print(
+                    f"[AI PROVIDER] START provider=Ollama "
+                    f"role=primary operation={operation} "
+                    f"attempt={attempt}/{MAX_OLLAMA_ATTEMPTS} model={OLLAMA_MODEL}"
+                )
+                content = _ollama_json_content(prompt, temperature=temperature)
+                result = validator(content)
+                print(f"[AI PROVIDER] SUCCESS provider=Ollama operation={operation}")
+                return result, "Ollama"
+            except Exception as error:
+                status = _exception_status_code(error)
+                errors.append(
+                    f"Ollama {type(error).__name__}: {str(error)[:400]}"
+                )
+                print(
+                    f"[AI PROVIDER] FAILED provider=Ollama role=primary "
+                    f"operation={operation} attempt={attempt} status={status!r} "
+                    f"error_type={type(error).__name__} error={str(error)[:500]}"
+                )
+                if attempt < MAX_OLLAMA_ATTEMPTS:
+                    delay = min(2 ** attempt, 8)
+                    print(f"[OLLAMA RETRY] Retrying same batch after {delay}s.")
+                    time.sleep(delay)
+
+    # --------------------------------------------------------
+    # GROQ PRIMARY (DEFAULT) OR FALLBACK WHEN OLLAMA IS PRIMARY
     # --------------------------------------------------------
 
     if groq_client and not _GROQ_CIRCUIT_OPEN:
@@ -458,7 +499,7 @@ def _request_with_fallback(
     # OLLAMA FALLBACK
     # --------------------------------------------------------
 
-    if ollama_client:
+    if ollama_client and not ollama_primary_attempted:
 
         for attempt in range(
             1,
@@ -1929,17 +1970,19 @@ def generate_questions(topic, easy, medium, hard):
             batch_size = int(
                 os.getenv(
                     "AI_QUIZ_BATCH_SIZE",
-                    "5"
+                    "10"
                 )
             )
 
         except (TypeError, ValueError):
 
-            batch_size = 5
+            batch_size = 10
 
+        # Larger batches reduce provider round-trips. Keep the upper bound
+        # conservative so structured JSON responses remain manageable.
         batch_size = max(
             1,
-            min(5, batch_size)
+            min(10, batch_size)
         )
 
         try:

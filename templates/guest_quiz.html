@@ -307,7 +307,61 @@
                 </div>
 
 
+                <!-- COURSE -->
 
+            <div class="form-group">
+                <label for="course">Course</label>
+
+                <div class="input-wrapper">
+                    <select id="course" name="course" required>
+                        <option value="">Select Course</option>
+                        <option value="MCA">MCA</option>
+                        <option value="MSC">M.Sc.</option>
+                        <option value="BTECH">B.Tech</option>
+                        <option value="MTECH">M.Tech</option>
+                        <option value="BCA">BCA</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+            </div>
+
+
+            <!-- DEPARTMENT -->
+
+            <div class="form-group">
+                <label for="department">Department</label>
+
+                <div class="input-wrapper">
+                    <input
+                        id="department"
+                        type="text"
+                        name="department"
+                        placeholder="Enter your department"
+                        maxlength="100"
+                        required
+                    >
+                </div>
+            </div>
+
+
+            <!-- SEMESTER -->
+
+            <div class="form-group">
+                <label for="semester">Semester</label>
+
+                <div class="input-wrapper">
+                    <select id="semester" name="semester" required>
+                        <option value="">Select Semester</option>
+                        {% for sem in range(1, 9) %}
+                            <option value="{{ sem }}">Semester {{ sem }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+
+
+            
                 <button
                     type="submit"
                     class="login-button"

@@ -113,7 +113,6 @@ mysql_cursor.execute("""
         roll_number,
         department,
         semester,
-        section,
         created_at,
         password,
         email,
@@ -135,21 +134,19 @@ for row in students:
             roll_number,
             department,
             semester,
-            section,
             created_at,
             password,
             email,
             phone,
             profile_image
         )
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (
         row["student_id"],
         row["full_name"],
         row["roll_number"],
         row["department"],
         row["semester"],
-        row["section"],
         row["created_at"],
         row["password"],
         row["email"],

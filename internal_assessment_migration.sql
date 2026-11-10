@@ -3,9 +3,9 @@ CREATE TABLE IF NOT EXISTS internal_assessments (
     assessment_id BIGSERIAL PRIMARY KEY,
     teacher_id INTEGER NOT NULL REFERENCES teachers(teacher_id) ON DELETE CASCADE,
     title VARCHAR(200) NOT NULL,
+    course VARCHAR(30),
     department VARCHAR(100),
     semester VARCHAR(20),
-    section VARCHAR(20),
     calculation_method VARCHAR(30) NOT NULL
         CHECK (calculation_method IN ('percentage_average', 'total_marks_average')),
     final_out_of INTEGER NOT NULL CHECK (final_out_of IN (30, 40)),

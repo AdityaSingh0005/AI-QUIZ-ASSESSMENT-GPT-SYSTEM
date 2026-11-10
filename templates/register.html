@@ -373,7 +373,41 @@
 
                 <div id="student-fields">
 
+                <!-- COURSE -->
 
+                <div class="form-group">
+
+                    <label for="course">
+                        Course
+                    </label>
+
+                    <div class="input-wrapper">
+
+                        <span class="input-icon">
+                            🎓
+                        </span>
+
+                        <select
+                            id="course"
+                            name="course"
+                        >
+
+                            <option value="">
+                                Select Course
+                            </option>
+
+                            <option value="MCA">MCA</option>
+                            <option value="MSC">M.Sc.</option>
+                            <option value="BTECH">B.Tech</option>
+                            <option value="MTECH">M.Tech</option>
+                            <option value="BCA">BCA</option>
+                            <option value="OTHER">Other</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
                     <!-- DEPARTMENT -->
 
                     <div class="form-group">
@@ -460,30 +494,7 @@
 
 
 
-                    <!-- SECTION -->
-
-                    <div class="form-group">
-
-                        <label for="section">
-                            Section
-                        </label>
-
-
-                        <div class="input-wrapper">
-
-                            <span class="input-icon">
-                                🔤
-                            </span>
-
-
-                            <input
-                                type="text"
-                                id="section"
-                                name="section"
-                                placeholder="e.g. A"
-                            >
-
-                        </div>
+                </div>
 
                     </div>
 
@@ -636,6 +647,8 @@
 
 function toggleStudentFields() {
 
+    const course = document.getElementById("course");
+
     const role =
         document.getElementById("role").value;
 
@@ -647,9 +660,6 @@ function toggleStudentFields() {
 
     const semester =
         document.getElementById("semester");
-
-    const section =
-        document.getElementById("section");
 
     const username =
         document.getElementById("username");
@@ -664,7 +674,7 @@ function toggleStudentFields() {
 
         department.required = true;
         semester.required = true;
-        section.required = true;
+        course.required = true;
 
         usernameLabel.textContent =
             "Roll Number";
@@ -680,7 +690,7 @@ function toggleStudentFields() {
 
         department.required = false;
         semester.required = false;
-        section.required = false;
+        course.required = false;
 
         usernameLabel.textContent =
             "Email";

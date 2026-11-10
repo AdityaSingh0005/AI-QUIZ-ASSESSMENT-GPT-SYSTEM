@@ -102,6 +102,24 @@
             font-size: 15px;
         }
 
+        input,
+        select {
+            width: 100%;
+            padding: 13px 14px;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            outline: none;
+            color: white;
+            background: #0f172a;
+            font-size: 15px;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96,165,250,.12);
+        }
+
         input:focus {
             border-color: #60a5fa;
             box-shadow: 0 0 0 3px rgba(96,165,250,.12);
@@ -166,8 +184,7 @@
     <main class="card">
         <span class="badge">AI QUIZ ASSESSMENT</span>
 
-        <h1>Ready to begin?</h1>
-
+        <h1>Ready to begin? - TEST VERSION 2</h1>
         <p class="subtitle">
             Enter your details below to start the quiz.
             Make sure your information is correct.
@@ -223,6 +240,37 @@
                 placeholder="Enter your roll number"
                 required
             >
+            <label for="course">Course</label>
+
+            <select id="course" name="course" required>
+                <option value="">Select Course</option>
+                <option value="MCA">MCA</option>
+                <option value="MSC">M.Sc.</option>
+                <option value="BTECH">B.Tech</option>
+                <option value="MTECH">M.Tech</option>
+                <option value="BCA">BCA</option>
+                <option value="OTHER">Other</option>
+            </select>
+
+            <label for="department">Department</label>
+
+            <input
+                id="department"
+                name="department"
+                type="text"
+                maxlength="100"
+                placeholder="e.g. Computer Science"
+                required
+            >
+
+            <label for="semester">Semester</label>
+
+            <select id="semester" name="semester" required>
+                <option value="">Select Semester</option>
+                {% for sem in range(1, 9) %}
+                    <option value="{{ sem }}">{{ sem }}</option>
+                {% endfor %}
+            </select>
 
             <button
                 class="submit-btn"

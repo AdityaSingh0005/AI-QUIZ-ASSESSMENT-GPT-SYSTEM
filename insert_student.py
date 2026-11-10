@@ -14,7 +14,6 @@ cursor.execute("""
         roll_number,
         department,
         semester,
-        section,
         password
     )
     VALUES
@@ -24,7 +23,6 @@ cursor.execute("""
         'MCA001',
         'MCA',
         '3',
-        'A',
         '12345'
     )
     ON CONFLICT (student_id) DO NOTHING

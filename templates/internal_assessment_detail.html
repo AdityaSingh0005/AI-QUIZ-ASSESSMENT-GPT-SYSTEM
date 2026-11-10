@@ -46,10 +46,14 @@
         <div>
             <p class="muted" style="color:#4f46e5;font-weight:800;letter-spacing:1px">INTERNAL ASSESSMENT #{{ assessment.assessment_id }}</p>
             <h1 style="margin:0">{{ assessment.title }}</h1>
-            <p class="muted">{{ assessment.department }} · Semester {{ assessment.semester }}{% if assessment.section %} · Section {{ assessment.section }}{% endif %} · Final marks out of {{ assessment.final_out_of }}</p>
+            <p class="muted">{{ assessment.course }} · {{ assessment.department }} · Semester {{ assessment.semester }} · Final marks out of {{ assessment.final_out_of }}</p>
         </div>
         <div class="actions">
             <a class="btn secondary" href="/internal_assessment">← All assessments</a>
+            <form method="POST" action="/internal_assessment/{{ assessment.assessment_id }}/delete"
+                  onsubmit="return confirm('Delete this assessment permanently? This cannot be undone.');">
+                <button class="btn" type="submit" style="background:#be123c">Delete assessment</button>
+            </form>
             <span class="badge {% if assessment.status=='finalized' %}final{% endif %}">{{ assessment.status|upper }}</span>
         </div>
     </div>
@@ -68,11 +72,11 @@
     </section>
 
     <div class="hint">
-        <b>Absent handling:</b> Pending = student baad mein attempt karega; Zero = is quiz mein 0 marks; Exclude = is student ke calculation se quiz remove. Agar student Pending ke baad quiz attempt kar leta hai, uske submitted attempt marks automatically count honge. Multiple submitted attempts ka average liya jayega. Guest attempts registered student ke marks mein auto-merge nahi honge.
+        <b>Absent handling:</b> Pending = student baad mein attempt karega; Zero = is quiz mein 0 marks; Exclude = is student ke calculation se quiz remove. Agar student Pending ke baad quiz attempt kar leta hai, uske submitted attempt marks automatically count honge. Multiple submitted attempts ka average liya jayega. Guest attempts with a matching registered roll number are merged into that student; unmatched guest roll numbers appear as separate participants.
     </div>
 
     <section class="card">
-        <b>Calculation method:</b> {{ "Percentage average" if assessment.calculation_method=="percentage_average" else "Total-marks-based average" }} · <b>Final scale:</b> / {{ assessment.final_out_of }} · <b>Attempt rule:</b> All submitted attempts ka average.
+        <b>Calculation method:</b> {{ "Percentage Based (equal quiz weight)" if assessment.calculation_method=="percentage_average" else "Marks Based (weighted by quiz maximum marks)" }} · <b>Final scale:</b> / {{ assessment.final_out_of }} · <b>Attempt rule:</b> All submitted attempts ka average.
     </section>
 
     {% if assessment.status == 'draft' %}
@@ -91,29 +95,34 @@
                     {% for q in quizzes %}
                     <th>{{ q.title }}<br><span class="muted">Max {{ q.total_questions or 0 }}</span></th>
                     {% endfor %}
+                    <th>Total raw marks</th>
                     <th>Average %</th>
-                    <th>Final marks / {{ assessment.final_out_of }}</th>
+                    <th>Converted marks / {{ assessment.final_out_of }}</th>
                 </tr>
             </thead>
             <tbody>
                 {% for row in rows %}
                 <tr>
                     <td>
-                        <b>{{ row.full_name }}</b><br>
-                        <span class="muted">{{ row.roll_number }} · {{ row.section or '' }}</span>
+                        <b>{{ row.participant_name }}</b><br>
+                        <span class="muted">{{ row.roll_number }}</span><br>
+                        <span class="muted">{{ row.participant_type|upper }}</span>
                     </td>
                     {% for q in quizzes %}
                         {% set item = row.quiz_data[q.quiz_id] %}
                         <td>
-                            {% if item.attempts %}
-                                <div class="marks">{{ "%.1f"|format(item.average_percentage) }}%</div>
-                                <span class="muted">{{ item.attempts|length }} submitted attempt(s)</span>
+                            {% if item.attempts or (assessment.status == 'finalized' and item.snapshot_status == 'attempted') %}
+                                <div class="marks">{{ "%.2f"|format(item.average_score or 0) }} / {{ "%.0f"|format(item.max_marks or 0) }}</div>
+                                <span class="muted">{{ "%.1f"|format(item.average_percentage or 0) }}% · {{ item.display_attempt_count|default(item.attempts|length) }} submitted attempt(s)</span>
+                            {% elif item.handling_status == 'zero' %}
+                                <div class="marks">0 / {{ "%.0f"|format(item.max_marks or 0) }}</div>
+                                <span class="muted">0% · Zero applied</span>
                             {% else %}
                                 <span class="badge">No attempt</span>
                             {% endif %}
                             
                             {% if assessment.status == 'draft' %}
-                                <select name="handling_{{ row.student_id }}_{{ q.quiz_id }}">
+                                <select name="handling_{{ row.participant_id }}_{{ q.quiz_id }}">
                                     <option value="pending" {% if item.handling_status=='pending' %}selected{% endif %}>Auto / Pending</option>
                                     <option value="zero" {% if item.handling_status=='zero' %}selected{% endif %}>Give Zero</option>
                                     <option value="exclude" {% if item.handling_status=='exclude' %}selected{% endif %}>Exclude</option>
@@ -124,8 +133,12 @@
                         </td>
                     {% endfor %}
                     <td>
-                        {% if assessment.status=='finalized' and finalized_results.get(row.student_id) %}
-                            {{ finalized_results[row.student_id].average_percentage }}%
+                        <b>{{ "%.2f"|format(row.total_obtained or 0) }} / {{ "%.2f"|format(row.total_max or 0) }}</b>
+                        {% if row.calculation.pending %}<br><span class="muted">Some quizzes pending</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if assessment.status=='finalized' and finalized_results.get(row.participant_id) %}
+                            {{ finalized_results[row.participant_id].average_percentage }}%
                         {% elif row.calculation.average_percentage is not none %}
                             {{ row.calculation.average_percentage }}%
                         {% elif row.calculation.pending %}
@@ -135,8 +148,8 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if assessment.status=='finalized' and finalized_results.get(row.student_id) %}
-                            <b class="marks">{{ finalized_results[row.student_id].final_marks }}</b>
+                        {% if assessment.status=='finalized' and finalized_results.get(row.participant_id) %}
+                            <b class="marks">{{ finalized_results[row.participant_id].final_marks }}</b>
                         {% elif row.calculation.final_marks is not none %}
                             <b class="marks">{{ row.calculation.final_marks }}</b>
                         {% elif row.calculation.pending %}

@@ -212,10 +212,10 @@ Back to Home </a>
               </div>
             {% endif %}
             <div class="options">
-              {% for letter, option in [('A', question.option_a), ('B', question.option_b), ('C', question.option_c), ('D', question.option_d)] %}
+              {% for display_letter, original_letter, option in question.display_options %}
                 <label class="option">
-                  <input type="radio" name="selected_option_{{ question.question_id }}" value="{{ letter }}" data-question-id="{{ question.question_id }}" {% if answers and answers.get(question.question_id) == letter %}checked{% endif %}>
-                  <span class="option-text"><strong>{{ letter }}.</strong> {{ option }}</span>
+                  <input type="radio" name="selected_option_{{ question.question_id }}" value="{{ original_letter }}" data-question-id="{{ question.question_id }}" {% if answers and answers.get(question.question_id) == original_letter %}checked{% endif %}>
+                  <span class="option-text"><strong>{{ display_letter }}.</strong> {{ option }}</span>
                 </label>
               {% endfor %}
             </div>
@@ -352,75 +352,128 @@ Back to Home </a>
           }, 200);
         }
 
+        let requestInProgress = false;
+
         async function postAction(action, automatic) {
-          if (submitting) return;
+          if (requestInProgress) return;
+
           if (remainingSeconds <= 0 && action !== "submit") {
             action = "submit";
             automatic = true;
           }
 
           prepare(action);
+          const payload = new FormData(form);
+          const savedIndex = currentIndex;
+          const savedQuestionRemaining = questionRemainingSeconds;
+          const savedQuestionDeadline = questionDeadlineMs;
+
+          requestInProgress = true;
           submitting = true;
           nextButton.disabled = true;
           submitButton.disabled = true;
           requestNotice.classList.add("hidden");
 
-          if (automatic) {
-            timerNotice.textContent = "Submitting your quiz...";
+          if (action === "submit" || automatic) {
+            timerNotice.textContent = action === "submit"
+              ? "Submitting your quiz and verifying saved answers..."
+              : "Time is up. Saving this question before moving on...";
             timerNotice.classList.remove("hidden");
+          } else {
+            nextButton.textContent = "Saving answer...";
+          }
+
+          if (questionInterval !== null) {
+            clearInterval(questionInterval);
+            questionInterval = null;
           }
 
           try {
             const response = await fetch(window.location.pathname, {
               method: "POST",
-              body: new FormData(form),
-              headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "application/json" },
-              credentials: "same-origin"
+              body: payload,
+              headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "application/json"
+              },
+              credentials: "same-origin",
+              cache: "no-store"
             });
 
             let data;
             try {
               data = await response.json();
             } catch (error) {
-              throw new Error("Server returned an unexpected response. Reload the quiz and try again.");
+              throw new Error("Server response verify nahi ho paya. Page reload karke database-saved position check karein.");
             }
 
-            if (!response.ok || !data.ok) throw new Error(data.message || "Could not save your answer.");
+            if (!response.ok || !data.ok) {
+              const error = new Error(data.message || "Answer save nahi ho saka. Please retry.");
+              error.status = response.status;
+              throw error;
+            }
 
+            // The server responds only after _save_answer() commits the answer.
+            // Do not move the learner until that acknowledgement is received.
             if (data.submitted) {
-              window.location.href = data.redirect_url || form.action;
+              timerNotice.textContent = "Submission verified. Opening your result...";
+              timerNotice.classList.remove("hidden");
+              window.location.replace(data.redirect_url || form.action);
               return;
             }
 
             const nextIndex = Number(data.current_index);
-            if (!Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= cards.length) {
-              throw new Error("The server returned an invalid question position. Please reload the quiz.");
+            if (!Number.isInteger(nextIndex) ||
+                nextIndex !== savedIndex + 1 ||
+                nextIndex >= cards.length) {
+              throw new Error("Server question position mismatch. Reload the quiz to synchronize.");
             }
 
-            currentIndex = nextIndex;
             if (Number.isFinite(Number(data.remaining_seconds))) {
               remainingSeconds = Math.max(0, Number(data.remaining_seconds));
               overallDeadlineMs = Date.now() + remainingSeconds * 1000;
             }
-            if (Number.isFinite(Number(data.question_remaining_seconds))) {
-              questionRemainingSeconds = Math.max(0, Number(data.question_remaining_seconds));
-            } else {
-              questionRemainingSeconds = questionTimeSeconds;
-            }
+
+            currentIndex = nextIndex;
+            questionRemainingSeconds = Number.isFinite(Number(data.question_remaining_seconds))
+              ? Math.max(0, Number(data.question_remaining_seconds))
+              : questionTimeSeconds;
+            questionDeadlineMs = 0;
+
+            submitting = false;
+            requestInProgress = false;
+            timerNotice.classList.add("hidden");
             updateDisplay();
-            submitting = false;
-            nextButton.disabled = false;
-            submitButton.disabled = false;
-            timerNotice.classList.add("hidden");
             startQuestionTimer();
-          } catch (error) {
-            submitting = false;
             nextButton.disabled = false;
             submitButton.disabled = false;
-            requestNotice.textContent = error.message || "Network error. Please try again.";
+          } catch (error) {
+            // A lost response can happen after the database commit. A reload
+            // restores the server's authoritative question index and saved answers.
+            submitting = false;
+            requestInProgress = false;
+            nextButton.disabled = false;
+            submitButton.disabled = false;
+            nextButton.textContent = savedIndex === cards.length - 1
+              ? "Submit Quiz"
+              : "Save & Next →";
+
+            questionRemainingSeconds = savedQuestionRemaining;
+            questionDeadlineMs = savedQuestionDeadline;
+            updateDisplay();
+
+            requestNotice.textContent =
+              (error.message || "Network error while saving.") +
+              " Agar server par save ho chuka hoga to reload par next question dikhega; warna isi question se retry kar sakte hain.";
             requestNotice.classList.remove("hidden");
-            timerNotice.classList.add("hidden");
-            if (questionTimeSeconds > 0 && questionInterval === null) startQuestionTimer();
+
+            if (error.status === 409) {
+              window.setTimeout(function () {
+                window.location.reload();
+              }, 1200);
+            } else if (questionTimeSeconds > 0) {
+              startQuestionTimer();
+            }
           }
         }
 

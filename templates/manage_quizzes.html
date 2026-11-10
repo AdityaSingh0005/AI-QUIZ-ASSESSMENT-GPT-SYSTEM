@@ -433,6 +433,16 @@
     </div>
 </div>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div style="margin:12px 0;padding:12px 15px;border-radius:10px;
+                    background:{% if category == 'success' %}#e9f8f1{% else %}#fff0ef{% endif %};
+                    color:{% if category == 'success' %}#08734f{% else %}#b42318{% endif %};">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endwith %}
+
 <section class="stats">
     <div class="stat-card">
         <div class="stat-label">Total Quizzes</div>
@@ -481,6 +491,7 @@
             <thead>
                 <tr>
                     <th>Quiz</th>
+                    <th>Subject</th>
                     <th>Status</th>
                     <th>Questions</th>
                     <th>Duration</th>
@@ -518,6 +529,17 @@
                         <div class="quiz-id">
                             Quiz ID: #{{ quiz.quiz_id }}
                         </div>
+                    </td>
+
+                    <td>
+                        <form method="POST"
+                              action="{{ url_for('teacher.assign_quiz_subject', quiz_id=quiz.quiz_id) }}"
+                              style="display:flex;gap:6px;align-items:center;min-width:190px">
+                            <input type="text" name="subject" value="{{ quiz.subject or 'General' }}"
+                                   maxlength="150" required aria-label="Subject for quiz {{ quiz.quiz_id }}"
+                                   style="width:125px;min-width:0;padding:8px;border:1px solid #dbe2ea;border-radius:8px">
+                            <button type="submit" class="btn btn-secondary">Save</button>
+                        </form>
                     </td>
 
                     <td>

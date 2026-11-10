@@ -1,11 +1,10 @@
-import os
 import time
+import json
+import random
 from datetime import datetime
 
-import psycopg2
-from psycopg2.pool import ThreadedConnectionPool
 from psycopg2.extras import RealDictCursor
-from threading import Lock
+from database import get_db_connection
 
 from flask import (
     Blueprint,
@@ -27,89 +26,16 @@ student = Blueprint("student", __name__)
 # DATABASE HELPERS
 # ============================================================
 
-_connection_pool = None
-_connection_pool_lock = Lock()
-_connection_pool_url = None
-
-
-def _get_connection_pool():
-    """Return a reusable, thread-safe PostgreSQL connection pool."""
-    global _connection_pool, _connection_pool_url
-
-    database_url = (
-        current_app.config.get("DATABASE_URL")
-        or current_app.config.get("SQLALCHEMY_DATABASE_URI")
-        or os.getenv("DATABASE_URL")
-    )
-
-    if not database_url:
-        raise RuntimeError(
-            "Database URL missing. Configure DATABASE_URL."
-        )
-
-    with _connection_pool_lock:
-        if (
-            _connection_pool is None
-            or _connection_pool_url != database_url
-        ):
-            if _connection_pool is not None:
-                _connection_pool.closeall()
-
-            connect_args = {}
-
-            if database_url.startswith(
-                ("postgres://", "postgresql://")
-            ):
-                connect_args["sslmode"] = os.getenv(
-                    "DB_SSLMODE", "require"
-                )
-
-            _connection_pool = ThreadedConnectionPool(
-                minconn=1,
-                maxconn=int(os.getenv("DB_POOL_MAX", "10")),
-                dsn=database_url,
-                cursor_factory=RealDictCursor,
-                **connect_args
-            )
-
-            _connection_pool_url = database_url
-
-    return _connection_pool
-
 
 def _db_connection():
-    """Borrow a PostgreSQL connection from the reusable pool."""
-    pool = _get_connection_pool()
-    return pool.getconn()
+    # All app routes share the same bounded process-local pool.
+    return get_db_connection(cursor_factory=RealDictCursor)
 
 
 def _close_db(connection):
-    """Return a connection to the pool after cleaning its transaction."""
-    if connection is None:
-        return
+    if connection is not None:
+        connection.close()
 
-    try:
-        pool = _get_connection_pool()
-
-        if connection.closed:
-            pool.putconn(connection, close=True)
-            return
-
-        # Ensure no unfinished transaction leaks into the next request.
-        if connection.get_transaction_status() != psycopg2.extensions.TRANSACTION_STATUS_IDLE:
-            connection.rollback()
-
-        pool.putconn(connection)
-
-    except Exception:
-        current_app.logger.exception(
-            "Could not return database connection to the pool."
-        )
-
-        try:
-            connection.close()
-        except Exception:
-            pass
 
 def _get_quiz(quiz_id):
     connection = _db_connection()
@@ -165,47 +91,160 @@ def _get_attempt(attempt_id):
         _close_db(connection)
 
 
-def _get_attempt_questions(quiz_id):
+def _get_attempt_and_quiz(attempt_id):
+    """Fetch the attempt and its quiz metadata in one database round trip."""
     connection = _db_connection()
-
     try:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT
-                    question_id,
-                    quiz_id,
-                    question,
-                    option_a,
-                    option_b,
-                    option_c,
-                    option_d,
-                    difficulty,
-                    explanation
-                FROM questions
-                WHERE quiz_id = %s
-                ORDER BY question_id
+                SELECT a.*, to_jsonb(q) AS quiz_data
+                FROM quiz_attempts AS a
+                LEFT JOIN quizzes AS q ON q.quiz_id = a.quiz_id
+                WHERE a.attempt_id = %s
                 """,
-                (quiz_id,),
+                (attempt_id,),
             )
-            return cursor.fetchall()
+            row = cursor.fetchone()
+            if not row:
+                return None, None
+            attempt = dict(row)
+            quiz_data = attempt.pop("quiz_data", None)
+            return attempt, quiz_data
     finally:
         _close_db(connection)
 
-def _get_attempt_question_at(quiz_id, question_index):
-    """Fetch only the requested question ID."""
-    connection = _db_connection()
 
+def _normalise_json_list(value):
+    """Accept PostgreSQL JSONB values or JSON strings."""
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (TypeError, ValueError):
+            return None
+    return value
+
+
+def _ensure_attempt_orders(attempt):
+    """Persist a unique question and option order for this attempt."""
+    question_order = _normalise_json_list(attempt.get("question_order"))
+    option_order = _normalise_json_list(attempt.get("option_order"))
+    if question_order and option_order:
+        return attempt
+
+    connection = _db_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT question_order, option_order FROM quiz_attempts WHERE attempt_id = %s FOR UPDATE",
+                (attempt["attempt_id"],),
+            )
+            stored = cursor.fetchone()
+            if not stored:
+                connection.rollback()
+                return attempt
+
+            question_order = _normalise_json_list(stored.get("question_order"))
+            option_order = _normalise_json_list(stored.get("option_order"))
+
+            cursor.execute(
+                "SELECT question_id FROM questions WHERE quiz_id = %s ORDER BY question_id",
+                (attempt["quiz_id"],),
+            )
+            question_ids = [row["question_id"] for row in cursor.fetchall()]
+
+            if not question_order:
+                question_order = question_ids[:]
+                random.SystemRandom().shuffle(question_order)
+
+            if not option_order:
+                option_order = {}
+                for question_id in question_ids:
+                    letters = ["A", "B", "C", "D"]
+                    random.SystemRandom().shuffle(letters)
+                    option_order[str(question_id)] = letters
+
+            cursor.execute(
+                """
+                UPDATE quiz_attempts
+                SET question_order = %s::jsonb,
+                    option_order = %s::jsonb
+                WHERE attempt_id = %s
+                RETURNING question_order, option_order
+                """,
+                (json.dumps(question_order), json.dumps(option_order), attempt["attempt_id"]),
+            )
+            saved = cursor.fetchone()
+            connection.commit()
+            attempt["question_order"] = saved["question_order"]
+            attempt["option_order"] = saved["option_order"]
+            return attempt
+    except Exception:
+        connection.rollback()
+        current_app.logger.exception("Unable to initialise per-attempt shuffle order.")
+        raise
+    finally:
+        _close_db(connection)
+
+
+def _get_attempt_questions(quiz_id, attempt=None):
+    connection = _db_connection()
     try:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT question_id
+                SELECT question_id, quiz_id, question,
+                       option_a, option_b, option_c, option_d,
+                       difficulty, explanation
                 FROM questions
                 WHERE quiz_id = %s
-                ORDER BY question_id
-                LIMIT 1 OFFSET %s
                 """,
+                (quiz_id,),
+            )
+            rows = cursor.fetchall()
+
+        if attempt:
+            order = _normalise_json_list(attempt.get("question_order")) or []
+            position = {int(qid): index for index, qid in enumerate(order)}
+            rows.sort(key=lambda row: position.get(int(row["question_id"]), len(position)))
+            option_orders = _normalise_json_list(attempt.get("option_order")) or {}
+            for row in rows:
+                qid = str(row["question_id"])
+                letters = option_orders.get(qid, ["A", "B", "C", "D"])
+                option_map = {
+                    "A": row.get("option_a"), "B": row.get("option_b"),
+                    "C": row.get("option_c"), "D": row.get("option_d"),
+                }
+                row["display_options"] = [
+                    (display_label, original_letter, option_map.get(original_letter))
+                    for display_label, original_letter in zip(("A", "B", "C", "D"), letters)
+                ]
+        else:
+            rows.sort(key=lambda row: row["question_id"])
+        return rows
+    finally:
+        _close_db(connection)
+
+
+def _get_attempt_question_at(quiz_id, question_index, attempt=None):
+    """Read the server-generated shuffled question ID without another DB trip.
+
+    The order is persisted on quiz_attempts when the attempt is initialized.
+    _save_answer() still validates that the selected question belongs to this
+    quiz and that the attempt is active before writing the answer.
+    """
+    order = _normalise_json_list((attempt or {}).get("question_order")) or []
+    if order and 0 <= question_index < len(order):
+        try:
+            return {"question_id": int(order[question_index])}
+        except (TypeError, ValueError):
+            pass
+
+    connection = _db_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT question_id FROM questions WHERE quiz_id = %s ORDER BY question_id LIMIT 1 OFFSET %s",
                 (quiz_id, question_index),
             )
             return cursor.fetchone()
@@ -475,142 +514,83 @@ def _save_answer(attempt, question_id, selected_option):
 # ============================================================
 
 def _mark_attempt_submitted(attempt_id):
+    """Idempotently score and submit an attempt in one short transaction."""
     connection = _db_connection()
-
     try:
         with connection.cursor() as cursor:
             cursor.execute(
-                """
-                SELECT *
-                FROM quiz_attempts
-                WHERE attempt_id = %s
-                FOR UPDATE
-                """,
+                "SELECT * FROM quiz_attempts WHERE attempt_id = %s FOR UPDATE",
                 (attempt_id,),
             )
-
             attempt = cursor.fetchone()
-
             if not attempt:
                 connection.rollback()
                 return None
-
             if attempt["status"] == "submitted":
                 connection.commit()
                 return attempt
 
+            # Aggregate in PostgreSQL instead of transferring every answer to Python.
             cursor.execute(
                 """
-                SELECT
-                    q.question_id,
-                    q.correct_option,
-                    sa.selected_option
-                FROM questions q
-                LEFT JOIN student_answers sa
-                  ON sa.question_id = q.question_id
-                 AND sa.attempt_id = %s
-                WHERE q.quiz_id = %s
+                WITH totals AS (
+                    SELECT
+                        COUNT(q.question_id)::INTEGER AS total_questions,
+                        COUNT(*) FILTER (
+                            WHERE sa.selected_option IS NOT NULL
+                              AND UPPER(BTRIM(sa.selected_option)) =
+                                  UPPER(BTRIM(q.correct_option))
+                        )::INTEGER AS score
+                    FROM questions q
+                    LEFT JOIN student_answers sa
+                      ON sa.question_id = q.question_id
+                     AND sa.attempt_id = %s
+                    WHERE q.quiz_id = %s
+                )
+                UPDATE quiz_attempts a
+                SET status = 'submitted',
+                    submitted_at = COALESCE(a.submitted_at, CURRENT_TIMESTAMP),
+                    score = totals.score,
+                    percentage = CASE
+                        WHEN totals.total_questions > 0
+                        THEN ROUND(totals.score * 100.0 / totals.total_questions, 2)
+                        ELSE 0
+                    END
+                FROM totals
+                WHERE a.attempt_id = %s
+                RETURNING a.*
                 """,
-                (
-                    attempt_id,
-                    attempt["quiz_id"],
-                ),
-            )
-
-            rows = cursor.fetchall()
-
-            total_questions = len(rows)
-            score = sum(
-                1
-                for row in rows
-                if row["selected_option"]
-                and str(row["selected_option"]).upper()
-                == str(row["correct_option"]).upper()
-            )
-
-            percentage = (
-                round(score * 100.0 / total_questions, 2)
-                if total_questions
-                else 0.0
-            )
-
-            cursor.execute(
-    """
-    UPDATE quiz_attempts
-    SET status = 'submitted',
-        submitted_at = CURRENT_TIMESTAMP,
-        score = %s,
-        percentage = %s
-    WHERE attempt_id = %s
-    RETURNING *
-    """,
-                (
-                    score,
-                    percentage,
-                    attempt_id,
-                ),
+                (attempt_id, attempt["quiz_id"], attempt_id),
             )
             submitted_attempt = cursor.fetchone()
+
             cursor.execute(
                 """
-                SELECT result_id
-                FROM results
-                WHERE attempt_id = %s
+                INSERT INTO results
+                    (student_id, quiz_id, score, percentage, submitted_at, attempt_id)
+                VALUES (%s, %s, %s, %s, COALESCE(%s, CURRENT_TIMESTAMP), %s)
+                ON CONFLICT (attempt_id) WHERE attempt_id IS NOT NULL
+                DO UPDATE SET
+                    score = EXCLUDED.score,
+                    percentage = EXCLUDED.percentage,
+                    submitted_at = EXCLUDED.submitted_at
                 """,
-                (attempt_id,),
+                (
+                    submitted_attempt["student_id"],
+                    submitted_attempt["quiz_id"],
+                    submitted_attempt["score"],
+                    submitted_attempt["percentage"],
+                    submitted_attempt.get("submitted_at"),
+                    attempt_id,
+                ),
             )
-
-            result_exists = cursor.fetchone()
-
-            if result_exists:
-                cursor.execute(
-                    """
-                    UPDATE results
-                    SET score = %s,
-                        percentage = %s,
-                        submitted_at = CURRENT_TIMESTAMP
-                    WHERE attempt_id = %s
-                    """,
-                    (
-                        score,
-                        percentage,
-                        attempt_id,
-                    ),
-                )
-            else:
-                cursor.execute(
-                    """
-                    INSERT INTO results
-                    (
-                        student_id,
-                        quiz_id,
-                        score,
-                        percentage,
-                        submitted_at,
-                        attempt_id
-                    )
-                    VALUES (%s, %s, %s, %s,
-                            CURRENT_TIMESTAMP, %s)
-                    """,
-                    (
-                        attempt["student_id"],
-                        attempt["quiz_id"],
-                        score,
-                        percentage,
-                        attempt_id,
-                    ),
-                )
 
         connection.commit()
         return submitted_attempt
-
     except Exception:
         connection.rollback()
-        current_app.logger.exception(
-            "Failed to submit quiz attempt."
-        )
+        current_app.logger.exception("Failed to submit quiz attempt.")
         raise
-
     finally:
         _close_db(connection)
 
@@ -945,6 +925,9 @@ def start_quiz(quiz_id):
                         student_id,
                         student_name,
                         roll_number,
+                        course,
+                        department,
+                        semester,
                         attempt_mode,
                         started_at,
                         status,
@@ -952,8 +935,8 @@ def start_quiz(quiz_id):
                         percentage
                     )
                     VALUES (
-                        %s, %s, %s, %s, 'student',
-                        CURRENT_TIMESTAMP,
+                        %s, %s, %s, %s, %s, %s, %s,
+                        'login', CURRENT_TIMESTAMP,
                         'in_progress', 0, 0
                     )
                     ON CONFLICT (quiz_id, student_id)
@@ -967,6 +950,9 @@ def start_quiz(quiz_id):
                         student_id,
                         student_data["full_name"],
                         student_data["roll_number"],
+                        student_data["course"],
+                        student_data["department"],
+                        student_data["semester"],
                     ),
                 )
 
@@ -1032,6 +1018,7 @@ def start_quiz(quiz_id):
     methods=["GET", "POST"],
 )
 def guest_start_quiz(quiz_id):
+
     quiz = _get_quiz(quiz_id)
 
     if not quiz:
@@ -1047,7 +1034,7 @@ def guest_start_quiz(quiz_id):
             error=None,
         )
 
-    # Accept all field names used by older form versions.
+    # Student details
     student_name = (
         request.form.get("student_name")
         or request.form.get("name")
@@ -1061,11 +1048,49 @@ def guest_start_quiz(quiz_id):
         or ""
     ).strip()
 
-    if not student_name or not roll_number:
+    course = (
+        request.form.get("course") or ""
+    ).strip().upper()
+
+    department = (
+        request.form.get("department") or ""
+    ).strip()
+
+    semester = (
+        request.form.get("semester") or ""
+    ).strip()
+
+    # Validation
+    if not all([
+        student_name,
+        roll_number,
+        course,
+        department,
+        semester
+    ]):
         return render_template(
             "guest_start_quiz.html",
             quiz=quiz,
-            error="Please enter your name and roll number.",
+            error="Please fill in all student details.",
+        ), 400
+
+    allowed_courses = {
+        "MCA", "MSC", "BTECH",
+        "MTECH", "BCA", "OTHER"
+    }
+
+    if course not in allowed_courses:
+        return render_template(
+            "guest_start_quiz.html",
+            quiz=quiz,
+            error="Please select a valid course.",
+        ), 400
+
+    if not semester.isdigit() or not 1 <= int(semester) <= 8:
+        return render_template(
+            "guest_start_quiz.html",
+            quiz=quiz,
+            error="Please select a valid semester.",
         ), 400
 
     if not _can_access_quiz(quiz):
@@ -1079,6 +1104,7 @@ def guest_start_quiz(quiz_id):
 
     try:
         with connection.cursor() as cursor:
+
             cursor.execute(
                 """
                 INSERT INTO quiz_attempts
@@ -1087,6 +1113,9 @@ def guest_start_quiz(quiz_id):
                     student_id,
                     student_name,
                     roll_number,
+                    course,
+                    department,
+                    semester,
                     attempt_mode,
                     started_at,
                     status,
@@ -1094,9 +1123,12 @@ def guest_start_quiz(quiz_id):
                     percentage
                 )
                 VALUES (
-                    %s, NULL, %s, %s, 'guest',
+                    %s, NULL, %s, %s, %s, %s, %s,
+                    'guest',
                     CURRENT_TIMESTAMP,
-                    'in_progress', 0, 0
+                    'in_progress',
+                    0,
+                    0
                 )
                 RETURNING *
                 """,
@@ -1104,6 +1136,9 @@ def guest_start_quiz(quiz_id):
                     quiz_id,
                     student_name,
                     roll_number,
+                    course,
+                    department,
+                    semester,
                 ),
             )
 
@@ -1112,7 +1147,9 @@ def guest_start_quiz(quiz_id):
         connection.commit()
 
     except Exception:
+
         connection.rollback()
+
         current_app.logger.exception(
             "Unable to create guest attempt."
         )
@@ -1128,18 +1165,22 @@ def guest_start_quiz(quiz_id):
 
     _clear_active_quiz_session()
 
-
-
     session["active_attempt_id"] = attempt["attempt_id"]
     session["active_quiz_id"] = quiz_id
     session["attempt_mode"] = "guest"
+
     session["guest_name"] = student_name
     session["guest_roll_number"] = roll_number
+    session["guest_course"] = course
+    session["guest_department"] = department
+    session["guest_semester"] = semester
+
     session["quiz_current_index"] = 0
     session["question_started_index"] = 0
     session["question_started_at"] = time.time()
 
     return redirect(url_for("student.quiz"))
+
 
 
 @student.route("/guest_start", methods=["POST"])
@@ -1165,6 +1206,10 @@ def guest_start():
 @student.route("/quiz", methods=["GET", "POST"])
 def quiz():
     """Render and process a quiz. AJAX requests save answers without a full page reload."""
+
+    request_started = time.perf_counter()
+    timings = {}
+
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
     def ajax_error(message, status=400, **extra):
@@ -1179,7 +1224,11 @@ def quiz():
         flash("Please start a quiz first.", "error")
         return redirect(url_for("student.available_quizzes"))
 
-    attempt = _get_attempt(attempt_id)
+    step_started = time.perf_counter()
+    attempt, quiz_data = _get_attempt_and_quiz(attempt_id)
+    timings["get_attempt_and_quiz_ms"] = round(
+        (time.perf_counter() - step_started) * 1000, 2
+    )
     if not attempt:
         _clear_active_quiz_session()
         if is_ajax:
@@ -1187,12 +1236,19 @@ def quiz():
         flash("Quiz attempt not found.", "error")
         return redirect(url_for("student.available_quizzes"))
 
-    quiz_data = _get_quiz(attempt["quiz_id"])
     if not quiz_data:
         _clear_active_quiz_session()
         if is_ajax:
             return ajax_error("Quiz not found.", 404)
         return "Quiz not found.", 404
+
+    # Keep the same randomized sequence for this student's entire attempt.
+    try:
+        attempt = _ensure_attempt_orders(attempt)
+    except Exception:
+        if is_ajax:
+            return ajax_error("Unable to prepare this quiz. Please retry.", 500)
+        return "Unable to prepare this quiz. Please try again.", 500
 
     # Verify ownership of logged-in student's attempt.
     if not _is_guest():
@@ -1258,8 +1314,14 @@ def quiz():
             expected_index, total_questions - 1
         )
 
+        step_started = time.perf_counter()
+
         question_state = _get_attempt_question_at(
-            attempt["quiz_id"], expected_index
+            attempt["quiz_id"], expected_index, attempt
+        )
+
+        timings["get_question_ms"] = round(
+            (time.perf_counter() - step_started) * 1000, 2
         )
 
         if not question_state:
@@ -1272,7 +1334,7 @@ def quiz():
 
     else:
         # GET requests still need the complete question list for rendering.
-        questions = _get_attempt_questions(attempt["quiz_id"])
+        questions = _get_attempt_questions(attempt["quiz_id"], attempt)
 
         if not questions:
             return _quiz_unavailable_page(
@@ -1343,7 +1405,17 @@ def quiz():
         question_expired = question_time_seconds > 0 and question_remaining_seconds <= 0
         if not question_expired and selected_option in ("A", "B", "C", "D"):
             try:
-                saved = _save_answer(attempt, posted_question_id, selected_option)
+                step_started = time.perf_counter()
+
+                saved = _save_answer(
+                    attempt,
+                    posted_question_id,
+                    selected_option
+                )
+
+                timings["save_answer_ms"] = round(
+                    (time.perf_counter() - step_started) * 1000, 2
+                )
             except Exception:
                 current_app.logger.exception("Unable to save quiz answer.")
                 if is_ajax:
@@ -1370,12 +1442,24 @@ def quiz():
         session["question_started_index"] = next_index
         session["question_started_at"] = time.time()
         if is_ajax:
-            return jsonify({"ok": True, "submitted": False,
-                            "current_index": next_index,
-                            "question_time_seconds": question_time_seconds,
-                            "question_remaining_seconds": question_time_seconds,
-                            "remaining_seconds": remaining_seconds,
-                            "message": "Question saved."})
+            timings["total_ms"] = round(
+            (time.perf_counter() - request_started) * 1000, 2
+        )
+
+        current_app.logger.info(
+            "QUIZ_SAVE_NEXT_PERFORMANCE: %s",
+            timings
+        )
+
+        return jsonify({
+            "ok": True,
+            "submitted": False,
+            "current_index": next_index,
+            "question_time_seconds": question_time_seconds,
+            "question_remaining_seconds": question_time_seconds,
+            "remaining_seconds": remaining_seconds,
+            "message": "Question saved."
+        })
         return redirect(url_for("student.quiz"))
 
     # GET: render the current question and existing answers.
