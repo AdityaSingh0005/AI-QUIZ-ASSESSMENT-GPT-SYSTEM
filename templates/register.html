@@ -2,269 +2,299 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <link
-        rel="icon"
-        href="{{ url_for('static', filename='images/logo.jpg') }}"
-    >
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.jpg') }}">
 
     <title>Create Account | AI Quiz Assessment System</title>
 
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='css/style.css') }}"
-    >
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet"
-    >
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
+
+    <style>
+        /* Registration page improvements */
+
+        .register-card {
+            max-width: 510px !important;
+            width: 100%;
+        }
+
+        .register-card .login-header {
+            margin-bottom: 24px;
+        }
+
+        .register-card .login-form {
+            gap: 17px;
+        }
+
+        .register-card .form-group {
+            width: 100%;
+        }
+
+        .register-card .input-wrapper {
+            position: relative;
+        }
+
+        .register-card input,
+        .register-card select {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .register-card select {
+            cursor: pointer;
+        }
+
+        .register-card input:focus,
+        .register-card select:focus {
+            outline: none;
+        }
+
+        .register-card .password-toggle {
+            position: absolute;
+            right: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 17px;
+            z-index: 2;
+        }
+
+        .register-card .password-input {
+            padding-right: 48px;
+        }
+
+        .register-card .student-fields {
+            display: none;
+            width: 100%;
+            padding: 17px;
+            border: 1px solid rgba(148, 163, 184, .25);
+            border-radius: 13px;
+            background: rgba(148, 163, 184, .05);
+        }
+
+        .register-card .student-fields .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .register-card .section-heading {
+            margin-bottom: 16px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+        }
+
+        .register-card .password-hint {
+            display: block;
+            margin-top: 7px;
+            font-size: 11px;
+            opacity: .7;
+        }
+
+        .register-card .login-button {
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .register-card .login-button:disabled {
+            opacity: .7;
+            cursor: wait;
+        }
+
+        .register-card .form-error {
+            display: none;
+            margin-top: 7px;
+            color: #ef4444;
+            font-size: 12px;
+        }
+
+        .register-card .login-error,
+        .register-card .login-success {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 18px;
+            padding: 13px 15px;
+            border-radius: 10px;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+
+        .register-card .login-error {
+            background: rgba(239, 68, 68, .10);
+            border: 1px solid rgba(239, 68, 68, .25);
+        }
+
+        .register-card .login-success {
+            background: rgba(34, 197, 94, .10);
+            border: 1px solid rgba(34, 197, 94, .25);
+        }
+
+        .register-card .create-account-section {
+            margin-top: 22px;
+            text-align: center;
+        }
+
+        .register-card .login-security {
+            margin-top: 15px;
+        }
+
+        .register-card .button-spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,.35);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: registerSpin .7s linear infinite;
+        }
+
+        @keyframes registerSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media(max-width: 600px) {
+            .register-card {
+                padding: 22px 17px !important;
+            }
+
+            .register-card .student-fields {
+                padding: 13px;
+            }
+        }
+    </style>
 
 </head>
 
-
 <body class="login-body">
-
 
 <div class="login-wrapper">
 
-
-    <!-- =====================================================
-         BRAND PANEL
-    ====================================================== -->
+    <!-- BRAND PANEL -->
 
     <section class="brand-panel">
 
         <div class="brand-content">
 
-
             <div class="brand-badge">
-
-                <span class="brand-icon">
-                    ✦
-                </span>
-
+                <span class="brand-icon">✦</span>
                 AI Powered
-
             </div>
 
-
-            <div class="brand-logo">
-                🧠
-            </div>
-
+            <div class="brand-logo">🧠</div>
 
             <h1>
-
                 Join AI Quiz
-
-                <span>
-                    Assessment System
-                </span>
-
+                <span>Assessment System</span>
             </h1>
 
-
             <p class="brand-description">
-
                 Create your account and start creating,
                 attempting and managing intelligent quizzes.
-
             </p>
-
 
             <div class="feature-list">
 
-
                 <div class="feature-item">
-
-                    <span>
-                        ✓
-                    </span>
-
+                    <span>✓</span>
                     <div>
-
-                        <strong>
-                            Teachers & Professors
-                        </strong>
-
-                        <small>
-                            Create AI-powered quizzes
-                        </small>
-
+                        <strong>Teachers & Professors</strong>
+                        <small>Create AI-powered quizzes</small>
                     </div>
-
                 </div>
 
-
                 <div class="feature-item">
-
-                    <span>
-                        ✓
-                    </span>
-
+                    <span>✓</span>
                     <div>
-
-                        <strong>
-                            Students
-                        </strong>
-
-                        <small>
-                            Attempt quizzes and view results
-                        </small>
-
+                        <strong>Students</strong>
+                        <small>Attempt quizzes and view results</small>
                     </div>
-
                 </div>
 
-
                 <div class="feature-item">
-
-                    <span>
-                        ✓
-                    </span>
-
+                    <span>✓</span>
                     <div>
-
-                        <strong>
-                            QR Quiz Access
-                        </strong>
-
-                        <small>
-                            Join assessments instantly
-                        </small>
-
+                        <strong>QR Quiz Access</strong>
+                        <small>Join assessments instantly</small>
                     </div>
-
                 </div>
-
 
             </div>
-
 
             <div class="brand-footer">
-
-                <span>
-                    AI Quiz Assessment System
-                </span>
-
-                <span>
-                    •
-                </span>
-
-                <span>
-                    Smart Education Platform
-                </span>
-
+                <span>AI Quiz Assessment System</span>
+                <span>•</span>
+                <span>Smart Education Platform</span>
             </div>
-
 
         </div>
 
     </section>
 
 
-
-    <!-- =====================================================
-         REGISTRATION PANEL
-    ====================================================== -->
+    <!-- REGISTRATION PANEL -->
 
     <section class="login-section">
 
-
         <div class="login-card register-card">
-
 
             <!-- HEADER -->
 
             <div class="login-header">
 
+                <div class="mobile-logo">🧠</div>
 
-                <div class="mobile-logo">
-                    🧠
-                </div>
+                <div class="welcome-icon">✨</div>
 
-
-                <div class="welcome-icon">
-                    ✨
-                </div>
-
-
-                <h2>
-                    Create your account
-                </h2>
-
+                <h2>Create your account</h2>
 
                 <p>
                     Register as a Teacher, Professor or Student.
                 </p>
 
-
             </div>
 
 
-
-            <!-- =================================================
-                 ERROR
-            ================================================== -->
+            <!-- ERROR MESSAGE -->
 
             {% if error %}
 
-            <div class="login-error">
-
-                <span>
-                    ⚠️
-                </span>
-
-                <span>
-                    {{ error }}
-                </span>
-
+            <div class="login-error" role="alert">
+                <span>⚠️</span>
+                <span>{{ error }}</span>
             </div>
 
             {% endif %}
 
 
-
-            <!-- =================================================
-                 SUCCESS
-            ================================================== -->
+            <!-- SUCCESS MESSAGE -->
 
             {% if success %}
 
-            <div class="login-success">
-
-                <span>
-                    ✓
-                </span>
-
-                <span>
-                    {{ success }}
-                </span>
-
+            <div class="login-success" role="status">
+                <span>✓</span>
+                <span>{{ success }}</span>
             </div>
 
             {% endif %}
 
 
-
-            <!-- =================================================
-                 REGISTRATION FORM
-            ================================================== -->
+            <!-- REGISTRATION FORM -->
 
             <form
-                action="/register"
+                action="{{ url_for('auth.register') }}"
                 method="POST"
                 class="login-form"
+                id="registerForm"
             >
-
 
                 <!-- ACCOUNT TYPE -->
 
@@ -274,30 +304,31 @@
                         Account Type
                     </label>
 
-
                     <div class="input-wrapper">
 
-                        <span class="input-icon">
-                            👤
-                        </span>
-
+                        <span class="input-icon">👤</span>
 
                         <select
                             id="role"
                             name="role"
                             required
-                            onchange="toggleStudentFields()"
                         >
 
                             <option value="">
                                 Select account type
                             </option>
 
-                            <option value="teacher">
+                            <option
+                                value="teacher"
+                                {% if request.form.get('role') == 'teacher' %}selected{% endif %}
+                            >
                                 Teacher / Professor
                             </option>
 
-                            <option value="student">
+                            <option
+                                value="student"
+                                {% if request.form.get('role') == 'student' %}selected{% endif %}
+                            >
                                 Student
                             </option>
 
@@ -308,7 +339,6 @@
                 </div>
 
 
-
                 <!-- FULL NAME -->
 
                 <div class="form-group">
@@ -317,19 +347,18 @@
                         Full Name
                     </label>
 
-
                     <div class="input-wrapper">
 
-                        <span class="input-icon">
-                            👨
-                        </span>
-
+                        <span class="input-icon">👤</span>
 
                         <input
                             type="text"
                             id="full_name"
                             name="full_name"
                             placeholder="Enter your full name"
+                            autocomplete="name"
+                            maxlength="120"
+                            value="{{ request.form.get('full_name', '') }}"
                             required
                         >
 
@@ -338,8 +367,7 @@
                 </div>
 
 
-
-                <!-- USERNAME -->
+                <!-- EMAIL / ROLL NUMBER -->
 
                 <div class="form-group">
 
@@ -347,19 +375,18 @@
                         Email
                     </label>
 
-
                     <div class="input-wrapper">
 
-                        <span class="input-icon">
-                            ✉
-                        </span>
-
+                        <span class="input-icon" id="username-icon">✉</span>
 
                         <input
                             type="text"
                             id="username"
                             name="username"
                             placeholder="Enter your email"
+                            autocomplete="username"
+                            maxlength="150"
+                            value="{{ request.form.get('username', '') }}"
                             required
                         >
 
@@ -368,46 +395,76 @@
                 </div>
 
 
-
                 <!-- STUDENT DETAILS -->
 
-                <div id="student-fields">
+                <div
+                    id="student-fields"
+                    class="student-fields"
+                >
 
-                <!-- COURSE -->
+                    <div class="section-heading">
+                        🎓 Student Information
+                    </div>
 
-                <div class="form-group">
 
-                    <label for="course">
-                        Course
-                    </label>
+                    <!-- COURSE -->
 
-                    <div class="input-wrapper">
+                    <div class="form-group">
 
-                        <span class="input-icon">
-                            🎓
-                        </span>
+                        <label for="course">
+                            Course
+                        </label>
 
-                        <select
-                            id="course"
-                            name="course"
-                        >
+                        <div class="input-wrapper">
 
-                            <option value="">
-                                Select Course
-                            </option>
+                            <span class="input-icon">🎓</span>
 
-                            <option value="MCA">MCA</option>
-                            <option value="MSC">M.Sc.</option>
-                            <option value="BTECH">B.Tech</option>
-                            <option value="MTECH">M.Tech</option>
-                            <option value="BCA">BCA</option>
-                            <option value="OTHER">Other</option>
+                            <select
+                                id="course"
+                                name="course"
+                            >
 
-                        </select>
+                                <option value="">
+                                    Select Course
+                                </option>
+
+                                <option value="MCA"
+                                    {% if request.form.get('course') == 'MCA' %}selected{% endif %}>
+                                    MCA
+                                </option>
+
+                                <option value="MSC"
+                                    {% if request.form.get('course') == 'MSC' %}selected{% endif %}>
+                                    M.Sc.
+                                </option>
+
+                                <option value="BTECH"
+                                    {% if request.form.get('course') == 'BTECH' %}selected{% endif %}>
+                                    B.Tech
+                                </option>
+
+                                <option value="MTECH"
+                                    {% if request.form.get('course') == 'MTECH' %}selected{% endif %}>
+                                    M.Tech
+                                </option>
+
+                                <option value="BCA"
+                                    {% if request.form.get('course') == 'BCA' %}selected{% endif %}>
+                                    BCA
+                                </option>
+
+                                <option value="OTHER"
+                                    {% if request.form.get('course') == 'OTHER' %}selected{% endif %}>
+                                    Other
+                                </option>
+
+                            </select>
+
+                        </div>
 
                     </div>
 
-                </div>
+
                     <!-- DEPARTMENT -->
 
                     <div class="form-group">
@@ -416,25 +473,22 @@
                             Department
                         </label>
 
-
                         <div class="input-wrapper">
 
-                            <span class="input-icon">
-                                🎓
-                            </span>
-
+                            <span class="input-icon">🏢</span>
 
                             <input
                                 type="text"
                                 id="department"
                                 name="department"
-                                placeholder="e.g. MCA / Computer Science"
+                                placeholder="e.g. Computer Science"
+                                maxlength="100"
+                                value="{{ request.form.get('department', '') }}"
                             >
 
                         </div>
 
                     </div>
-
 
 
                     <!-- SEMESTER -->
@@ -445,13 +499,9 @@
                             Semester
                         </label>
 
-
                         <div class="input-wrapper">
 
-                            <span class="input-icon">
-                                📚
-                            </span>
-
+                            <span class="input-icon">📚</span>
 
                             <select
                                 id="semester"
@@ -462,29 +512,16 @@
                                     Select semester
                                 </option>
 
-                                <option value="1">
-                                    Semester 1
+                                {% for i in range(1, 7) %}
+
+                                <option
+                                    value="{{ i }}"
+                                    {% if request.form.get('semester') == i|string %}selected{% endif %}
+                                >
+                                    Semester {{ i }}
                                 </option>
 
-                                <option value="2">
-                                    Semester 2
-                                </option>
-
-                                <option value="3">
-                                    Semester 3
-                                </option>
-
-                                <option value="4">
-                                    Semester 4
-                                </option>
-
-                                <option value="5">
-                                    Semester 5
-                                </option>
-
-                                <option value="6">
-                                    Semester 6
-                                </option>
+                                {% endfor %}
 
                             </select>
 
@@ -492,15 +529,7 @@
 
                     </div>
 
-
-
                 </div>
-
-                    </div>
-
-
-                </div>
-
 
 
                 <!-- PASSWORD -->
@@ -511,27 +540,37 @@
                         Password
                     </label>
 
-
                     <div class="input-wrapper">
 
-                        <span class="input-icon">
-                            🔒
-                        </span>
-
+                        <span class="input-icon">🔒</span>
 
                         <input
                             type="password"
                             id="password"
                             name="password"
+                            class="password-input"
                             placeholder="Minimum 6 characters"
                             minlength="6"
+                            autocomplete="new-password"
                             required
                         >
 
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            data-target="password"
+                            aria-label="Show password"
+                        >
+                            👁
+                        </button>
+
                     </div>
 
-                </div>
+                    <small class="password-hint">
+                        Password must contain at least 6 characters.
+                    </small>
 
+                </div>
 
 
                 <!-- CONFIRM PASSWORD -->
@@ -542,39 +581,58 @@
                         Confirm Password
                     </label>
 
-
                     <div class="input-wrapper">
 
-                        <span class="input-icon">
-                            🔐
-                        </span>
-
+                        <span class="input-icon">🔐</span>
 
                         <input
                             type="password"
                             id="confirm_password"
                             name="confirm_password"
+                            class="password-input"
                             placeholder="Re-enter your password"
                             minlength="6"
+                            autocomplete="new-password"
                             required
                         >
 
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            data-target="confirm_password"
+                            aria-label="Show confirm password"
+                        >
+                            👁
+                        </button>
+
                     </div>
+
+                    <small
+                        class="form-error"
+                        id="password-error"
+                    >
+                        Passwords do not match.
+                    </small>
 
                 </div>
 
 
-
-                <!-- CREATE ACCOUNT -->
+                <!-- CREATE ACCOUNT BUTTON -->
 
                 <button
                     type="submit"
                     class="login-button"
+                    id="registerButton"
                 >
 
-                    <span>
+                    <span id="buttonText">
                         Create Account
                     </span>
+
+                    <span
+                        class="button-spinner"
+                        id="buttonSpinner"
+                    ></span>
 
                     <span class="button-arrow">
                         →
@@ -582,14 +640,10 @@
 
                 </button>
 
-
             </form>
 
 
-
-            <!-- =================================================
-                 LOGIN LINK
-            ================================================== -->
+            <!-- LOGIN LINK -->
 
             <div class="create-account-section">
 
@@ -598,7 +652,7 @@
                 </span>
 
                 <a
-                    href="/"
+                    href="{{ url_for('auth.login_page') }}"
                     class="create-account-link"
                 >
                     Sign In
@@ -607,24 +661,15 @@
             </div>
 
 
-
             <!-- SECURITY -->
 
             <div class="login-divider">
-
-                <span>
-                    AI Powered Education
-                </span>
-
+                <span>AI Powered Education</span>
             </div>
-
 
             <div class="login-security">
 
-                <span>
-                    🔐
-                </span>
-
+                <span>🔐</span>
 
                 <p>
                     Your account information is securely managed.
@@ -632,95 +677,227 @@
 
             </div>
 
-
         </div>
 
-
     </section>
-
 
 </div>
 
 
+<!-- REGISTRATION JAVASCRIPT -->
 
 <script>
 
-function toggleStudentFields() {
+(function () {
+
+    "use strict";
+
+    const form = document.getElementById("registerForm");
+
+    const role = document.getElementById("role");
+
+    const studentFields = document.getElementById("student-fields");
 
     const course = document.getElementById("course");
 
-    const role =
-        document.getElementById("role").value;
+    const department = document.getElementById("department");
 
-    const studentFields =
-        document.getElementById("student-fields");
+    const semester = document.getElementById("semester");
 
-    const department =
-        document.getElementById("department");
+    const username = document.getElementById("username");
 
-    const semester =
-        document.getElementById("semester");
+    const usernameLabel = document.getElementById("username-label");
 
-    const username =
-        document.getElementById("username");
+    const usernameIcon = document.getElementById("username-icon");
 
-    const usernameLabel =
-        document.getElementById("username-label");
+    const password = document.getElementById("password");
+
+    const confirmPassword = document.getElementById("confirm_password");
+
+    const passwordError = document.getElementById("password-error");
+
+    const registerButton = document.getElementById("registerButton");
+
+    const buttonText = document.getElementById("buttonText");
+
+    const buttonSpinner = document.getElementById("buttonSpinner");
 
 
-    if (role === "student") {
+    // =====================================================
+    // TEACHER / STUDENT FIELD TOGGLE
+    // =====================================================
 
-        studentFields.style.display = "block";
+    function toggleStudentFields() {
 
-        department.required = true;
-        semester.required = true;
-        course.required = true;
+        const isStudent = role.value === "student";
 
-        usernameLabel.textContent =
-            "Roll Number";
+        studentFields.style.display = isStudent ? "block" : "none";
 
-        username.placeholder =
-            "Enter your roll number";
+        course.required = isStudent;
+
+        department.required = isStudent;
+
+        semester.required = isStudent;
+
+
+        if (isStudent) {
+
+            usernameLabel.textContent = "Roll Number";
+
+            username.placeholder = "Enter your roll number";
+
+            username.type = "text";
+
+            username.autocomplete = "username";
+
+            usernameIcon.textContent = "#";
+
+        } else {
+
+            usernameLabel.textContent = "Email";
+
+            username.placeholder = "Enter your email";
+
+            username.type = "email";
+
+            username.autocomplete = "email";
+
+            usernameIcon.textContent = "✉";
+
+        }
 
     }
 
-    else {
 
-        studentFields.style.display = "none";
+    role.addEventListener("change", toggleStudentFields);
 
-        department.required = false;
-        semester.required = false;
-        course.required = false;
 
-        usernameLabel.textContent =
-            "Email";
+    // =====================================================
+    // PASSWORD VISIBILITY
+    // =====================================================
 
-        username.placeholder =
-            "Enter your email";
+    document.querySelectorAll(".password-toggle").forEach(function (button) {
+
+        button.addEventListener("click", function () {
+
+            const target = document.getElementById(
+                button.dataset.target
+            );
+
+            if (target.type === "password") {
+
+                target.type = "text";
+
+                button.textContent = "🙈";
+
+                button.setAttribute("aria-label", "Hide password");
+
+            } else {
+
+                target.type = "password";
+
+                button.textContent = "👁";
+
+                button.setAttribute("aria-label", "Show password");
+
+            }
+
+        });
+
+    });
+
+
+    // =====================================================
+    // PASSWORD MATCH VALIDATION
+    // =====================================================
+
+    function checkPasswordMatch() {
+
+        if (!confirmPassword.value) {
+
+            passwordError.style.display = "none";
+
+            confirmPassword.setCustomValidity("");
+
+            return true;
+
+        }
+
+        if (password.value !== confirmPassword.value) {
+
+            passwordError.style.display = "block";
+
+            confirmPassword.setCustomValidity(
+                "Passwords do not match."
+            );
+
+            return false;
+
+        }
+
+        passwordError.style.display = "none";
+
+        confirmPassword.setCustomValidity("");
+
+        return true;
 
     }
 
-}
+
+    password.addEventListener("input", checkPasswordMatch);
+
+    confirmPassword.addEventListener("input", checkPasswordMatch);
 
 
-document.addEventListener(
-    "DOMContentLoaded",
-    function() {
+    // =====================================================
+    // FORM SUBMISSION
+    // =====================================================
 
-        toggleStudentFields();
+    form.addEventListener("submit", function (event) {
 
-    }
-);
+        if (!checkPasswordMatch()) {
+
+            event.preventDefault();
+
+            confirmPassword.reportValidity();
+
+            return;
+
+        }
+
+        if (!form.checkValidity()) {
+
+            event.preventDefault();
+
+            form.reportValidity();
+
+            return;
+
+        }
+
+        // Prevent accidental double submission.
+
+        registerButton.disabled = true;
+
+        buttonText.textContent = "Creating account...";
+
+        buttonSpinner.style.display = "inline-block";
+
+    });
+
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+
+    toggleStudentFields();
+
+})();
 
 </script>
 
 
-
-<script
-    src="{{ url_for('static', filename='js/darkmode.js') }}">
-</script>
-
+<script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
 
 </body>
-
 </html>
