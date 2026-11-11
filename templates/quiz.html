@@ -307,11 +307,18 @@ Back to Home </a>
           cards.forEach(function (card, index) {
             card.classList.toggle("hidden", index !== currentIndex);
           });
+
           const card = cards[currentIndex];
+
           questionIdInput.value = card.dataset.questionId;
           currentIndexInput.value = currentIndex;
+
           nextButton.hidden = currentIndex === cards.length - 1;
           submitButton.hidden = currentIndex !== cards.length - 1;
+
+          // FIX: Reset button text after successfully saving the answer.
+          nextButton.textContent = "Save & Next →";
+
           updateStyles();
           updateProgress();
           updateQuestionTimerDisplay(questionRemainingSeconds);
