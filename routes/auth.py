@@ -4,9 +4,9 @@ import os
 import re
 import secrets
 import hashlib
-import smtplib
-import ssl
-from email.message import EmailMessage
+import json
+import urllib.request
+import urllib.error
 from datetime import datetime, timedelta
 
 from flask import (
@@ -82,28 +82,75 @@ def _log_login_activity(
         )
     )
 def _send_student_email(to_email, subject, body):
-    """Send mail through Gmail SMTP using environment-only credentials."""
-    smtp_user = os.getenv("MAIL_USERNAME", "").strip()
-    smtp_password = os.getenv("MAIL_APP_PASSWORD", "").replace(" ", "").strip()
-    if not smtp_user or not smtp_password:
-        raise RuntimeError("Gmail SMTP is not configured. Set MAIL_USERNAME and MAIL_APP_PASSWORD.")
+    """
+    Send student emails using Resend HTTPS API.
+    Works for registration verification and password recovery.
+    """
 
-    message = EmailMessage()
-    message["Subject"] = subject
-    message["From"] = os.getenv("MAIL_DEFAULT_SENDER", smtp_user).strip()
-    message["To"] = to_email
-    message.set_content(body)
+    api_key = os.getenv("RESEND_API_KEY", "").strip()
+    from_email = os.getenv("RESEND_FROM_EMAIL", "").strip()
 
-    host = os.getenv("MAIL_SERVER", "smtp.gmail.com")
-    port = int(os.getenv("MAIL_PORT", "587"))
-    with smtplib.SMTP(host, port, timeout=20) as smtp:
-        smtp.ehlo()
-        smtp.starttls(context=ssl.create_default_context())
-        smtp.ehlo()
-        smtp.login(smtp_user, smtp_password)
-        smtp.send_message(message)
+    if not api_key:
+        raise RuntimeError("RESEND_API_KEY is not configured.")
 
+    if not from_email:
+        raise RuntimeError("RESEND_FROM_EMAIL is not configured.")
 
+    payload = {
+        "from": from_email,
+        "to": [to_email],
+        "subject": subject,
+        "text": body
+    }
+
+    data = json.dumps(payload).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=data,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        },
+        method="POST"
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=25) as response:
+            result = json.loads(response.read().decode("utf-8"))
+
+            if response.status not in (200, 201):
+                raise RuntimeError(
+                    f"Resend API returned status {response.status}"
+                )
+
+            current_app.logger.info(
+                "Student email sent successfully. Email ID: %s",
+                result.get("id")
+            )
+
+            return result
+
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+
+        current_app.logger.error(
+            "Resend API error: HTTP %s - %s",
+            e.code,
+            error_body
+        )
+
+        raise RuntimeError(
+            f"Email provider rejected the request (HTTP {e.code})."
+        ) from e
+
+    except urllib.error.URLError as e:
+        current_app.logger.exception("Resend connection failed.")
+
+        raise RuntimeError(
+            "Unable to connect to the email service."
+        ) from e
+        
 def _valid_email(value):
     value = (value or "").strip().lower()
     return value if len(value) <= 100 and re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", value) else ""
