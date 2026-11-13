@@ -1,3 +1,7 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask
 from routes.auth import auth
 from routes.teacher import teacher
@@ -5,9 +9,10 @@ from routes.student import student
 from routes.admin import admin
 
 
+
 app = Flask(__name__)
 
-app.secret_key = "ai_quiz_secret_key"
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "ai_quiz_secret_key")
 
 app.register_blueprint(auth)
 app.register_blueprint(teacher)

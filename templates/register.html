@@ -406,6 +406,22 @@
                         🎓 Student Information
                     </div>
 
+                    <div class="form-group">
+                        <label for="student_email">Email Address (for password recovery)</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">✉</span>
+                            <input
+                                type="email"
+                                id="student_email"
+                                name="student_email"
+                                placeholder="Enter your active email address"
+                                maxlength="100"
+                                autocomplete="email"
+                                value="{{ request.form.get('student_email', '') }}"
+                            >
+                        </div>
+                    </div>
+
 
                     <!-- COURSE -->
 
@@ -703,6 +719,7 @@
     const department = document.getElementById("department");
 
     const semester = document.getElementById("semester");
+    const studentEmail = document.getElementById("student_email");
 
     const username = document.getElementById("username");
 
@@ -738,6 +755,7 @@
         department.required = isStudent;
 
         semester.required = isStudent;
+        studentEmail.required = isStudent;
 
 
         if (isStudent) {

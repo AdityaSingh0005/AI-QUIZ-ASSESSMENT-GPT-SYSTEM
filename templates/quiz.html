@@ -172,8 +172,8 @@ Back to Home </a>
 
     {% else %}
       <div class="notice" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <span>Exam mode: fullscreen recommended. Copy/paste is restricted within this quiz.</span>
-        <button type="button" class="btn btn-secondary" id="fullscreenButton">Enter Fullscreen</button>
+        <span>Exam mode: use the fullscreen button. Exiting fullscreen or switching tabs will submit the quiz automatically. Copy/paste is restricted within this quiz.</span>
+        <button type="button" class="btn btn-secondary" id="fullscreenButton">Enter Fullscreen to Start</button>
       </div>
       <header class="header">
         <div>
@@ -540,26 +540,55 @@ Back to Home </a>
         });
 
         const fullscreenButton = document.getElementById("fullscreenButton");
+        let examFullscreenStarted = false;
+
+        // Fullscreen must be requested directly from a student's click.
+        // The quiz timers and existing answer controls continue normally.
         async function enterExamFullscreen() {
+          if (submitting || document.fullscreenElement) return;
+
           try {
-            if (!document.fullscreenElement) {
-              await document.documentElement.requestFullscreen();
+            await document.documentElement.requestFullscreen();
+            if (document.fullscreenElement) {
+              examFullscreenStarted = true;
+              fullscreenButton.textContent = "Fullscreen Active";
             }
-            fullscreenButton.textContent = "Fullscreen Active";
           } catch (error) {
-            fullscreenButton.textContent = "Fullscreen unavailable";
-            alert("Your browser did not allow fullscreen. Please use the fullscreen button or continue in your exam window.");
+            fullscreenButton.textContent = "Retry Fullscreen";
+            requestNotice.textContent = "Fullscreen could not be enabled. Please click the fullscreen button again and allow browser fullscreen.";
+            requestNotice.classList.remove("hidden");
           }
         }
 
         fullscreenButton?.addEventListener("click", enterExamFullscreen);
+
+        // A browser cannot intercept the Windows key itself. When it causes
+        // the quiz window to lose focus after fullscreen has started, submit
+        // as a best-effort fallback. The existing tab-switch handler remains.
+        let fullscreenBlurHandled = false;
+        window.addEventListener("blur", function () {
+          if (!examFullscreenStarted || submitting || fullscreenBlurHandled) return;
+          fullscreenBlurHandled = true;
+          requestNotice.textContent = "Quiz window focus lost during the assessment. Your quiz is being submitted automatically...";
+          requestNotice.classList.remove("hidden");
+          postAction("submit", true);
+        });
+
+        // Submit only if the student had successfully entered fullscreen first.
         document.addEventListener("fullscreenchange", function () {
-          if (!document.fullscreenElement && !submitting) {
-            fullscreenButton.textContent = "Re-enter Fullscreen";
-            requestNotice.textContent = "Warning: You exited fullscreen during the quiz.";
-            requestNotice.classList.remove("hidden");
-          } else if (document.fullscreenElement) {
+          if (document.fullscreenElement) {
+            examFullscreenStarted = true;
             fullscreenButton.textContent = "Fullscreen Active";
+            return;
+          }
+
+          if (examFullscreenStarted && !submitting) {
+            examFullscreenStarted = false;
+            requestNotice.textContent = "Fullscreen exit detected. Your quiz is being submitted automatically...";
+            requestNotice.classList.remove("hidden");
+            postAction("submit", true);
+          } else if (!submitting) {
+            fullscreenButton.textContent = "Enter Fullscreen to Start";
           }
         });
 

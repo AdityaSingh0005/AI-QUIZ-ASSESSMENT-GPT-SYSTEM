@@ -694,6 +694,33 @@ def build_compact_evaluation_data(
 
 
 # ============================================================
+# QUIZ PUBLICATION / COHORT HELPERS
+# ============================================================
+
+_ALLOWED_PUBLICATION_STATUSES = {"draft", "published", "closed"}
+_ALLOWED_COURSES = {"BCA", "MCA", "BTECH", "MTECH", "MSC", "OTHER"}
+
+
+def _normalise_cohort_value(value):
+    return " ".join(str(value or "").strip().split()).casefold()
+
+
+def _validate_quiz_cohort(course, department, semester):
+    course = str(course or "").strip().upper().replace(" ", "")
+    department = " ".join(str(department or "").strip().split())
+    semester = str(semester or "").strip()
+
+    if course not in _ALLOWED_COURSES:
+        return None, None, None, "Please select a valid course."
+    if not department:
+        return None, None, None, "Department is required."
+    if not semester.isdigit() or not 1 <= int(semester) <= 8:
+        return None, None, None, "Please select a semester between 1 and 8."
+
+    return course, department, str(int(semester)), None
+
+
+# ============================================================
 # TEACHER DASHBOARD
 # ============================================================
 
@@ -728,7 +755,9 @@ def teacher_dashboard():
             """
             SELECT q.quiz_id, q.title, q.total_questions, q.duration_minutes,
                    q.question_time_seconds, q.available_from, q.available_until,
-                   q.created_at, COUNT(DISTINCT qa.attempt_id) AS participants
+                   q.target_course, q.target_department, q.target_semester,
+                   q.publication_status, q.created_at,
+                   COUNT(DISTINCT qa.attempt_id) AS participants
             FROM quizzes q
             LEFT JOIN quiz_attempts qa ON qa.quiz_id=q.quiz_id
             WHERE q.teacher_id=%s
@@ -747,7 +776,10 @@ def teacher_dashboard():
                 quiz.get("total_questions") or 0,
                 quiz.get("question_time_seconds") or 0,
             )
-            if quiz["status"] == "live":
+            if (
+                quiz["status"] == "live"
+                and quiz.get("publication_status") == "published"
+            ):
                 live_quizzes.append(quiz)
 
         return render_template(
@@ -785,7 +817,9 @@ def create_quiz():
     if request.method == "GET":
 
         return render_template(
-            "create_quiz.html"
+            "create_quiz.html",
+            allowed_courses=sorted(_ALLOWED_COURSES),
+            semesters=range(1, 9),
         )
 
     print("\n")
@@ -811,6 +845,17 @@ def create_quiz():
         "prompt",
         ""
     ).strip()
+
+    target_course, target_department, target_semester, cohort_error = (
+        _validate_quiz_cohort(
+            request.form.get("target_course"),
+            request.form.get("target_department"),
+            request.form.get("target_semester"),
+        )
+    )
+
+    if cohort_error:
+        return error_page(cohort_error)
 
     # ========================================================
     # COUNTS + QUESTION TIMER
@@ -1344,7 +1389,11 @@ def create_quiz():
                 duration_minutes,
                 question_time_seconds,
                 available_from,
-                available_until
+                available_until,
+                target_course,
+                target_department,
+                target_semester,
+                publication_status
             )
 
             VALUES
@@ -1357,7 +1406,11 @@ def create_quiz():
                 %s,
                 %s,
                 %s,
-                %s
+                %s,
+                %s,
+                %s,
+                %s,
+                'draft'
             )
 
             RETURNING quiz_id
@@ -1371,7 +1424,10 @@ def create_quiz():
                 duration_minutes,
                 question_time_seconds,
                 available_from,
-                available_until
+                available_until,
+                target_course,
+                target_department,
+                target_semester,
             )
         )
 
@@ -2509,6 +2565,10 @@ def manage_quizzes():
                 question_time_seconds,
                 available_from,
                 available_until,
+                target_course,
+                target_department,
+                target_semester,
+                publication_status,
                 created_at
 
             FROM quizzes
@@ -2565,6 +2625,122 @@ def manage_quizzes():
         quizzes=quizzes
     )
 
+
+
+# ============================================================
+# UPDATE QUIZ TARGET COHORT (ALSO SUPPORTS LEGACY QUIZZES)
+# ============================================================
+
+@teacher.route("/update_quiz_cohort/<int:quiz_id>", methods=["POST"])
+def update_quiz_cohort(quiz_id):
+    if not teacher_logged_in():
+        return redirect("/")
+
+    course, department, semester, validation_error = _validate_quiz_cohort(
+        request.form.get("target_course"),
+        request.form.get("target_department"),
+        request.form.get("target_semester"),
+    )
+    if validation_error:
+        flash(validation_error, "error")
+        return redirect("/manage_quizzes")
+
+    db = get_db_connection()
+    cursor = db.cursor()
+    try:
+        cursor.execute(
+            """UPDATE quizzes
+               SET target_course = %s,
+                   target_department = %s,
+                   target_semester = %s
+               WHERE quiz_id = %s AND teacher_id = %s""",
+            (course, department, semester, quiz_id, session["teacher_id"]),
+        )
+        if cursor.rowcount != 1:
+            db.rollback()
+            flash("Quiz not found or you do not have permission to edit it.", "error")
+            return redirect("/manage_quizzes")
+        db.commit()
+        flash("Quiz target cohort updated successfully.", "success")
+    except Exception:
+        db.rollback()
+        current_app.logger.exception("Quiz cohort update failed | quiz_id=%s", quiz_id)
+        flash("Unable to update quiz target cohort. Please try again.", "error")
+    finally:
+        cursor.close()
+        db.close()
+
+    return redirect("/manage_quizzes")
+
+
+# ============================================================
+# PUBLISH / UNPUBLISH / CLOSE QUIZ
+# ============================================================
+
+@teacher.route("/quiz_publication/<int:quiz_id>/<action>", methods=["POST"])
+def update_quiz_publication(quiz_id, action):
+    if not teacher_logged_in():
+        return redirect("/")
+
+    transitions = {
+        "publish": "published",
+        "unpublish": "draft",
+        "close": "closed",
+    }
+    new_status = transitions.get(action)
+    if new_status is None:
+        flash("Invalid quiz publication action.", "error")
+        return redirect("/manage_quizzes")
+
+    db = get_db_connection()
+    cursor = db.cursor(cursor_factory=RealDictCursor)
+    try:
+        if new_status == "published":
+            cursor.execute(
+                """SELECT target_course, target_department, target_semester
+                   FROM quizzes
+                   WHERE quiz_id = %s AND teacher_id = %s""",
+                (quiz_id, session["teacher_id"]),
+            )
+            cohort = cursor.fetchone()
+            if not cohort:
+                flash("Quiz not found or access denied.", "error")
+                return redirect("/manage_quizzes")
+            if not all(str(cohort.get(key) or "").strip() for key in (
+                "target_course", "target_department", "target_semester"
+            )):
+                flash("Set the course, department and semester before publishing this quiz.", "error")
+                return redirect("/manage_quizzes")
+
+        cursor.execute(
+            """UPDATE quizzes
+               SET publication_status = %s
+               WHERE quiz_id = %s AND teacher_id = %s
+               RETURNING quiz_id, publication_status""",
+            (new_status, quiz_id, session["teacher_id"]),
+        )
+        updated = cursor.fetchone()
+        if not updated:
+            db.rollback()
+            flash("Quiz not found or you do not have permission to modify it.", "error")
+            return redirect("/manage_quizzes")
+
+        db.commit()
+        messages = {
+            "published": "Quiz published. Matching students can see it, subject to its schedule.",
+            "draft": "Quiz unpublished. It is now hidden from students.",
+            "closed": "Quiz closed. It is now hidden from students.",
+        }
+        flash(messages[new_status], "success")
+        return redirect("/manage_quizzes")
+    except Exception:
+        db.rollback()
+        current_app.logger.exception("Quiz publication update failed | quiz_id=%s", quiz_id)
+        flash("Unable to update quiz publication status. Please try again.", "error")
+        return redirect("/manage_quizzes")
+    finally:
+        cursor.close()
+        db.close()
 
 
 # ============================================================

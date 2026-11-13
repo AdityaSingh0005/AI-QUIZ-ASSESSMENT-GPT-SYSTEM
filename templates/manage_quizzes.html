@@ -493,6 +493,7 @@
                     <th>Quiz</th>
                     <th>Subject</th>
                     <th>Status</th>
+                    <th>Publication</th>
                     <th>Questions</th>
                     <th>Duration</th>
                     <th>Schedule</th>
@@ -504,6 +505,7 @@
             {% for quiz in quizzes %}
 
                 {% set status_text = quiz.status|default('unknown', true)|lower %}
+                {% set publication_status = quiz.publication_status|default('draft', true)|lower|trim %}
                 {% if status_text in ['live', 'active', 'available', 'ongoing'] %}
                     {% set status_key = 'live' %}
                     {% set status_label = 'Live' %}
@@ -547,7 +549,40 @@
                             {{ status_label }}
                         </span>
                     </td>
+                                    <td>
+                    {% if publication_status == 'published' %}
+                        <span class="status status-published">
+                            Published
+                        </span>
 
+                    {% elif publication_status == 'closed' %}
+                        <span class="status status-publication-closed">
+                            Closed
+                        </span>
+
+                    {% else %}
+                        <span class="status status-draft">
+                            Draft
+                        </span>
+                    {% endif %}
+                </td>
+                                        <td>
+                        {% if publication_status == 'published' %}
+                            <span class="status status-published">
+                                Published
+                            </span>
+
+                        {% elif publication_status == 'closed' %}
+                            <span class="status status-publication-closed">
+                                Closed
+                            </span>
+
+                        {% else %}
+                            <span class="status status-draft">
+                                Draft
+                            </span>
+                        {% endif %}
+                    </td>
                     <td>
                         <strong>
                             {{ quiz.total_questions|default(0, true) }}
@@ -591,7 +626,43 @@
 
                     <td>
                         <div class="actions">
+                                                        {% if publication_status == 'published' %}
 
+                                <form method="POST"
+                                    action="{{ url_for('teacher.update_quiz_publication', quiz_id=quiz.quiz_id, action='unpublish') }}"
+                                    onsubmit="return confirm('Are you sure you want to unpublish this quiz?');">
+
+                                    <button type="submit" class="btn btn-unpublish">
+                                        Unpublish
+                                    </button>
+                                </form>
+
+                                <form method="POST"
+                                    action="{{ url_for('teacher.update_quiz_publication', quiz_id=quiz.quiz_id, action='close') }}"
+                                    onsubmit="return confirm('Are you sure you want to close this quiz?');">
+
+                                    <button type="submit" class="btn btn-danger">
+                                        Close
+                                    </button>
+                                </form>
+
+                            {% else %}
+
+                                <form method="POST"
+                                    action="{{ url_for('teacher.update_quiz_publication', quiz_id=quiz.quiz_id, action='publish') }}"
+                                    onsubmit="return confirm('Publish this quiz? Matching students will be able to see it.');">
+
+                                    <button type="submit" class="btn btn-publish">
+                                        {% if publication_status == 'closed' %}
+                                            Reopen
+                                        {% else %}
+                                            Publish
+                                        {% endif %}
+                                    </button>
+                                </form>
+
+                            {% endif %}
+                            
                             <a class="btn btn-primary"
                                href="{{ url_for('teacher.view_results', quiz_id=quiz.quiz_id) }}">
                                 Results

@@ -1,12 +1,23 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 import hmac
+import os
+import re
+import secrets
+import hashlib
+import smtplib
+import ssl
+from email.message import EmailMessage
+from datetime import datetime, timedelta
 
 from flask import (
     Blueprint,
     render_template,
     request,
     redirect,
-    session
+    session,
+    flash,
+    current_app,
+    url_for,
 )
 
 from database import get_db_connection
@@ -70,6 +81,45 @@ def _log_login_activity(
             login_status
         )
     )
+def _send_student_email(to_email, subject, body):
+    """Send mail through Gmail SMTP using environment-only credentials."""
+    smtp_user = os.getenv("MAIL_USERNAME", "").strip()
+    smtp_password = os.getenv("MAIL_APP_PASSWORD", "").replace(" ", "").strip()
+    if not smtp_user or not smtp_password:
+        raise RuntimeError("Gmail SMTP is not configured. Set MAIL_USERNAME and MAIL_APP_PASSWORD.")
+
+    message = EmailMessage()
+    message["Subject"] = subject
+    message["From"] = os.getenv("MAIL_DEFAULT_SENDER", smtp_user).strip()
+    message["To"] = to_email
+    message.set_content(body)
+
+    host = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+    port = int(os.getenv("MAIL_PORT", "587"))
+    with smtplib.SMTP(host, port, timeout=20) as smtp:
+        smtp.ehlo()
+        smtp.starttls(context=ssl.create_default_context())
+        smtp.ehlo()
+        smtp.login(smtp_user, smtp_password)
+        smtp.send_message(message)
+
+
+def _valid_email(value):
+    value = (value or "").strip().lower()
+    return value if len(value) <= 100 and re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", value) else ""
+
+
+def _guest_matches_quiz_cohort(course, department, semester, quiz):
+    def norm(value):
+        return " ".join(str(value or "").strip().casefold().split())
+    return (
+        str(quiz.get("publication_status") or "draft").strip().lower() == "published"
+        and bool(norm(course)) and norm(course) == norm(quiz.get("target_course"))
+        and bool(norm(department)) and norm(department) == norm(quiz.get("target_department"))
+        and bool(norm(semester)) and norm(semester) == norm(quiz.get("target_semester"))
+    )
+
+
 # ============================================================
 # LOGIN PAGE
 # ============================================================
@@ -304,6 +354,8 @@ def register():
         ""
     ).strip()
 
+    student_email = _valid_email(request.form.get("student_email", ""))
+
     
     course = (
     request.form.get("course") or ""
@@ -398,6 +450,12 @@ def register():
             return render_template(
                 "register.html",
                 error="Course is required."
+            )
+
+        if not student_email:
+            return render_template(
+                "register.html",
+                error="A valid email address is required for student password recovery."
             )
 
 
@@ -502,32 +560,68 @@ def register():
                 )
 
 
-            # Insert student
             cursor.execute(
-                """
-                INSERT INTO students
-                (
-                    full_name,
-                    roll_number,
-                    course,
-                    department,
-                    semester,
-                    password
+                "SELECT student_id FROM students WHERE LOWER(TRIM(email)) = LOWER(TRIM(%s)) LIMIT 1",
+                (student_email,),
+            )
+            if cursor.fetchone():
+                return render_template(
+                    "register.html",
+                    error="An account already uses this email address. Please use another email."
                 )
 
-                VALUES
-                (
-                    %s, %s, %s, %s, %s, %s
+            # Verify control of the recovery email before creating the account.
+            cursor.execute(
+                """SELECT COUNT(*) AS request_count
+                   FROM pending_student_registrations
+                   WHERE LOWER(TRIM(email)) = LOWER(TRIM(%s))
+                     AND created_at > NOW() - INTERVAL '15 minutes'""",
+                (student_email,),
+            )
+            if int(cursor.fetchone()["request_count"]) >= 3:
+                return render_template(
+                    "register.html",
+                    error="Too many verification requests for this email. Please try again after 15 minutes."
                 )
-                """,
+
+            otp = f"{secrets.randbelow(1000000):06d}"
+            cursor.execute(
+                "DELETE FROM pending_student_registrations WHERE expires_at <= NOW()"
+            )
+            cursor.execute(
+                """INSERT INTO pending_student_registrations
+                   (full_name, roll_number, course, department, semester,
+                    password_hash, email, otp_hash, expires_at, attempts, created_at)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s,
+                           NOW() + INTERVAL '10 minutes', 0, NOW())""",
                 (
-                    full_name,
-                    username,
-                    course,
-                    department,
-                    semester,
-                    generate_password_hash(password)
+                    full_name, username, course, department, semester,
+                    generate_password_hash(password), student_email,
+                    generate_password_hash(otp),
+                ),
+            )
+            db.commit()
+            try:
+                _send_student_email(
+                    student_email,
+                    "AI Quiz Assessment System - Verify Your Email",
+                    f"Your student registration verification code is {otp}. It expires in 10 minutes.",
                 )
+            except Exception:
+                current_app.logger.exception("Student registration verification email could not be sent.")
+                cursor.execute(
+                    "DELETE FROM pending_student_registrations WHERE LOWER(TRIM(email)) = LOWER(TRIM(%s))",
+                    (student_email,),
+                )
+                db.commit()
+                return render_template(
+                    "student_forgot_password.html", stage="request",
+                    error="Gmail could not send the verification email. Please try again later."
+                ), 503
+            return render_template(
+                "student_forgot_password.html", stage="registration_verify",
+                email=student_email,
+                success="A verification code has been sent to your email. Enter it to finish creating your student account."
             )
 
 
@@ -577,6 +671,174 @@ def register():
 
     finally:
 
+        cursor.close()
+        db.close()
+
+
+@auth.route("/student/register/verify", methods=["POST"])
+def student_register_verify():
+    email = _valid_email(request.form.get("email", ""))
+    otp = (request.form.get("otp") or "").strip()
+    if not email or not re.fullmatch(r"\d{6}", otp):
+        return render_template("student_forgot_password.html", stage="registration_verify", email=email, error="Enter your email and 6-digit verification code."), 400
+
+    db = get_db_connection()
+    cursor = db.cursor(cursor_factory=RealDictCursor)
+    try:
+        cursor.execute(
+            """SELECT * FROM pending_student_registrations
+               WHERE LOWER(TRIM(email)) = LOWER(TRIM(%s))
+                 AND expires_at > NOW()
+               ORDER BY created_at DESC LIMIT 1 FOR UPDATE""",
+            (email,),
+        )
+        pending = cursor.fetchone()
+        if not pending or int(pending["attempts"]) >= 5 or not check_password_hash(pending["otp_hash"], otp):
+            if pending:
+                cursor.execute("UPDATE pending_student_registrations SET attempts = attempts + 1 WHERE pending_id = %s", (pending["pending_id"],))
+                db.commit()
+            return render_template("student_forgot_password.html", stage="registration_verify", email=email, error="Invalid or expired verification code. Register again to request a new code."), 400
+
+        cursor.execute(
+            """INSERT INTO students
+               (full_name, roll_number, course, department, semester, password, email)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+            (pending["full_name"], pending["roll_number"], pending["course"],
+             pending["department"], pending["semester"], pending["password_hash"], pending["email"]),
+        )
+        cursor.execute("DELETE FROM pending_student_registrations WHERE LOWER(TRIM(email)) = LOWER(TRIM(%s))", (email,))
+        db.commit()
+        return render_template("register.html", success="Email verified and student account created successfully. You can now log in.")
+    except Exception:
+        db.rollback()
+        current_app.logger.exception("Student email verification failed.")
+        return render_template("student_forgot_password.html", stage="registration_verify", email=email, error="Unable to verify email. Please try again."), 500
+    finally:
+        cursor.close()
+        db.close()
+
+
+# ============================================================
+# STUDENT FORGOT PASSWORD (TEACHER ACCOUNTS ARE NOT TOUCHED)
+# ============================================================
+
+@auth.route("/student/forgot-password", methods=["GET", "POST"])
+def student_forgot_password():
+    if request.method == "GET":
+        return render_template("student_forgot_password.html", stage="request")
+
+    roll_number = (request.form.get("roll_number") or "").strip()
+    email = _valid_email(request.form.get("email", ""))
+    if not roll_number or not email:
+        return render_template("student_forgot_password.html", stage="request", error="Enter your roll number and valid email.")
+
+    db = get_db_connection()
+    cursor = db.cursor(cursor_factory=RealDictCursor)
+    try:
+        cursor.execute(
+            """SELECT student_id, email FROM students
+               WHERE LOWER(TRIM(roll_number)) = LOWER(TRIM(%s))
+                 AND LOWER(TRIM(email)) = LOWER(TRIM(%s))
+               LIMIT 1""",
+            (roll_number, email),
+        )
+        student_row = cursor.fetchone()
+        # Use a generic response for unknown roll/email combinations.
+        if not student_row:
+            return render_template("student_forgot_password.html", stage="request", success="If the details match an account, a verification code will be sent.")
+
+        cursor.execute(
+            """SELECT COUNT(*) AS sent_count FROM student_password_resets
+               WHERE student_id = %s AND created_at > NOW() - INTERVAL '15 minutes'""",
+            (student_row["student_id"],),
+        )
+        if int(cursor.fetchone()["sent_count"]) >= 3:
+            return render_template("student_forgot_password.html", stage="request", error="Too many code requests. Please try again after 15 minutes.")
+
+        otp = f"{secrets.randbelow(1000000):06d}"
+        otp_hash = generate_password_hash(otp)
+        cursor.execute(
+            """INSERT INTO student_password_resets
+               (student_id, otp_hash, expires_at, attempts, created_at)
+               VALUES (%s, %s, NOW() + INTERVAL '10 minutes', 0, NOW())""",
+            (student_row["student_id"], otp_hash),
+        )
+        db.commit()
+        try:
+            _send_student_email(
+                email,
+                "AI Quiz Assessment System - Password Reset Code",
+                f"Your password reset code is {otp}. It expires in 10 minutes. If you did not request this, ignore this email.",
+            )
+        except Exception:
+            current_app.logger.exception("Student password reset email could not be sent.")
+            db.rollback()
+            return render_template("student_forgot_password.html", stage="request", error="Email could not be sent. Please contact the administrator or try again later."), 503
+
+        session["student_password_reset_id"] = student_row["student_id"]
+        return render_template("student_forgot_password.html", stage="verify", success="A verification code has been sent to your registered email.")
+    except Exception:
+        db.rollback()
+        current_app.logger.exception("Student forgot-password request failed.")
+        return render_template("student_forgot_password.html", stage="request", error="Unable to process the request right now."), 500
+    finally:
+        cursor.close()
+        db.close()
+
+
+@auth.route("/student/reset-password", methods=["POST"])
+def student_reset_password():
+    student_id = session.get("student_password_reset_id")
+    otp = (request.form.get("otp") or "").strip()
+    new_password = request.form.get("new_password") or ""
+    confirm_password = request.form.get("confirm_password") or ""
+
+    if not student_id:
+        return redirect(url_for("auth.student_forgot_password"))
+    if not re.fullmatch(r"\d{6}", otp):
+        return render_template("student_forgot_password.html", stage="verify", error="Enter the 6-digit verification code.")
+    if len(new_password) < 8:
+        return render_template("student_forgot_password.html", stage="verify", error="New password must contain at least 8 characters.")
+    if new_password != confirm_password:
+        return render_template("student_forgot_password.html", stage="verify", error="Passwords do not match.")
+
+    db = get_db_connection()
+    cursor = db.cursor(cursor_factory=RealDictCursor)
+    try:
+        cursor.execute(
+            """SELECT reset_id, otp_hash, attempts
+               FROM student_password_resets
+               WHERE student_id = %s AND used_at IS NULL AND expires_at > NOW()
+               ORDER BY created_at DESC LIMIT 1 FOR UPDATE""",
+            (student_id,),
+        )
+        reset_row = cursor.fetchone()
+        if not reset_row or int(reset_row["attempts"]) >= 5 or not check_password_hash(reset_row["otp_hash"], otp):
+            if reset_row:
+                cursor.execute("UPDATE student_password_resets SET attempts = attempts + 1 WHERE reset_id = %s", (reset_row["reset_id"],))
+                db.commit()
+            return render_template("student_forgot_password.html", stage="verify", error="Invalid or expired code. Request a new code and try again."), 400
+
+        cursor.execute(
+            "UPDATE students SET password = %s WHERE student_id = %s",
+            (generate_password_hash(new_password), student_id),
+        )
+        cursor.execute(
+            "UPDATE student_password_resets SET used_at = NOW() WHERE reset_id = %s",
+            (reset_row["reset_id"],),
+        )
+        cursor.execute(
+            "UPDATE student_password_resets SET used_at = NOW() WHERE student_id = %s AND used_at IS NULL",
+            (student_id,),
+        )
+        db.commit()
+        session.pop("student_password_reset_id", None)
+        return render_template("student_forgot_password.html", stage="request", success="Password changed successfully. You can now log in with your new password.")
+    except Exception:
+        db.rollback()
+        current_app.logger.exception("Student password reset failed.")
+        return render_template("student_forgot_password.html", stage="verify", error="Unable to reset password right now."), 500
+    finally:
         cursor.close()
         db.close()
 
@@ -648,12 +910,16 @@ def guest_quiz():
                 duration_minutes,
                 question_time_seconds,
                 available_from,
-                available_until
+                available_until,
+                target_course,
+                target_department,
+                target_semester,
+                publication_status
 
             FROM quizzes
 
             WHERE quiz_id=%s
-
+            AND publication_status = 'published'
             AND available_from <= NOW()
 
             AND
@@ -741,12 +1007,16 @@ def guest_start_quiz_page(quiz_id):
                 duration_minutes,
                 question_time_seconds,
                 available_from,
-                available_until
+                available_until,
+                target_course,
+                target_department,
+                target_semester,
+                publication_status
 
             FROM quizzes
 
             WHERE quiz_id=%s
-
+            AND publication_status = 'published'
             AND available_from <= NOW()
 
             AND
@@ -817,6 +1087,9 @@ def guest_start_quiz():
         "roll_number",
         ""
     ).strip()
+    course = (request.form.get("course") or "").strip().upper()
+    department = (request.form.get("department") or "").strip()
+    semester = (request.form.get("semester") or "").strip()
 
 
     # ========================================================
@@ -828,11 +1101,8 @@ def guest_start_quiz():
         return redirect("/")
 
 
-    if not name or not roll_number:
-
-        return redirect(
-            f"/guest_quiz?quiz_id={quiz_id}"
-        )
+    if not all([name, roll_number, course, department, semester]):
+        return redirect(f"/guest_quiz?quiz_id={quiz_id}")
 
 
     quiz_id = int(
@@ -861,12 +1131,16 @@ def guest_start_quiz():
                 duration_minutes,
                 question_time_seconds,
                 available_from,
-                available_until
+                available_until,
+                target_course,
+                target_department,
+                target_semester,
+                publication_status
 
             FROM quizzes
 
             WHERE quiz_id=%s
-
+            AND publication_status = 'published'
             AND available_from <= NOW()
 
             AND
@@ -894,6 +1168,12 @@ def guest_start_quiz():
             "guest_quiz.html",
             error="Quiz is no longer available."
         )
+
+    if not _guest_matches_quiz_cohort(course, department, semester, quiz):
+        return render_template(
+            "guest_quiz.html",
+            error="This quiz is not assigned to your course, department and semester."
+        ), 403
 
 
     # ========================================================
@@ -938,6 +1218,9 @@ def guest_start_quiz():
                 student_id,
                 student_name,
                 roll_number,
+                course,
+                department,
+                semester,
                 attempt_mode,
                 started_at,
                 status
@@ -947,6 +1230,9 @@ def guest_start_quiz():
             (
                 %s,
                 NULL,
+                %s,
+                %s,
+                %s,
                 %s,
                 %s,
                 'guest',
@@ -959,7 +1245,10 @@ def guest_start_quiz():
             (
                 quiz_id,
                 name,
-                roll_number
+                roll_number,
+                course,
+                department,
+                semester
             )
         )
 
@@ -1015,6 +1304,9 @@ def guest_start_quiz():
     session["guest_roll_number"] = (
         roll_number
     )
+    session["guest_course"] = course
+    session["guest_department"] = department
+    session["guest_semester"] = semester
 
     session["quiz_id"] = quiz_id
 

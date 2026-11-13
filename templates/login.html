@@ -356,8 +356,13 @@
                             required
                         >
 
+                        
                     </div>
-
+                    <div class="forgot-password-row">
+                        <a href="{{ url_for('auth.student_forgot_password') }}">
+                            Forgot Student Password?
+                        </a>
+                    </div>
                 </div>
 
 
@@ -553,6 +558,8 @@
 <script
     src="{{ url_for('static', filename='js/darkmode.js') }}">
 </script>
+
+
 
 
 </body>

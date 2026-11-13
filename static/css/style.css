@@ -13795,3 +13795,48 @@ VERY SMALL PHONES
         text-decoration: none !important;
     }
 }
+
+
+.forgot-password-row {
+    text-align: right;
+    margin-top: 8px;
+    font-size: 13px;
+}
+
+.forgot-password-row a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.forgot-password-row a:hover {
+    text-decoration: underline;
+}
+
+
+.status-draft {
+    color: var(--yellow);
+    background: rgba(245,189,79,.1);
+}
+
+.status-published {
+    color: var(--green);
+    background: rgba(53,211,154,.1);
+}
+
+.status-publication-closed {
+    color: #a7b1c6;
+    background: rgba(167,177,198,.1);
+}
+
+.btn-publish {
+    color: #35d39a;
+    background: rgba(53,211,154,.10);
+    border-color: rgba(53,211,154,.30);
+}
+
+.btn-unpublish {
+    color: #f5bd4f;
+    background: rgba(245,189,79,.10);
+    border-color: rgba(245,189,79,.30);
+}

@@ -824,6 +824,27 @@ def _build_result_review(attempt_id):
 
 
 
+def _student_matches_quiz(student_data, quiz):
+    """Return True only for a published quiz assigned to this student's cohort."""
+    if not student_data or not quiz:
+        return False
+
+    if str(quiz.get("publication_status") or "draft").strip().lower() != "published":
+        return False
+
+    def normalise(value):
+        return " ".join(str(value or "").strip().casefold().split())
+
+    return all((
+        normalise(student_data.get("course"))
+        and normalise(student_data.get("course")) == normalise(quiz.get("target_course")),
+        normalise(student_data.get("department"))
+        and normalise(student_data.get("department")) == normalise(quiz.get("target_department")),
+        normalise(student_data.get("semester"))
+        and normalise(student_data.get("semester")) == normalise(quiz.get("target_semester")),
+    ))
+
+
 # ============================================================
 # STUDENT DASHBOARD
 # ============================================================
@@ -847,14 +868,22 @@ def student_dashboard():
             )
             student_data = cursor.fetchone()
 
-            cursor.execute(
-                """
-                SELECT *
-                FROM quizzes
-                ORDER BY created_at DESC
-                """
-            )
-            quizzes = cursor.fetchall()
+            if student_data:
+                cursor.execute(
+                    """
+                    SELECT *
+                    FROM quizzes
+                    WHERE LOWER(TRIM(COALESCE(publication_status, 'draft'))) = 'published'
+                      AND LOWER(TRIM(COALESCE(target_course, ''))) = LOWER(TRIM(COALESCE(%s, '')))
+                      AND LOWER(TRIM(COALESCE(target_department, ''))) = LOWER(TRIM(COALESCE(%s, '')))
+                      AND LOWER(TRIM(COALESCE(target_semester, ''))) = LOWER(TRIM(COALESCE(%s, '')))
+                    ORDER BY created_at DESC
+                    """,
+                    (student_data.get("course"), student_data.get("department"), student_data.get("semester")),
+                )
+                quizzes = cursor.fetchall()
+            else:
+                quizzes = []
 
         return render_template(
             "student_dashboard.html",
@@ -894,18 +923,38 @@ def available_quizzes():
 
     try:
         with connection.cursor() as cursor:
+            student_id = session.get("student_id")
+            if not student_id:
+                return redirect(url_for("auth.login"))
+
+            cursor.execute(
+                """
+                SELECT s.course, s.department, s.semester
+                FROM students AS s
+                WHERE s.student_id = %s
+                """,
+                (student_id,),
+            )
+            student_cohort = cursor.fetchone()
+
+            if not student_cohort:
+                session.pop("student_id", None)
+                return redirect(url_for("auth.login"))
+
             cursor.execute(
                 """
                 SELECT *
                 FROM quizzes
+                WHERE LOWER(TRIM(COALESCE(publication_status, 'draft'))) = 'published'
+                  AND LOWER(TRIM(COALESCE(target_course, ''))) = LOWER(TRIM(COALESCE(%s, '')))
+                  AND LOWER(TRIM(COALESCE(target_department, ''))) = LOWER(TRIM(COALESCE(%s, '')))
+                  AND LOWER(TRIM(COALESCE(target_semester, ''))) = LOWER(TRIM(COALESCE(%s, '')))
                 ORDER BY created_at DESC
-                """
+                """,
+                (student_cohort.get("course"), student_cohort.get("department"), student_cohort.get("semester")),
             )
 
-            quizzes = [
-                dict(quiz)
-                for quiz in cursor.fetchall()
-            ]
+            quizzes = [dict(quiz) for quiz in cursor.fetchall()]
 
                # Calculate status using the original database timestamps.
         for quiz in quizzes:
@@ -957,6 +1006,16 @@ def start_quiz(quiz_id):
             url_for("student.available_quizzes")
         )
 
+    student_data = _get_student(student_id)
+    if not student_data:
+        session.pop("student_id", None)
+        flash("Please log in again.", "error")
+        return redirect(url_for("auth.login"))
+
+    if not _student_matches_quiz(student_data, quiz):
+        flash("This quiz is not assigned to your course, department and semester.", "error")
+        return redirect(url_for("student.available_quizzes"))
+
     if _quiz_status(quiz) == "upcoming":
         return _quiz_countdown_page(quiz)
 
@@ -973,24 +1032,6 @@ def start_quiz(quiz_id):
 
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT *
-                FROM students
-                WHERE student_id = %s
-                """,
-                (student_id,),
-            )
-            student_data = cursor.fetchone()
-
-            if not student_data:
-                session.pop("student_id", None)
-                flash(
-                    "Please log in again.",
-                    "error",
-                )
-                return redirect(url_for("auth.login"))
-
             cursor.execute(
                 """
                 SELECT *
@@ -1182,6 +1223,18 @@ def guest_start_quiz(quiz_id):
             quiz=quiz,
             error="Please select a valid semester.",
         ), 400
+
+    guest_cohort = {
+        "course": course,
+        "department": department,
+        "semester": semester,
+    }
+    if not _student_matches_quiz(guest_cohort, quiz):
+        return render_template(
+            "guest_start_quiz.html",
+            quiz=quiz,
+            error="This quiz is not assigned to your course, department and semester.",
+        ), 403
 
     if not _can_access_quiz(quiz):
         return render_template(
