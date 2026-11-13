@@ -83,74 +83,77 @@ def _log_login_activity(
     )
 def _send_student_email(to_email, subject, body):
     """
-    Send student emails using Resend HTTPS API.
-    Works for registration verification and password recovery.
+    Send student emails using Google Apps Script.
+    Supports registration OTP and forgot-password OTP.
     """
 
-    api_key = os.getenv("RESEND_API_KEY", "").strip()
-    from_email = os.getenv("RESEND_FROM_EMAIL", "").strip()
+    script_url = os.getenv("GOOGLE_APPS_SCRIPT_URL", "").strip()
+    api_secret = os.getenv("GOOGLE_APPS_SCRIPT_SECRET", "").strip()
 
-    if not api_key:
-        raise RuntimeError("RESEND_API_KEY is not configured.")
-
-    if not from_email:
-        raise RuntimeError("RESEND_FROM_EMAIL is not configured.")
+    if not script_url or not api_secret:
+        raise RuntimeError(
+            "Google Apps Script email service is not configured."
+        )
 
     payload = {
-        "from": from_email,
-        "to": [to_email],
+        "secret": api_secret,
+        "to": to_email,
         "subject": subject,
-        "text": body
+        "body": body
     }
 
     data = json.dumps(payload).encode("utf-8")
 
     req = urllib.request.Request(
-        "https://api.resend.com/emails",
+        script_url,
         data=data,
         headers={
-            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         },
         method="POST"
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=25) as response:
-            result = json.loads(response.read().decode("utf-8"))
+        with urllib.request.urlopen(req, timeout=30) as response:
+            response_text = response.read().decode("utf-8")
+            result = json.loads(response_text)
 
-            if response.status not in (200, 201):
-                raise RuntimeError(
-                    f"Resend API returned status {response.status}"
-                )
-
-            current_app.logger.info(
-                "Student email sent successfully. Email ID: %s",
-                result.get("id")
+        if not result.get("success"):
+            raise RuntimeError(
+                result.get("message", "Email sending failed.")
             )
 
-            return result
+        current_app.logger.info(
+            "Student email sent successfully to %s",
+            to_email
+        )
 
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode("utf-8", errors="replace")
+        return True
+
+    except urllib.error.HTTPError as error:
+        error_body = error.read().decode(
+            "utf-8", errors="replace"
+        )
 
         current_app.logger.error(
-            "Resend API error: HTTP %s - %s",
-            e.code,
+            "Google Apps Script HTTP error: %s - %s",
+            error.code,
             error_body
         )
 
         raise RuntimeError(
-            f"Email provider rejected the request (HTTP {e.code})."
-        ) from e
+            "Google Apps Script rejected the email request."
+        ) from error
 
-    except urllib.error.URLError as e:
-        current_app.logger.exception("Resend connection failed.")
+    except urllib.error.URLError as error:
+        current_app.logger.exception(
+            "Google Apps Script connection failed."
+        )
 
         raise RuntimeError(
-            "Unable to connect to the email service."
-        ) from e
-        
+            "Unable to connect to Google Apps Script."
+        ) from error
+              
 def _valid_email(value):
     value = (value or "").strip().lower()
     return value if len(value) <= 100 and re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", value) else ""
